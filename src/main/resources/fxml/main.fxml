@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.rappi.farmer.presentation.controllers.MainController"
+            prefWidth="1200" prefHeight="720">
+
+    <!-- ── Barra superior ── -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12"
+              style="-fx-background-color: #e31837; -fx-padding: 12 20 12 20;">
+            <Label text="Rappi Farmer Assistant"
+                   style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="lblEstado" style="-fx-font-size: 12px; -fx-text-fill: white;"
+                   visible="false" managed="false"/>
+            <ProgressIndicator fx:id="progressIndicator" prefWidth="22" prefHeight="22"
+                               visible="false" managed="false" style="-fx-progress-color: white;"/>
+            <Button fx:id="btnCargarExcel" text="Cargar Excel" onAction="#onCargarExcel"
+                    style="-fx-background-color: white; -fx-text-fill: #e31837;
+                           -fx-font-weight: bold; -fx-font-size: 13px;
+                           -fx-padding: 7 16; -fx-background-radius: 5; -fx-cursor: hand;"/>
+        </HBox>
+    </top>
+
+    <!-- ── Sidebar izquierdo ── -->
+    <left>
+        <VBox style="-fx-background-color: #2c3e50; -fx-pref-width: 210px; -fx-padding: 10 0 16 0;">
+
+            <!-- Búsqueda rápida -->
+            <VBox style="-fx-padding: 10 12 10 12;" spacing="6">
+                <Label text="BUSCAR TIENDA"
+                       style="-fx-font-size: 10px; -fx-text-fill: #95a5a6; -fx-font-weight: bold;"/>
+                <HBox spacing="4">
+                    <TextField fx:id="txtBuscarStore"
+                               HBox.hgrow="ALWAYS"
+                               promptText="Código o nombre..."
+                               onAction="#onBuscarTienda"
+                               style="-fx-font-size: 11px; -fx-padding: 5 8;
+                                      -fx-background-radius: 4; -fx-pref-height: 28;"/>
+                    <Button text="→" onAction="#onBuscarTienda"
+                            style="-fx-background-color: #e31837; -fx-text-fill: white;
+                                   -fx-font-weight: bold; -fx-padding: 5 9;
+                                   -fx-background-radius: 4; -fx-cursor: hand;"/>
+                </HBox>
+            </VBox>
+
+            <Separator style="-fx-background-color: #3d5166;"/>
+
+            <!-- ── Grupo CARTERA ── -->
+            <HBox fx:id="headerCartera" onMouseClicked="#onToggleCartera" spacing="6"
+                  alignment="CENTER_LEFT"
+                  style="-fx-padding: 10 12 6 12; -fx-cursor: hand;">
+                <Label fx:id="arrowCartera" text="▼"
+                       style="-fx-text-fill: #95a5a6; -fx-font-size: 10px;"/>
+                <Label text="CARTERA"
+                       style="-fx-font-size: 10px; -fx-text-fill: #95a5a6; -fx-font-weight: bold;"/>
+            </HBox>
+
+            <VBox fx:id="groupCartera" spacing="0">
+                <Button fx:id="btnOnboarding" text="Onboarding 1-8 (0)"
+                        onAction="#onSectionOnboarding" maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #ecf0f1;
+                               -fx-font-size: 13px; -fx-alignment: CENTER-LEFT;
+                               -fx-padding: 9 16; -fx-cursor: hand;"/>
+                <Button fx:id="btnAliados" text="Conexion Aliados (0)"
+                        onAction="#onSectionAliados" maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #ecf0f1;
+                               -fx-font-size: 13px; -fx-alignment: CENTER-LEFT;
+                               -fx-padding: 9 16; -fx-cursor: hand;"/>
+                <Button fx:id="btnChurn" text="Riesgo Churn (0)"
+                        onAction="#onSectionChurn" maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #ecf0f1;
+                               -fx-font-size: 13px; -fx-alignment: CENTER-LEFT;
+                               -fx-padding: 9 16; -fx-cursor: hand;"/>
+                <Button fx:id="btnAva" text="AVA bajando (0)"
+                        onAction="#onSectionAva" maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #ecf0f1;
+                               -fx-font-size: 13px; -fx-alignment: CENTER-LEFT;
+                               -fx-padding: 9 16; -fx-cursor: hand;"/>
+                <Button fx:id="btnHealthy" text="Saludables (0)"
+                        onAction="#onSectionHealthy" maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #ecf0f1;
+                               -fx-font-size: 13px; -fx-alignment: CENTER-LEFT;
+                               -fx-padding: 9 16; -fx-cursor: hand;"/>
+                <Button fx:id="btnAvaLow" text="AVA 1%-15% (0)"
+                        onAction="#onSectionAvaLow" maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #e74c3c;
+                               -fx-font-size: 13px; -fx-font-weight: bold;
+                               -fx-alignment: CENTER-LEFT; -fx-padding: 9 16; -fx-cursor: hand;"/>
+            </VBox>
+
+            <Separator style="-fx-background-color: #3d5166; -fx-padding: 2 0;"/>
+
+            <!-- ── Grupo ACTIVIDAD ── -->
+            <HBox fx:id="headerActividad" onMouseClicked="#onToggleActividad" spacing="6"
+                  alignment="CENTER_LEFT"
+                  style="-fx-padding: 10 12 6 12; -fx-cursor: hand;">
+                <Label fx:id="arrowActividad" text="▼"
+                       style="-fx-text-fill: #95a5a6; -fx-font-size: 10px;"/>
+                <Label text="ACTIVIDAD"
+                       style="-fx-font-size: 10px; -fx-text-fill: #95a5a6; -fx-font-weight: bold;"/>
+            </HBox>
+
+            <VBox fx:id="groupActividad" spacing="0">
+                <Button fx:id="btnGestiones" text="Gestiones del dia (0)"
+                        onAction="#onSectionGestiones" maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #2ecc71;
+                               -fx-font-size: 13px; -fx-font-weight: bold;
+                               -fx-alignment: CENTER-LEFT; -fx-padding: 9 16; -fx-cursor: hand;"/>
+                <Button fx:id="btnWhatsapp" text="WhatsApp Masivo"
+                        onAction="#onSectionWhatsapp" maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #25d366;
+                               -fx-font-size: 13px; -fx-font-weight: bold;
+                               -fx-alignment: CENTER-LEFT; -fx-padding: 9 16; -fx-cursor: hand;"/>
+            </VBox>
+
+        </VBox>
+    </left>
+
+    <!-- ── Contenido central ── -->
+    <center>
+        <VBox style="-fx-background-color: #f5f5f5; -fx-padding: 20;" spacing="10">
+
+            <Label fx:id="lblSectionTitle" text="Selecciona una sección"
+                   style="-fx-font-size: 16px; -fx-font-weight: bold;
+                          -fx-text-fill: #2c3e50;"/>
+
+            <!-- Tabla tiendas -->
+            <TableView fx:id="tableStores" VBox.vgrow="ALWAYS"
+                       style="-fx-background-color: white; -fx-background-radius: 6;">
+                <placeholder>
+                    <Label text="Carga un archivo Excel para ver las tiendas"
+                           style="-fx-text-fill: #aaa; -fx-font-size: 13px;"/>
+                </placeholder>
+            </TableView>
+
+            <!-- Tabla gestiones (oculta) -->
+            <TableView fx:id="tableGestiones" VBox.vgrow="ALWAYS"
+                       visible="false" managed="false"
+                       style="-fx-background-color: white; -fx-background-radius: 6;">
+                <placeholder>
+                    <Label text="Sin gestiones registradas hoy"
+                           style="-fx-text-fill: #aaa; -fx-font-size: 13px;"/>
+                </placeholder>
+            </TableView>
+
+            <!-- Panel WhatsApp (oculto) -->
+            <fx:include fx:id="whatsappPanel" source="whatsapp-panel.fxml"
+                        visible="false" managed="false"/>
+
+        </VBox>
+    </center>
+
+</BorderPane>

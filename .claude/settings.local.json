@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Recurse -File C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation | Where-Object { $_.Extension -in '.java','.xml','.fxml','.properties','.sql' } | Select-Object FullName | Sort-Object FullName)"
+    ]
+  }
+}

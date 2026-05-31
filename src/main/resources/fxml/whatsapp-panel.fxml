@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.rappi.farmer.presentation.controllers.WhatsappController"
+      VBox.vgrow="ALWAYS">
+
+    <TabPane VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE"
+             style="-fx-tab-min-width: 160px;">
+
+        <!-- ══════════════════════════════════════════════════ -->
+        <!-- TAB 1 — RECOMENDACIONES                           -->
+        <!-- ══════════════════════════════════════════════════ -->
+        <Tab text="Recomendaciones">
+            <HBox spacing="16" style="-fx-padding: 14;" VBox.vgrow="ALWAYS">
+
+                <!-- ── Panel izquierdo ── -->
+                <VBox spacing="12" prefWidth="310" minWidth="270">
+
+                    <!-- Plantilla -->
+                    <Label text="Plantilla activa"
+                           style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
+
+                    <HBox spacing="6">
+                        <ComboBox fx:id="cboPlantillas" HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                                  promptText="Selecciona plantilla..."/>
+                        <Button text="Nueva" onAction="#onNuevaPlantilla"
+                                style="-fx-background-color: #3498db; -fx-text-fill: white;
+                                       -fx-padding: 5 10; -fx-cursor: hand; -fx-background-radius: 4;"/>
+                        <Button text="Eliminar" onAction="#onEliminarPlantilla"
+                                style="-fx-background-color: #e74c3c; -fx-text-fill: white;
+                                       -fx-padding: 5 10; -fx-cursor: hand; -fx-background-radius: 4;"/>
+                    </HBox>
+
+                    <HBox spacing="6" alignment="CENTER_LEFT">
+                        <Label text="Nombre:" style="-fx-font-size: 12px; -fx-text-fill: #555;"/>
+                        <TextField fx:id="txtNombrePlantilla" HBox.hgrow="ALWAYS"
+                                   promptText="Nombre de la plantilla"
+                                   style="-fx-font-size: 12px;"/>
+                    </HBox>
+
+                    <TextArea fx:id="txtTemplate"
+                              prefHeight="160" wrapText="true"
+                              promptText="Escribe el mensaje aquí...&#10;Variable disponible: {store_name}"/>
+
+                    <Label text="Variable: {store_name}"
+                           style="-fx-font-size: 11px; -fx-text-fill: #95a5a6;"/>
+
+                    <Button text="Guardar Plantilla" onAction="#onGuardarPlantilla"
+                            maxWidth="Infinity"
+                            style="-fx-background-color: #2ecc71; -fx-text-fill: white;
+                                   -fx-font-weight: bold; -fx-padding: 7 0;
+                                   -fx-cursor: hand; -fx-background-radius: 4;"/>
+
+                    <Separator/>
+
+                    <!-- Contadores -->
+                    <HBox spacing="16">
+                        <VBox alignment="CENTER">
+                            <Label fx:id="lblContador" text="0/40"
+                                   style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #e31837;"/>
+                            <Label text="seleccionadas" style="-fx-font-size: 10px; -fx-text-fill: #95a5a6;"/>
+                        </VBox>
+                        <VBox alignment="CENTER">
+                            <Label fx:id="lblEnviadosHoy" text="0"
+                                   style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #27ae60;"/>
+                            <Label text="enviados hoy" style="-fx-font-size: 10px; -fx-text-fill: #95a5a6;"/>
+                        </VBox>
+                    </HBox>
+
+                    <Separator/>
+
+                    <!-- Conexión y envío -->
+                    <Button fx:id="btnAbrirChrome"
+                            text="Abrir WhatsApp Web"
+                            onAction="#onAbrirChrome"
+                            maxWidth="Infinity"
+                            style="-fx-background-color: #25d366; -fx-text-fill: white;
+                                   -fx-font-weight: bold; -fx-padding: 9 0; -fx-cursor: hand;
+                                   -fx-background-radius: 5; -fx-font-size: 13px;"/>
+
+                    <Label fx:id="lblEstadoWa" text="● No conectado"
+                           style="-fx-font-size: 12px; -fx-text-fill: #e74c3c;"/>
+
+                    <Button fx:id="btnEnviar"
+                            text="Iniciar Envío"
+                            onAction="#onIniciarEnvio"
+                            maxWidth="Infinity"
+                            disable="true"
+                            style="-fx-background-color: #e31837; -fx-text-fill: white;
+                                   -fx-font-weight: bold; -fx-padding: 9 0; -fx-cursor: hand;
+                                   -fx-background-radius: 5; -fx-font-size: 13px;"/>
+
+                    <Button fx:id="btnDetener"
+                            text="Detener envío"
+                            onAction="#onDetener"
+                            maxWidth="Infinity"
+                            visible="false" managed="false"
+                            style="-fx-background-color: #7f8c8d; -fx-text-fill: white;
+                                   -fx-font-weight: bold; -fx-padding: 9 0; -fx-cursor: hand;
+                                   -fx-background-radius: 5; -fx-font-size: 13px;"/>
+
+                </VBox>
+
+                <!-- ── Panel derecho: recomendaciones + tabla ── -->
+                <VBox spacing="10" HBox.hgrow="ALWAYS">
+
+                    <!-- Filtros de categoría -->
+                    <Label text="Tiendas recomendadas"
+                           style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
+
+                    <HBox spacing="6" style="-fx-flex-wrap: wrap;">
+                        <Button fx:id="btnCatOnboarding" text="Onboarding (0)"
+                                onAction="#onFiltrarOnboarding"
+                                style="-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32;
+                                       -fx-font-size: 11px; -fx-padding: 5 10;
+                                       -fx-cursor: hand; -fx-background-radius: 14;
+                                       -fx-border-color: #81c784; -fx-border-radius: 14;"/>
+                        <Button fx:id="btnCatAliados" text="Aliados &lt;60% (0)"
+                                onAction="#onFiltrarAliados"
+                                style="-fx-background-color: #fff3e0; -fx-text-fill: #e65100;
+                                       -fx-font-size: 11px; -fx-padding: 5 10;
+                                       -fx-cursor: hand; -fx-background-radius: 14;
+                                       -fx-border-color: #ffb74d; -fx-border-radius: 14;"/>
+                        <Button fx:id="btnCatChurn" text="Churn (0)"
+                                onAction="#onFiltrarChurn"
+                                style="-fx-background-color: #fce4ec; -fx-text-fill: #c62828;
+                                       -fx-font-size: 11px; -fx-padding: 5 10;
+                                       -fx-cursor: hand; -fx-background-radius: 14;
+                                       -fx-border-color: #ef9a9a; -fx-border-radius: 14;"/>
+                        <Button fx:id="btnCatAva" text="AVA bajando (0)"
+                                onAction="#onFiltrarAva"
+                                style="-fx-background-color: #fff8e1; -fx-text-fill: #f57f17;
+                                       -fx-font-size: 11px; -fx-padding: 5 10;
+                                       -fx-cursor: hand; -fx-background-radius: 14;
+                                       -fx-border-color: #ffe082; -fx-border-radius: 14;"/>
+                        <Button fx:id="btnCatTodas" text="Todas"
+                                onAction="#onFiltrarTodas"
+                                style="-fx-background-color: #e3f2fd; -fx-text-fill: #1565c0;
+                                       -fx-font-size: 11px; -fx-padding: 5 10;
+                                       -fx-cursor: hand; -fx-background-radius: 14;
+                                       -fx-border-color: #90caf9; -fx-border-radius: 14;
+                                       -fx-font-weight: bold;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="Marcar todas" onAction="#onMarcarTodas"
+                                style="-fx-background-color: #ecf0f1; -fx-text-fill: #2c3e50;
+                                       -fx-font-size: 11px; -fx-padding: 5 10; -fx-cursor: hand;"/>
+                        <Button text="Desmarcar" onAction="#onDesmarcarTodas"
+                                style="-fx-background-color: #ecf0f1; -fx-text-fill: #2c3e50;
+                                       -fx-font-size: 11px; -fx-padding: 5 10; -fx-cursor: hand;"/>
+                    </HBox>
+
+                    <Label fx:id="lblCategoriaActual" text=""
+                           style="-fx-font-size: 11px; -fx-text-fill: #7f8c8d;"/>
+
+                    <!-- Buscador -->
+                    <HBox spacing="6" alignment="CENTER_LEFT">
+                        <TextField fx:id="txtBuscarTienda"
+                                   HBox.hgrow="ALWAYS"
+                                   promptText="Buscar por nombre o código de tienda..."
+                                   style="-fx-font-size: 12px;"/>
+                        <Button text="✕" onAction="#onLimpiarBusqueda"
+                                style="-fx-background-color: #ecf0f1; -fx-text-fill: #7f8c8d;
+                                       -fx-padding: 5 10; -fx-cursor: hand; -fx-font-size: 12px;"/>
+                    </HBox>
+
+                    <TableView fx:id="tableWa" VBox.vgrow="ALWAYS"
+                               style="-fx-background-color: white; -fx-background-radius: 6;">
+                        <placeholder>
+                            <Label text="Selecciona una categoría o carga un Excel"
+                                   style="-fx-text-fill: #aaa; -fx-font-size: 12px;"/>
+                        </placeholder>
+                    </TableView>
+
+                    <!-- Progreso -->
+                    <ProgressBar fx:id="progressBar" maxWidth="Infinity" progress="0"
+                                 visible="false" managed="false"
+                                 style="-fx-accent: #25d366; -fx-pref-height: 10;"/>
+                    <Label fx:id="lblProgreso" text=""
+                           visible="false" managed="false"
+                           style="-fx-font-size: 12px; -fx-text-fill: #555;"/>
+                    <TextArea fx:id="txtLog" prefHeight="100" editable="false" wrapText="true"
+                              visible="false" managed="false"
+                              style="-fx-font-family: monospace; -fx-font-size: 11px;
+                                     -fx-background-color: #1e1e1e; -fx-text-fill: #d4d4d4;"/>
+                </VBox>
+
+            </HBox>
+        </Tab>
+
+        <!-- ══════════════════════════════════════════════════ -->
+        <!-- TAB 2 — ENVÍO DE PRUEBA                           -->
+        <!-- ══════════════════════════════════════════════════ -->
+        <Tab text="Envío de Prueba">
+            <VBox spacing="16" style="-fx-padding: 30; -fx-max-width: 500;">
+
+                <Label text="Envía un mensaje de prueba para verificar que WhatsApp Web funciona correctamente."
+                       style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" wrapText="true"/>
+
+                <Separator/>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Número:" style="-fx-font-weight: bold; -fx-min-width: 90;"/>
+                    <TextField fx:id="txtTelefonoPrueba" prefWidth="220"
+                               promptText="ej: 3001234567"/>
+                    <Label text="(solo dígitos, sin +57)"
+                           style="-fx-font-size: 11px; -fx-text-fill: #aaa;"/>
+                </HBox>
+
+                <VBox spacing="4">
+                    <Label text="Mensaje:" style="-fx-font-weight: bold;"/>
+                    <TextArea fx:id="txtMensajePrueba" prefHeight="120" wrapText="true"
+                              promptText="Mensaje de prueba..."/>
+                    <Button text="Usar plantilla activa" onAction="#onUsarPlantillaEnPrueba"
+                            style="-fx-background-color: #ecf0f1; -fx-text-fill: #2c3e50;
+                                   -fx-font-size: 11px; -fx-padding: 4 10; -fx-cursor: hand;"/>
+                </VBox>
+
+                <Button fx:id="btnEnviarPrueba"
+                        text="Enviar Prueba"
+                        onAction="#onEnviarPrueba"
+                        prefWidth="200"
+                        style="-fx-background-color: #25d366; -fx-text-fill: white;
+                               -fx-font-weight: bold; -fx-padding: 10 0;
+                               -fx-cursor: hand; -fx-background-radius: 5; -fx-font-size: 13px;"/>
+
+                <Label fx:id="lblResultadoPrueba" text=""
+                       style="-fx-font-size: 13px;" wrapText="true"/>
+
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

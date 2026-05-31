@@ -1,0 +1,59 @@
+package com.rappi.farmer.infrastructure.persistence.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "stores")
+public class StoreEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "store_code", unique = true, nullable = false, length = 50)
+    private String storeCode;
+
+    @Column(name = "store_name", nullable = false, length = 150)
+    private String storeName;
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(length = 50)
+    private String channel;
+
+    @Column(name = "onboarding_date")
+    private LocalDate onboardingDate;
+
+    @Column
+    private Boolean active;
+
+    @Column(name = "connection_percentage", precision = 5, scale = 2)
+    private BigDecimal connectionPercentage;
+
+    @Column(name = "current_status", length = 50)
+    private String currentStatus;
+
+    @Column(name = "had_handoff")
+    private Boolean hadHandoff;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private UserEntity user;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
