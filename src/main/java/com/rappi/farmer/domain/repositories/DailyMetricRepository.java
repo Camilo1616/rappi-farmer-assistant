@@ -11,4 +11,5 @@ public interface DailyMetricRepository {
     List<DailyMetric> findByDate(LocalDate date);
     Optional<DailyMetric> findLatestByStoreId(Long storeId);
     Optional<DailyMetric> findByStoreIdAndDate(Long storeId, LocalDate date);
+    void deleteByStoreId(Long storeId);
 }

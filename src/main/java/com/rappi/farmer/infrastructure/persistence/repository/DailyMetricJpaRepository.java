@@ -11,4 +11,5 @@ public interface DailyMetricJpaRepository extends JpaRepository<DailyMetricEntit
     Optional<DailyMetricEntity> findByStore_IdAndMetricDate(Long storeId, LocalDate metricDate);
     List<DailyMetricEntity> findByMetricDate(LocalDate metricDate);
     Optional<DailyMetricEntity> findTop1ByStore_IdOrderByMetricDateDesc(Long storeId);
+    void deleteByStore_Id(Long storeId);
 }

@@ -8,6 +8,7 @@ import com.rappi.farmer.infrastructure.persistence.repository.DailyMetricJpaRepo
 import com.rappi.farmer.infrastructure.persistence.repository.StoreJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
+@Transactional
 public class DailyMetricRepositoryAdapter implements DailyMetricRepository {
 
     private final DailyMetricJpaRepository jpaRepository;
@@ -41,6 +43,11 @@ public class DailyMetricRepositoryAdapter implements DailyMetricRepository {
     @Override
     public Optional<DailyMetric> findByStoreIdAndDate(Long storeId, LocalDate date) {
         return jpaRepository.findByStore_IdAndMetricDate(storeId, date).map(this::toDomain);
+    }
+
+    @Override
+    public void deleteByStoreId(Long storeId) {
+        jpaRepository.deleteByStore_Id(storeId);
     }
 
     private DailyMetricEntity toEntity(DailyMetric metric, StoreEntity store) {

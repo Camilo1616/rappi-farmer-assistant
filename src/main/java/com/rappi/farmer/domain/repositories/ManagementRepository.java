@@ -11,4 +11,6 @@ public interface ManagementRepository {
     Optional<Management> findLatestTodayByStoreId(Long storeId);
     Optional<Management> findLatestByStoreId(Long storeId);
     List<Management> findAllToday();
+    List<Management> findTodayByUser(Long userId);
+    void deleteByStoreId(Long storeId);
 }

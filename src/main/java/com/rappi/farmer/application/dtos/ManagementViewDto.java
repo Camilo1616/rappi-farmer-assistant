@@ -2,8 +2,10 @@ package com.rappi.farmer.application.dtos;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class ManagementViewDto {
     private Long id;
@@ -13,4 +15,7 @@ public class ManagementViewDto {
     private String resultType;
     private String comments;
     private String managementTime;
+    private String farmerName;
+    private String farmerCode;
+    private Boolean hadHandoff;
 }

@@ -2,17 +2,12 @@ package com.rappi.farmer.application.services;
 
 import com.rappi.farmer.application.dtos.StoreViewDto;
 import com.rappi.farmer.application.dtos.WhatsappSendProgress;
-import com.rappi.farmer.infrastructure.persistence.entity.StoreEntity;
-import com.rappi.farmer.infrastructure.persistence.entity.WhatsappMessageEntity;
-import com.rappi.farmer.infrastructure.persistence.repository.StoreJpaRepository;
-import com.rappi.farmer.infrastructure.persistence.repository.WhatsappMessageJpaRepository;
+import com.rappi.farmer.domain.repositories.WhatsappMessageRepository;
 import com.rappi.farmer.infrastructure.selenium.WhatsappDriver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
@@ -27,8 +22,7 @@ public class WhatsappService {
     private static final int DELAY_MAX_MS = 25_000;
 
     private final WhatsappDriver whatsappDriver;
-    private final StoreJpaRepository storeJpaRepository;
-    private final WhatsappMessageJpaRepository whatsappMessageJpaRepository;
+    private final WhatsappMessageRepository whatsappMessageRepository;
 
     private final Random random = new Random();
 
@@ -71,19 +65,18 @@ public class WhatsappService {
      * Cuántos mensajes ya fueron enviados hoy (para el límite de 40).
      */
     public long enviadosHoy() {
-        LocalDateTime start = LocalDate.now().atStartOfDay();
-        return whatsappMessageJpaRepository.countSentToday(start, start.plusDays(1));
+        return whatsappMessageRepository.countSentToday();
     }
 
     /**
      * Envía mensajes masivos a las tiendas indicadas.
-     * Corre en el hilo que lo llama — el caller debe usar un Thread/Task de JavaFX.
+     * Corre en el hilo que lo llama — el caller debe usar un hilo separado (no el hilo HTTP).
      *
      * @param stores          tiendas seleccionadas
      * @param template        plantilla con variable {store_name}
      * @param progressCallback callback invocado tras cada mensaje (puede ser desde hilo no-FX)
      */
-    public void enviarMasivo(List<StoreViewDto> stores, String template,
+    public void enviarMasivo(List<StoreViewDto> stores, String template, Long userId,
                               Consumer<WhatsappSendProgress> progressCallback) {
 
         int total = Math.min(stores.size(), MAX_DIARIO);
@@ -100,22 +93,34 @@ public class WhatsappService {
 
             String resultado = whatsappDriver.enviarMensaje(store.getPhoneNumber(), mensaje);
 
-            // Persiste el resultado
-            guardarLog(store.getId(), mensaje, resultado);
+            // Chrome fue cerrado mientras se enviaba — abortar todo el envío
+            if ("ERROR_CHROME_CERRADO".equals(resultado)) {
+                progressCallback.accept(new WhatsappSendProgress(
+                        total, i + 1, enviados, errores, store.getStoreName(), "ERROR_CHROME_CERRADO", true));
+                log.warn("Envío masivo abortado — Chrome fue cerrado");
+                return;
+            }
+
+            whatsappMessageRepository.save(store.getId(), userId, mensaje, resultado, null);
 
             if ("ENVIADO".equals(resultado)) {
                 enviados++;
-            } else {
+            } else if (!"NUMERO_INVALIDO".equals(resultado)) {
                 errores++;
             }
+
+            boolean esOmitido = false; // intentar siempre, nunca omitir
 
             // Notifica resultado de este mensaje
             progressCallback.accept(new WhatsappSendProgress(
                     total, i + 1, enviados, errores, store.getStoreName(), resultado, false));
 
-            // Delay aleatorio entre mensajes (excepto el último)
-            if (i < total - 1) {
+            // Delay aleatorio solo cuando realmente se envió (no gastar tiempo en omitidos)
+            if (i < total - 1 && !esOmitido) {
                 int delay = DELAY_MIN_MS + random.nextInt(DELAY_MAX_MS - DELAY_MIN_MS);
+                int delaySeg = delay / 1000;
+                progressCallback.accept(new WhatsappSendProgress(
+                        total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delaySeg));
                 log.debug("Esperando {}ms antes del siguiente mensaje", delay);
                 try {
                     Thread.sleep(delay);
@@ -134,20 +139,4 @@ public class WhatsappService {
         log.info("Envío masivo completado — enviados:{} errores:{}", enviados, errores);
     }
 
-    private void guardarLog(Long storeId, String mensaje, String resultado) {
-        try {
-            StoreEntity store = storeJpaRepository.findById(storeId).orElse(null);
-            if (store == null) return;
-
-            WhatsappMessageEntity registro = new WhatsappMessageEntity();
-            registro.setStore(store);
-            registro.setMessage(mensaje);
-            registro.setStatus(resultado.startsWith("ERROR") ? "ERROR" : resultado);
-            registro.setErrorMessage(resultado.startsWith("ERROR") ? resultado : null);
-            registro.setSentAt(LocalDateTime.now());
-            whatsappMessageJpaRepository.save(registro);
-        } catch (Exception e) {
-            log.error("Error guardando log de WhatsApp para tienda {}: {}", storeId, e.getMessage());
-        }
-    }
 }

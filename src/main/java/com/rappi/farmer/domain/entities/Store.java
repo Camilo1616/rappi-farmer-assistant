@@ -21,4 +21,6 @@ public class Store {
     private BigDecimal connectionPercentage;
     private String currentStatus;
     private Boolean hadHandoff;
+    private Long farmerId;
+    private Integer aging;
 }

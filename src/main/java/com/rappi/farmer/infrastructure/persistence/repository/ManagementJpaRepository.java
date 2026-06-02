@@ -19,16 +19,45 @@ public interface ManagementJpaRepository extends JpaRepository<ManagementEntity,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
 
-    @Query("SELECT m FROM ManagementEntity m JOIN FETCH m.store " +
+    @Query("SELECT m FROM ManagementEntity m JOIN FETCH m.store LEFT JOIN FETCH m.user " +
            "WHERE m.managementDate >= :start AND m.managementDate < :end " +
            "ORDER BY m.managementDate DESC")
     List<ManagementEntity> findAllToday(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
 
-    @Query("SELECT m FROM ManagementEntity m WHERE m.store.id = :storeId " +
+    @Query("SELECT m FROM ManagementEntity m JOIN FETCH m.store WHERE m.store.id = :storeId " +
            "ORDER BY m.managementDate DESC")
     List<ManagementEntity> findLatestByStoreId(
             @Param("storeId") Long storeId,
             org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT COUNT(m) FROM ManagementEntity m " +
+           "WHERE m.user.id = :userId AND m.managementDate >= :start AND m.managementDate < :end")
+    long countTodayByUserId(@Param("userId") Long userId,
+                            @Param("start") LocalDateTime start,
+                            @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(m) FROM ManagementEntity m " +
+           "WHERE m.user.id = :userId AND m.resultType = :result " +
+           "AND m.managementDate >= :start AND m.managementDate < :end")
+    long countTodayByUserIdAndResult(@Param("userId") Long userId,
+                                     @Param("result") String result,
+                                     @Param("start") LocalDateTime start,
+                                     @Param("end") LocalDateTime end);
+
+    @Query("SELECT m FROM ManagementEntity m JOIN FETCH m.store LEFT JOIN FETCH m.user " +
+           "WHERE m.user.id = :userId AND m.managementDate >= :start AND m.managementDate < :end " +
+           "ORDER BY m.managementDate DESC")
+    List<ManagementEntity> findTodayByUserId(@Param("userId") Long userId,
+                                              @Param("start") LocalDateTime start,
+                                              @Param("end") LocalDateTime end);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ManagementEntity m WHERE m.user.id = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ManagementEntity m WHERE m.store.id = :storeId")
+    void deleteByStoreId(@Param("storeId") Long storeId);
 }

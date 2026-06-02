@@ -8,7 +8,7 @@ Aplicación desktop para automatizar la gestión diaria de una cartera de 400–
 
 | Capa | Tecnología |
 |---|---|
-| Lenguaje | Java 24 |
+| Lenguaje | Java 21 |
 | Framework | Spring Boot 3.x |
 | UI | JavaFX |
 | Base de datos | MySQL 8 |

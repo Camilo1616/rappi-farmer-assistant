@@ -8,5 +8,12 @@ import java.util.Optional;
 public interface UserRepository {
     User save(User user);
     Optional<User> findById(Long id);
+    Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
     List<User> findAll();
+    List<User> findByRole(String role);
+    List<User> findByLiderId(Long liderId);
+    long countByCountryCode(String countryCode);
+    boolean existsByFarmerCode(String farmerCode);
+    List<User> findByCountryCodeAndRole(String countryCode, String role);
 }

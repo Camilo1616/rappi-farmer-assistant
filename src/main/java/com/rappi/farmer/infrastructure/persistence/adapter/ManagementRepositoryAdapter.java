@@ -19,9 +19,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
+@Transactional
 public class ManagementRepositoryAdapter implements ManagementRepository {
 
     private final ManagementJpaRepository managementJpaRepository;
@@ -87,6 +89,19 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<Management> findTodayByUser(Long userId) {
+        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        return managementJpaRepository.findTodayByUserId(userId, start, end)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteByStoreId(Long storeId) {
+        managementJpaRepository.deleteByStoreId(storeId);
+    }
+
     private Management toDomain(ManagementEntity e) {
         return new Management(
                 e.getId(),
@@ -97,7 +112,9 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
                 e.getManagementType(),
                 e.getResultType(),
                 e.getComments(),
-                e.getManagementDate()
+                e.getManagementDate(),
+                e.getUser() != null ? e.getUser().getFullName() : null,
+                e.getUser() != null ? e.getUser().getFarmerCode() : null
         );
     }
 }

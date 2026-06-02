@@ -19,4 +19,6 @@ public class Management {
     private String resultType;
     private String comments;
     private LocalDateTime managementDate;
+    private String farmerName;
+    private String farmerCode;
 }

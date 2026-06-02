@@ -15,23 +15,21 @@
     <artifactId>rappi-farmer-assistant</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>rappi-farmer-assistant</name>
-    <description>Herramienta desktop para automatización de gestión de restaurantes Rappi</description>
+    <description>Herramienta web para automatización de gestión de restaurantes Rappi</description>
 
     <properties>
         <java.version>21</java.version>
-        <javafx.version>21.0.4</javafx.version>
         <selenium.version>4.20.0</selenium.version>
         <poi.version>5.3.0</poi.version>
+        <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
     <dependencies>
 
         <!-- ===== Spring Boot ===== -->
-        <!-- spring-boot-starter (sin web): no levanta servidor Tomcat,
-             solo el contenedor de Spring (IoC, JPA, etc.) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -43,21 +41,32 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
             <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
 
-        <!-- ===== JavaFX ===== -->
+        <!-- ===== JWT ===== -->
         <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
-            <version>${javafx.version}</version>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
-            <version>${javafx.version}</version>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- ===== Base de datos ===== -->
@@ -80,6 +89,19 @@
             <artifactId>poi-ooxml</artifactId>
             <version>${poi.version}</version>
         </dependency>
+
+        <!-- ===== Email (verificación de cuenta) ===== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- ===== JSON (parseo de tokens OAuth) ===== -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
 
         <!-- ===== Utilidades ===== -->
         <dependency>
@@ -111,16 +133,6 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
-                </configuration>
-            </plugin>
-
-            <!-- JavaFX: permite ejecutar con "mvn javafx:run" -->
-            <plugin>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-maven-plugin</artifactId>
-                <version>0.0.8</version>
-                <configuration>
-                    <mainClass>com.rappi.farmer.RappiFarmerApplication</mainClass>
                 </configuration>
             </plugin>
 

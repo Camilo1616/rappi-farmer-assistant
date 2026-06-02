@@ -4,7 +4,8 @@ import com.rappi.farmer.application.dtos.ManagementViewDto;
 import com.rappi.farmer.application.dtos.RegisterManagementRequest;
 import com.rappi.farmer.domain.entities.Management;
 import com.rappi.farmer.domain.repositories.ManagementRepository;
-import com.rappi.farmer.infrastructure.config.SessionContext;
+import com.rappi.farmer.domain.repositories.StoreRepository;
+import com.rappi.farmer.application.SessionContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class ManagementService {
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
     private final ManagementRepository managementRepository;
+    private final StoreRepository storeRepository;
     private final SessionContext sessionContext;
 
     @Transactional
@@ -37,7 +39,9 @@ public class ManagementService {
                 request.getManagementType(),
                 request.getResultType(),
                 request.getComments(),
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                null,
+                null
         );
         Management saved = managementRepository.save(management);
         log.info("Gestión registrada — tienda:{} tipo:{} resultado:{}",
@@ -58,12 +62,39 @@ public class ManagementService {
     }
 
     public List<ManagementViewDto> getTodayManagements() {
-        return managementRepository.findAllToday().stream()
-                .map(this::toViewDto)
+        Long userId = sessionContext.getCurrentUserId();
+        boolean isLider = sessionContext.getCurrentUserRole() != null
+                && com.rappi.farmer.domain.enums.UserRole.LIDER == sessionContext.getCurrentUserRole();
+
+        List<Management> all = managementRepository.findAllToday();
+        log.info("getTodayManagements — userId:{} isLider:{} totalHoy:{}", userId, isLider, all.size());
+
+        // Líder ve todo. Farmer filtra por su userId
+        List<Management> managements = (isLider || userId == null)
+                ? all
+                : all.stream()
+                    .filter(m -> userId.equals(m.getUserId()))
+                    .collect(java.util.stream.Collectors.toList());
+
+        log.info("getTodayManagements — mostrando:{}", managements.size());
+
+        // Batch: una sola query para todos los stores necesarios
+        List<Long> storeIds = managements.stream()
+                .map(Management::getStoreId).filter(id -> id != null).distinct().toList();
+        java.util.Map<Long, Boolean> handoffMap = storeIds.isEmpty()
+                ? java.util.Map.of()
+                : storeRepository.findByIds(storeIds).stream()
+                        .collect(Collectors.toMap(
+                                com.rappi.farmer.domain.entities.Store::getId,
+                                s -> s.getHadHandoff() != null && s.getHadHandoff()));
+
+        return managements.stream()
+                .map(m -> toViewDto(m, handoffMap))
                 .collect(Collectors.toList());
     }
 
-    private ManagementViewDto toViewDto(Management m) {
+    private ManagementViewDto toViewDto(Management m, java.util.Map<Long, Boolean> handoffMap) {
+        Boolean hadHandoff = m.getStoreId() != null ? handoffMap.get(m.getStoreId()) : null;
         return new ManagementViewDto(
                 m.getId(),
                 m.getStoreName(),
@@ -71,7 +102,10 @@ public class ManagementService {
                 m.getManagementType(),
                 m.getResultType(),
                 m.getComments(),
-                m.getManagementDate() != null ? m.getManagementDate().format(TIME_FMT) : ""
+                m.getManagementDate() != null ? m.getManagementDate().format(TIME_FMT) : "",
+                m.getFarmerName(),
+                m.getFarmerCode(),
+                hadHandoff
         );
     }
 }

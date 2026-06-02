@@ -11,5 +11,23 @@ public interface StoreRepository {
     Optional<Store> findById(Long id);
     List<Store> findAll();
     List<Store> findActive();
+    List<Store> findActiveByUser(Long userId);
+    List<Store> findByUserId(Long userId);
+    void deleteById(Long id);
+    long countActiveByUserId(Long userId);
     List<Store> searchByCodeOrName(String query);
+    List<Store> searchByCodeOrNameAndUser(String query, Long userId);
+    List<Store> findByUserIdAndIdIn(Long userId, List<Long> ids);
+    List<Store> findByIds(List<Long> ids);
+    // Queries por tipo de base — para un farmer
+    List<Store> findChurnByFarmer(Long farmerId);
+    List<Store> findActiveF7dByFarmer(Long farmerId);
+    List<Store> findRetencionByFarmer(Long farmerId);
+    List<Store> findAva8a14ByFarmer(Long farmerId);
+    // Queries por tipo de base — para lista de farmers
+    List<Store> findChurnByFarmerIds(List<Long> farmerIds);
+    List<Store> findActiveF7dByFarmerIds(List<Long> farmerIds);
+    List<Store> findRetencionByFarmerIds(List<Long> farmerIds);
+    List<Store> findAva8a14ByFarmerIds(List<Long> farmerIds);
+    List<Store> findAllActiveByFarmerIds(List<Long> farmerIds);
 }

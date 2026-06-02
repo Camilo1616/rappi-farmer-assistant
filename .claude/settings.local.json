@@ -1,7 +1,38 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Get-ChildItem -Recurse -File C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation | Where-Object { $_.Extension -in '.java','.xml','.fxml','.properties','.sql' } | Select-Object FullName | Sort-Object FullName)"
+      "PowerShell(Get-ChildItem -Recurse -File C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation | Where-Object { $_.Extension -in '.java','.xml','.fxml','.properties','.sql' } | Select-Object FullName | Sort-Object FullName)",
+      "Bash(mvn javafx:run)",
+      "Bash(mvn compile *)",
+      "Bash(.\\\\mvnw compile *)",
+      "Bash(./mvnw compile *)",
+      "PowerShell(cd C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation; $env:GOOGLE_CLIENT_ID=\"326126797531-arhj0d0620vcqtt3dnhpas4ua0es1hgq.apps.googleusercontent.com\"; $env:GOOGLE_CLIENT_SECRET=\"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\"; $env:MAIL_USERNAME=\"cristianariza068@gmail.com\"; $env:MAIL_PASSWORD=\"zunouxmezabnpduj\"; .\\\\mvnw javafx:run \"-Dspring.profiles.active=local\" 2>&1 | Select-String -Pattern \"ERROR|WARN|Exception|caused\" | Select-Object -First 30)",
+      "PowerShell(cd C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation; .\\\\mvnw javafx:run \"-Dspring.profiles.active=local\" > \"C:\\\\Users\\\\camil\\\\AppData\\\\Local\\\\Temp\\\\app.log\" 2>&1; Get-Content \"C:\\\\Users\\\\camil\\\\AppData\\\\Local\\\\Temp\\\\app.log\" | Where-Object { $_ -match \"ERROR|Exception|WARN|caused|failed\" } | Select-Object -First 40)",
+      "Bash(mvn clean *)",
+      "PowerShell(mvn clean *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(.\\\\mvnw.cmd clean compile 2>&1 | Select-Object -Last 15)",
+      "PowerShell(.\\\\mvnw.cmd javafx:run 2>&1)",
+      "PowerShell(.\\\\mvnw.cmd clean compile 2>&1 | Select-Object -Last 20)",
+      "PowerShell(.\\\\mvnw.cmd compile -q 2>&1 | Select-Object -Last 8)",
+      "PowerShell(.\\\\mvnw.cmd compile -q 2>&1 | Select-Object -Last 10)",
+      "PowerShell(.\\\\mvnw.cmd compile -q 2>&1 | Select-Object -Last 5)",
+      "Bash(git -C \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\" status --short)",
+      "Bash(del *)",
+      "PowerShell($m = Get-Command mvn -ErrorAction SilentlyContinue; if \\($m\\) { $m.Source } else { \"not found\" }; $env:MAVEN_HOME; $env:M2_HOME)",
+      "Read(//c/Users/camil/rappi-automation/**)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(xargs grep -l -i \"google\\\\|oauth\")",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(mvn -f \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\pom.xml\" compile -q)",
+      "Bash(dir \"C:\\\\Users\\\\camil\\\\rappi-automation\")",
+      "Bash(Remove-Item -Recurse -Force \"src\\\\main\\\\resources\\\\imagenes\")",
+      "Bash(.\\\\\\\\mvnw.cmd compile *)",
+      "Bash(xargs grep -l -i \"farmer\\\\|lider\\\\|gestiones\")",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation'; .\\\\mvnw.cmd spring-boot:run '-Dspring.profiles.active=local'\" -WindowStyle Normal)",
+      "Bash(git add *)"
     ]
   }
 }

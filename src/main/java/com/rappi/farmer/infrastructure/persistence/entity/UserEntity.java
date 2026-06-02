@@ -30,6 +30,24 @@ public class UserEntity {
     @Column(length = 50)
     private String role;
 
+    @Column(name = "farmer_code", length = 20)
+    private String farmerCode;
+
+    @Column(name = "country_code", length = 100)
+    private String countryCode;
+
+    @Column(name = "account_status", length = 20)
+    private String accountStatus;
+
+    @Column(name = "lider_id")
+    private Long liderId;
+
+    @Column(name = "nickname", length = 50)
+    private String nickname;
+
+    @Column(name = "avatar_url", length = 255)
+    private String avatarUrl;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

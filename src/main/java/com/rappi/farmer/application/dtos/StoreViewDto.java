@@ -19,4 +19,7 @@ public class StoreViewDto {
     private String tendencia;
     /** Resultado de la última gestión registrada hoy. Null si aún no fue gestionada. */
     private String todayManagementResult;
+    /** Segmento de prioridad (solo se usa en la sección Recomendado Hoy). */
+    private String segmento;
+    private Boolean hadHandoff;
 }

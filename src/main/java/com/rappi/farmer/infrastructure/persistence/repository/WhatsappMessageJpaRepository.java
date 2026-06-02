@@ -12,4 +12,12 @@ public interface WhatsappMessageJpaRepository extends JpaRepository<WhatsappMess
     @Query("SELECT COUNT(m) FROM WhatsappMessageEntity m " +
            "WHERE m.status = 'ENVIADO' AND m.sentAt >= :start AND m.sentAt < :end")
     long countSentToday(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM WhatsappMessageEntity m WHERE m.user.id = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM WhatsappMessageEntity m WHERE m.store.id = :storeId")
+    void deleteByStoreId(@Param("storeId") Long storeId);
 }

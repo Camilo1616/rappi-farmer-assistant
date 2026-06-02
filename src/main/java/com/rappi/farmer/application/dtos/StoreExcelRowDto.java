@@ -21,4 +21,5 @@ public class StoreExcelRowDto {
     private String avaStatus;
     private BigDecimal avaL7d;
     private Boolean hadHandoff;
+    private String farmerEmail;
 }

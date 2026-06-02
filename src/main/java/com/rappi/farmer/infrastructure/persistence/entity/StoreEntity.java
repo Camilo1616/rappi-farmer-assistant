@@ -47,6 +47,9 @@ public class StoreEntity {
     @Column(name = "had_handoff")
     private Boolean hadHandoff;
 
+    @Column(name = "aging")
+    private Integer aging;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity user;

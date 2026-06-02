@@ -3,7 +3,7 @@ package com.rappi.farmer.infrastructure.excel;
 import com.rappi.farmer.application.dtos.StoreExcelRowDto;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +25,7 @@ import java.util.Map;
  * detecta esto y multiplica × 100 para que la BD guarde 38.00.
  */
 @Slf4j
-@Service
+@Component
 public class ExcelReaderService {
 
     private static final String COL_STORE_ID       = "COUNTRY STORE ID";
@@ -40,6 +40,7 @@ public class ExcelReaderService {
     private static final String COL_AVA_STATUS     = "AVA STATUS";
     private static final String COL_HANDOFF        = "TUVO_HANDOFF";
     private static final String COL_AVA_L7D        = "AVA_L7D";
+    private static final String COL_FARMER         = "FARMER";
 
     public List<StoreExcelRowDto> read(File file) throws IOException {
         log.info("Leyendo archivo: {}", file.getName());
@@ -75,6 +76,7 @@ public class ExcelReaderService {
                             .avaStatus(getString(row, cols, COL_AVA_STATUS))
                             .avaL7d(getPercentage(row, cols, COL_AVA_L7D))
                             .hadHandoff(parseHandoff(getString(row, cols, COL_HANDOFF)))
+                            .farmerEmail(getString(row, cols, COL_FARMER))
                             .build());
 
                 } catch (Exception e) {
@@ -152,23 +154,6 @@ public class ExcelReaderService {
             log.debug("No se pudo parsear porcentaje '{}' en columna {}", cell.toString(), colName);
             return null;
         }
-    }
-
-    private BigDecimal getDecimal(Row row, Map<String, Integer> cols, String colName) {
-        Integer idx = cols.get(colName);
-        if (idx == null) return null;
-        Cell cell = row.getCell(idx);
-        if (cell == null) return null;
-        try {
-            if (cell.getCellType() == CellType.NUMERIC) {
-                return BigDecimal.valueOf(cell.getNumericCellValue()).setScale(2, RoundingMode.HALF_UP);
-            }
-            String str = cell.toString().trim().replace(",", ".");
-            if (!str.isBlank()) return new BigDecimal(str).setScale(2, RoundingMode.HALF_UP);
-        } catch (Exception e) {
-            log.debug("No se pudo parsear decimal '{}' en columna {}", cell.toString(), colName);
-        }
-        return null;
     }
 
     private LocalDate getDate(Row row, Map<String, Integer> cols, String colName) {

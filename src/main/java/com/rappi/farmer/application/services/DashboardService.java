@@ -6,6 +6,7 @@ import com.rappi.farmer.domain.entities.DailyMetric;
 import com.rappi.farmer.domain.entities.Management;
 import com.rappi.farmer.domain.entities.Store;
 import com.rappi.farmer.domain.repositories.DailyMetricRepository;
+import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.domain.repositories.ManagementRepository;
 import com.rappi.farmer.domain.repositories.StoreRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,16 +37,30 @@ import java.util.stream.Collectors;
 public class DashboardService {
 
     private static final BigDecimal ALIADOS_THRESHOLD = BigDecimal.valueOf(60);
-    private static final int MAX_PER_SECTION = 20;
+    private static final int MAX_PER_SECTION = 30;
 
     private final StoreRepository storeRepository;
     private final DailyMetricRepository dailyMetricRepository;
     private final ManagementRepository managementRepository;
+    private final SessionContext sessionContext;
 
     public DashboardDataDto load() {
         LocalDate today = LocalDate.now();
+        Long userId = sessionContext.getCurrentUserId();
 
-        List<Store> stores = storeRepository.findActive();
+        List<Store> stores;
+        if (userId != null) {
+            boolean isLider = sessionContext.getCurrentUserRole() != null
+                    && com.rappi.farmer.domain.enums.UserRole.LIDER == sessionContext.getCurrentUserRole();
+            if (isLider) {
+                stores = storeRepository.findActive();
+            } else {
+                stores = storeRepository.findActiveByUser(userId);
+                log.info("Dashboard — userId:{} tiendas:{}", userId, stores.size());
+            }
+        } else {
+            stores = storeRepository.findActive();
+        }
 
         Map<Long, DailyMetric> metricsMap = dailyMetricRepository
                 .findByDate(today)
@@ -71,7 +86,7 @@ public class DashboardService {
 
         for (Store store : stores) {
             DailyMetric metric = metricsMap.get(store.getId());
-            int aging = calcAging(store.getOnboardingDate());
+            int aging = store.getAging() != null ? store.getAging() : calcAging(store.getOnboardingDate());
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
 
             // AVA < 10% — se evalúa independientemente de las otras secciones
@@ -92,18 +107,22 @@ public class DashboardService {
             }
         }
 
-        log.info("Dashboard cargado — onboarding:{}, aliados:{}, churn:{}, ava:{}, sanos:{}, avaLow:{}",
+        List<StoreViewDto> recommended = buildRecommended(
+                onboardingCritical, aliados, churnRisk, avaLow, metricsMap);
+
+        log.info("Dashboard cargado — onboarding:{}, aliados:{}, churn:{}, ava:{}, sanos:{}, avaLow:{}, recomendado:{}",
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
-                avaDropping.size(), healthy.size(), avaLow.size());
+                avaDropping.size(), healthy.size(), avaLow.size(), recommended.size());
 
         return new DashboardDataDto(
                 cap(onboardingCritical), cap(aliados),
-                churnRisk,    // todas
-                avaDropping,  // todas
-                healthy,      // todas
-                avaLow,       // todas
+                churnRisk,
+                avaDropping,
+                healthy,
+                avaLow,
+                recommended,
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
-                avaDropping.size(), healthy.size(), avaLow.size()
+                avaDropping.size(), healthy.size(), avaLow.size(), recommended.size()
         );
     }
 
@@ -173,7 +192,9 @@ public class DashboardService {
                 connection,
                 store.getCurrentStatus(),
                 calcTendencia(metric),
-                managementResult
+                managementResult,
+                null,
+                store.getHadHandoff()
         );
     }
 
@@ -192,5 +213,58 @@ public class DashboardService {
         if (diff > 5)  return "Subiendo";
         if (diff < -5) return "Bajando";
         return "Estable";
+    }
+
+    /**
+     * Arma la lista "Recomendado Hoy":
+     *  - Todas las tiendas onboarding 1-8 sin primera orden
+     *  - Todas las tiendas aliados 8-14 con AVA < 60%
+     *  - Hasta 5 churn M1 sin login en Rappi Aliados (rappiAlliesConnected = false/null)
+     *  - Hasta 10 tiendas AVA 1-15%
+     * Cada DTO lleva el campo segmento para mostrarlo en la tabla.
+     */
+    private List<StoreViewDto> buildRecommended(
+            List<StoreViewDto> onboarding,
+            List<StoreViewDto> aliados,
+            List<StoreViewDto> churnRisk,
+            List<StoreViewDto> avaLow,
+            Map<Long, DailyMetric> metricsMap) {
+
+        List<StoreViewDto> result = new ArrayList<>();
+        // Tracked por id para evitar duplicados (una tienda puede estar en avaLow Y onboarding/aliados)
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+
+        for (StoreViewDto s : onboarding) {
+            if (seen.add(s.getId())) result.add(withSegmento(s, "Onboarding 1-8"));
+        }
+        for (StoreViewDto s : aliados) {
+            if (seen.add(s.getId())) result.add(withSegmento(s, "Aliados <60%"));
+        }
+
+        churnRisk.stream().limit(5).forEach(s -> {
+            if (seen.add(s.getId())) {
+                String status = s.getCurrentStatus() != null
+                        ? s.getCurrentStatus().toUpperCase() : "CHURN";
+                String label = status.contains("M1") ? "Churn M1"
+                             : status.contains("M2") ? "Churn M2"
+                             : "Churn";
+                result.add(withSegmento(s, label));
+            }
+        });
+
+        avaLow.stream().limit(15).forEach(s -> {
+            if (seen.add(s.getId())) result.add(withSegmento(s, "AVA 1-15%"));
+        });
+
+        return result;
+    }
+
+    private StoreViewDto withSegmento(StoreViewDto original, String segmento) {
+        return new StoreViewDto(
+                original.getId(), original.getStoreCode(), original.getStoreName(),
+                original.getPhoneNumber(), original.getAging(), original.getOrdersL4W(),
+                original.getConnectionPercentage(), original.getCurrentStatus(),
+                original.getTendencia(), original.getTodayManagementResult(), segmento,
+                original.getHadHandoff());
     }
 }

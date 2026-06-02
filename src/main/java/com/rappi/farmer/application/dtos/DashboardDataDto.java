@@ -15,8 +15,8 @@ public class DashboardDataDto {
     private List<StoreViewDto> avaDropping;
     private List<StoreViewDto> healthy;
 
-    // Conteos reales (pueden ser > 20 aunque la lista esté limitada)
     private List<StoreViewDto> avaLow;
+    private List<StoreViewDto> recommended;
 
     private int onboardingCount;
     private int aliadosCount;
@@ -24,6 +24,7 @@ public class DashboardDataDto {
     private int avaDroppingCount;
     private int healthyCount;
     private int avaLowCount;
+    private int recommendedCount;
 
     /** Todas las tiendas activas combinadas (para la tabla de WhatsApp). */
     public List<StoreViewDto> allStores() {

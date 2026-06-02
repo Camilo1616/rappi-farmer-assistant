@@ -3,7 +3,9 @@ package com.rappi.farmer.infrastructure.persistence.adapter;
 import com.rappi.farmer.domain.entities.Store;
 import com.rappi.farmer.domain.repositories.StoreRepository;
 import com.rappi.farmer.infrastructure.persistence.entity.StoreEntity;
+import com.rappi.farmer.infrastructure.persistence.entity.UserEntity;
 import com.rappi.farmer.infrastructure.persistence.repository.StoreJpaRepository;
+import com.rappi.farmer.infrastructure.persistence.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -16,6 +18,7 @@ import java.util.Optional;
 public class StoreRepositoryAdapter implements StoreRepository {
 
     private final StoreJpaRepository jpaRepository;
+    private final UserJpaRepository userJpaRepository;
 
     @Override
     public Store save(Store store) {
@@ -44,10 +47,92 @@ public class StoreRepositoryAdapter implements StoreRepository {
     }
 
     @Override
+    public List<Store> findActiveByUser(Long userId) {
+        return jpaRepository.findByUser_IdAndActiveTrue(userId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public List<Store> searchByCodeOrName(String query) {
         return jpaRepository
                 .findByStoreCodeContainingIgnoreCaseOrStoreNameContainingIgnoreCase(query, query)
                 .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> searchByCodeOrNameAndUser(String query, Long userId) {
+        return jpaRepository
+                .findByStoreCodeContainingIgnoreCaseOrStoreNameContainingIgnoreCaseAndUser_Id(query, query, userId)
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findByUserId(Long userId) {
+        return jpaRepository.findByUser_Id(userId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        jpaRepository.deleteById(id);
+    }
+
+    @Override
+    public long countActiveByUserId(Long userId) {
+        return jpaRepository.countByUser_IdAndActiveTrue(userId);
+    }
+
+    @Override
+    public List<Store> findByUserIdAndIdIn(Long userId, List<Long> ids) {
+        return jpaRepository.findByUser_IdAndIdIn(userId, ids).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findByIds(List<Long> ids) {
+        return jpaRepository.findAllById(ids).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findChurnByFarmer(Long farmerId) {
+        return jpaRepository.findChurnByFarmer(farmerId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findActiveF7dByFarmer(Long farmerId) {
+        return jpaRepository.findActiveF7dByFarmer(farmerId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findRetencionByFarmer(Long farmerId) {
+        return jpaRepository.findRetencionByFarmer(farmerId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findAva8a14ByFarmer(Long farmerId) {
+        return jpaRepository.findAva8a14ByFarmer(farmerId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findChurnByFarmerIds(List<Long> farmerIds) {
+        return jpaRepository.findChurnByFarmers(farmerIds).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findActiveF7dByFarmerIds(List<Long> farmerIds) {
+        return jpaRepository.findActiveF7dByFarmers(farmerIds).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findRetencionByFarmerIds(List<Long> farmerIds) {
+        return jpaRepository.findRetencionByFarmers(farmerIds).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findAva8a14ByFarmerIds(List<Long> farmerIds) {
+        return jpaRepository.findAva8a14ByFarmers(farmerIds).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findAllActiveByFarmerIds(List<Long> farmerIds) {
+        return jpaRepository.findAllActiveByFarmers(farmerIds).stream().map(this::toDomain).toList();
     }
 
     private StoreEntity toEntity(Store store) {
@@ -62,18 +147,22 @@ public class StoreRepositoryAdapter implements StoreRepository {
         entity.setConnectionPercentage(store.getConnectionPercentage());
         entity.setCurrentStatus(store.getCurrentStatus());
         entity.setHadHandoff(store.getHadHandoff());
+        entity.setAging(store.getAging());
         entity.setUpdatedAt(LocalDateTime.now());
-        if (store.getId() == null) {
-            entity.setCreatedAt(LocalDateTime.now());
+        if (store.getId() == null) entity.setCreatedAt(LocalDateTime.now());
+        if (store.getFarmerId() != null) {
+            userJpaRepository.findById(store.getFarmerId()).ifPresent(entity::setUser);
         }
         return entity;
     }
 
     private Store toDomain(StoreEntity e) {
+        Long farmerId = e.getUser() != null ? e.getUser().getId() : null;
         return new Store(
                 e.getId(), e.getStoreCode(), e.getStoreName(),
                 e.getPhoneNumber(), e.getChannel(), e.getOnboardingDate(),
-                e.getActive(), e.getConnectionPercentage(), e.getCurrentStatus(), e.getHadHandoff()
+                e.getActive(), e.getConnectionPercentage(), e.getCurrentStatus(),
+                e.getHadHandoff(), farmerId, e.getAging()
         );
     }
 }

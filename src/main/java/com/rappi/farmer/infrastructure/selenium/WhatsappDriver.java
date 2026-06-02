@@ -11,8 +11,11 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
@@ -44,17 +47,41 @@ public class WhatsappDriver {
 
     /** Abre Chrome con el perfil guardado. */
     public void abrir() {
+        // Si ya hay driver pero Chrome fue cerrado externamente, limpiarlo primero
+        if (driver != null && !verificarEstadoReal()) {
+            driver = null;
+        }
         if (driver != null) return;
+
+        log.info("Abriendo Chrome con perfil en: {}", SESSION_DIR);
+        limpiarLock();
 
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--user-data-dir=" + SESSION_DIR);
+        options.addArguments("--profile-directory=Default");
         options.addArguments("--no-first-run");
+        options.addArguments("--no-default-browser-check");
+        options.addArguments("--disable-gpu");
         options.addArguments("--disable-blink-features=AutomationControlled");
+        options.addArguments("--remote-allow-origins=*");
         options.setExperimentalOption("excludeSwitches", new String[]{"enable-automation"});
 
         driver = new ChromeDriver(options);
+        log.info("ChromeDriver iniciado, navegando a WhatsApp Web");
         driver.get(WA_URL);
-        log.info("Chrome abierto — sesión en: {}", SESSION_DIR);
+        log.info("URL actual: {}", driver.getCurrentUrl());
+    }
+
+    /** Borra el SingletonLock que Chrome deja si se cierra abruptamente. */
+    private void limpiarLock() {
+        try {
+            Path lock = Path.of(SESSION_DIR, "SingletonLock");
+            if (Files.deleteIfExists(lock)) {
+                log.info("SingletonLock eliminado — sesión anterior no cerró correctamente");
+            }
+        } catch (IOException e) {
+            log.warn("No se pudo eliminar SingletonLock: {}", e.getMessage());
+        }
     }
 
     /**
@@ -147,6 +174,12 @@ public class WhatsappDriver {
             Thread.currentThread().interrupt();
             return "ERROR: interrumpido";
         } catch (Exception e) {
+            // Chrome fue cerrado mientras se enviaba
+            if (esChromeDesconectado(e)) {
+                log.warn("Chrome fue cerrado durante el envío, limpiando driver");
+                cerrar();
+                return "ERROR_CHROME_CERRADO";
+            }
             log.error("Error enviando a {}: {}", numero, e.getMessage());
             return "ERROR: " + e.getMessage();
         }
@@ -167,9 +200,19 @@ public class WhatsappDriver {
             return estaConectado();
         } catch (Exception e) {
             log.info("Chrome fue cerrado externamente, limpiando driver");
-            driver = null;
+            cerrar();
             return false;
         }
+    }
+
+    private boolean esChromeDesconectado(Exception e) {
+        if (e == null || e.getMessage() == null) return false;
+        String msg = e.getMessage().toLowerCase();
+        return msg.contains("no such window")
+                || msg.contains("disconnected")
+                || msg.contains("session deleted")
+                || msg.contains("chrome not reachable")
+                || msg.contains("target window already closed");
     }
 
     public void cerrar() {
@@ -184,18 +227,18 @@ public class WhatsappDriver {
      * Limpia y normaliza el teléfono a formato internacional colombiano (57XXXXXXXXXX).
      * Retorna null si el número no tiene dígitos suficientes.
      */
-    private String limpiarTelefono(String raw) {
+    public static String limpiarTelefono(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String digits = raw.replaceAll("[^0-9]", "");
         if (digits.isEmpty()) return null;
 
-        // Si ya tiene código de país 57 y 12 dígitos total
+        // Normalizar número colombiano de 10 dígitos
+        if (digits.length() == 10 && !digits.startsWith("57")) return "57" + digits;
+        // Ya tiene código de país
         if (digits.startsWith("57") && digits.length() == 12) return digits;
-        // Si es número local de 10 dígitos (Colombia)
-        if (digits.length() == 10) return "57" + digits;
-        // Si tiene 7 u 8 dígitos, probablemente incompleto
-        if (digits.length() < 10) return null;
+        // Cualquier otro número con dígitos suficientes → intentar tal cual
+        if (digits.length() >= 7) return digits;
 
-        return digits;
+        return null;
     }
 }
