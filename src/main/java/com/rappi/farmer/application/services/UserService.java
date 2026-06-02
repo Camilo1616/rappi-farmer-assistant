@@ -73,19 +73,17 @@ public class UserService {
 
     public List<User> findFarmersByLider(Long liderId) {
         User lider = userRepository.findById(liderId).orElse(null);
-        List<User> byId = userRepository.findByLiderId(liderId);
         if (lider == null || lider.getCountryCode() == null || lider.getCountryCode().isBlank()) {
-            return byId;
+            return List.of();
         }
         java.util.Set<Long> seen = new java.util.HashSet<>();
-        List<User> result = new java.util.ArrayList<>(byId);
-        byId.forEach(u -> seen.add(u.getId()));
+        List<User> result = new java.util.ArrayList<>();
         for (String country : lider.getCountryCode().split(",")) {
             String c = country.trim();
             if (!c.isBlank()) {
                 userRepository.findByCountryCodeAndRole(c, UserRole.FARMER_MASS.name()).stream()
-                        .filter(u -> !seen.contains(u.getId()))
-                        .forEach(u -> { result.add(u); seen.add(u.getId()); });
+                        .filter(u -> seen.add(u.getId()))
+                        .forEach(result::add);
             }
         }
         return result;
