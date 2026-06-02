@@ -37,9 +37,6 @@ public class AdminService {
     public List<FarmerSummaryDto> getAllFarmers() {
         Long liderId = sessionContext.getCurrentUserId();
         List<User> farmers = liderId != null ? userService.findFarmersByLider(liderId) : List.of();
-        if (farmers.isEmpty()) {
-            farmers = userService.findFarmers();
-        }
         LocalDateTime start = LocalDate.now().atStartOfDay();
         LocalDateTime end = start.plusDays(1);
         return farmers.stream().map(f -> buildSummary(f, start, end)).collect(Collectors.toList());

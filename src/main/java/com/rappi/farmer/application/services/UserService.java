@@ -120,14 +120,10 @@ public class UserService {
         return toControlDtos(farmers, liders);
     }
 
-    /** Farmers del equipo del líder. Si ninguno tiene lider_id asignado, muestra todos. */
+    /** Farmers del equipo del líder: por liderId asignado + por países del líder. */
     public List<FarmerControlDto> getFarmerControlForLider(Long liderId) {
-        List<User> farmers = userRepository.findByLiderId(liderId);
-        if (farmers.isEmpty()) {
-            // Fallback: mostrar todos los farmers para que el líder pueda asignarlos
-            farmers = userRepository.findByRole(UserRole.FARMER_MASS.name());
-        }
-        List<User> liders = userRepository.findByRole(UserRole.LIDER.name());
+        List<User> farmers = findFarmersByLider(liderId);
+        List<User> liders  = userRepository.findByRole(UserRole.LIDER.name());
         return toControlDtos(farmers, liders);
     }
 

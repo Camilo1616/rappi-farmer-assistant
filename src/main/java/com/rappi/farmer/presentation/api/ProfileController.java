@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -137,6 +138,10 @@ public class ProfileController {
         } else {
             target.setCountryCode(newCountry);
             target.setFarmerCode(userService.generateFarmerCode(newCountry));
+            // Si quien asigna es Líder, lo vincula como líder directo del farmer
+            if (caller.getUserRole() == UserRole.LIDER) {
+                target.setLiderId(caller.getId());
+            }
         }
         userRepository.save(target);
         return ResponseEntity.ok(Map.of("message", "País " + newCountry + " asignado", "countryCode", target.getCountryCode()));
@@ -173,11 +178,12 @@ public class ProfileController {
                     .filter(u -> !u.getId().equals(caller.getId()))
                     .map(this::toDto).toList());
         }
-        // LIDER ve farmers y otros líderes (menos él mismo)
+        // LIDER ve solo los farmers de sus países + otros líderes
+        List<User> farmersDesusPaises = userService.findFarmersByLider(caller.getId());
+        java.util.Set<Long> farmerIds = farmersDesusPaises.stream().map(User::getId).collect(java.util.stream.Collectors.toSet());
         return ResponseEntity.ok(userRepository.findAll().stream()
                 .filter(u -> !u.getId().equals(caller.getId()))
-                .filter(u -> u.getRole().equals(UserRole.FARMER_MASS.name())
-                          || u.getRole().equals(UserRole.LIDER.name()))
+                .filter(u -> u.getRole().equals(UserRole.LIDER.name()) || farmerIds.contains(u.getId()))
                 .map(this::toDto).toList());
     }
 
