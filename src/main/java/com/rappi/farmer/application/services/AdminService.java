@@ -74,7 +74,7 @@ public class AdminService {
 
     private FarmerSummaryDto buildSummary(User f, LocalDateTime start, LocalDateTime end) {
         long gestiones  = f.getId() != null ? managementJpaRepository.countTodayByUserId(f.getId(), start, end) : 0;
-        long exitosas   = f.getId() != null ? managementJpaRepository.countTodayByUserIdAndResult(f.getId(), "EXITOSA", start, end) : 0;
+        long exitosas   = f.getId() != null ? managementJpaRepository.countTodayByUserIdAndResult(f.getId(), "EFECTIVA", start, end) : 0;
         long noContacto = f.getId() != null ? managementJpaRepository.countTodayByUserIdAndResult(f.getId(), "NO_CONTACTO", start, end) : 0;
         long total      = f.getId() != null ? storeRepository.countActiveByUserId(f.getId()) : 0;
 
