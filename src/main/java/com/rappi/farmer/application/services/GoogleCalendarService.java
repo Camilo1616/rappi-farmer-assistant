@@ -175,7 +175,7 @@ public class GoogleCalendarService {
 
         // Validar que el HO fue exitoso: duración > 10 min O asistente externo (no @rappi.com)
         if (!isHandoffExitoso(event)) {
-            log.debug("HO descartado (duración < 10 min y sin asistente externo) — tienda:{}", storeCode);
+            log.debug("HO descartado (duración < 10 min y sin asistente externo) — tienda:{}", brandId);
             return;
         }
 
@@ -193,8 +193,8 @@ public class GoogleCalendarService {
             store.setHadHandoff(true);
             store.setHandoffActivatedAt(eventDate);
             storeRepository.save(store);
-            log.info("HO exitoso registrado — tienda:{} fecha:{} (calendar de {})",
-                    storeCode, eventDate, user.getEmail());
+            log.info("HO exitoso registrado — brandId:{} fecha:{} (calendar de {})",
+                    brandId, eventDate, user.getEmail());
         }
     }
 
