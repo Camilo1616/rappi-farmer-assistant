@@ -119,8 +119,8 @@ public class GoogleCalendarService {
             return;
         }
 
-        // Traer eventos de los últimos 30 días
-        Date desde = Date.from(LocalDate.now().minusDays(30)
+        // Traer eventos de los últimos 20 días
+        Date desde = Date.from(LocalDate.now().minusDays(20)
                 .atStartOfDay(ZoneId.systemDefault()).toInstant());
 
         Events events = calendar.events().list(calendarId)
@@ -156,6 +156,12 @@ public class GoogleCalendarService {
 
         Store store = storeOpt.get();
 
+        // Validar que el HO fue exitoso: duración > 10 min O asistente externo (no @rappi.com)
+        if (!isHandoffExitoso(event)) {
+            log.debug("HO descartado (duración < 10 min y sin asistente externo) — tienda:{}", storeCode);
+            return;
+        }
+
         // Extraer fecha del evento
         LocalDate eventDate;
         if (event.getStart().getDate() != null) {
@@ -170,9 +176,38 @@ public class GoogleCalendarService {
             store.setHadHandoff(true);
             store.setHandoffActivatedAt(eventDate);
             storeRepository.save(store);
-            log.info("HO registrado — tienda:{} fecha:{} (desde calendar de {})",
+            log.info("HO exitoso registrado — tienda:{} fecha:{} (calendar de {})",
                     storeCode, eventDate, user.getEmail());
         }
+    }
+
+    /**
+     * Un HO se considera exitoso si:
+     * 1. La reunión duró más de 10 minutos, O
+     * 2. Asistió al menos un invitado con correo externo (no @rappi.com)
+     */
+    private boolean isHandoffExitoso(Event event) {
+        // Criterio 1: duración > 10 minutos
+        if (event.getStart() != null && event.getEnd() != null
+                && event.getStart().getDateTime() != null && event.getEnd().getDateTime() != null) {
+            long duracionMs = event.getEnd().getDateTime().getValue()
+                    - event.getStart().getDateTime().getValue();
+            if (duracionMs > 10 * 60 * 1000L) return true;
+        }
+
+        // Criterio 2: hay al menos un asistente con email externo a rappi.com
+        if (event.getAttendees() != null) {
+            boolean tieneExterno = event.getAttendees().stream()
+                    .filter(a -> Boolean.TRUE.equals(a.getAccepted()) || a.getResponseStatus() == null
+                            || "accepted".equals(a.getResponseStatus())
+                            || "needsAction".equals(a.getResponseStatus()))
+                    .anyMatch(a -> a.getEmail() != null
+                            && !a.getEmail().toLowerCase().endsWith("@rappi.com")
+                            && !a.getEmail().toLowerCase().endsWith("@resource.calendar.google.com"));
+            if (tieneExterno) return true;
+        }
+
+        return false;
     }
 
     private String findCalendarId(Calendar calendar, String name) throws IOException {
