@@ -181,7 +181,7 @@ public class GoogleAuthController {
     }
 
     /** Alias del callback de Google Calendar — la URL configurada en Google Cloud Console */
-    @org.springframework.web.bind.annotation.GetMapping("/google/calendar/callback")
+    @org.springframework.web.bind.annotation.GetMapping("/calendar/callback")
     public org.springframework.http.ResponseEntity<String> calendarCallback(
             @org.springframework.web.bind.annotation.RequestParam String code,
             @org.springframework.web.bind.annotation.RequestParam String state) {
