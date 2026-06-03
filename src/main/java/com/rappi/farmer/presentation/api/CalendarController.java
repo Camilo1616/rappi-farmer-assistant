@@ -92,13 +92,14 @@ public class CalendarController {
         return ResponseEntity.ok(Map.of("message", "Google Calendar desconectado"));
     }
 
-    /** Forzar sincronización manual */
+    /** Forzar sincronización manual — devuelve detalle de lo que activó */
     @PostMapping("/sync")
     public ResponseEntity<?> sync(@RequestHeader("Authorization") String authHeader) {
         try {
-            calendarService.syncHandoffs();
-            return ResponseEntity.ok(Map.of("message", "Sincronización completada"));
+            var result = calendarService.syncHandoffs();
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("Error en sync manual: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body(Map.of("message", e.getMessage()));
         }
     }

@@ -95,61 +95,60 @@ public class GoogleCalendarService {
 
     @Scheduled(fixedDelay = 60 * 60 * 1000) // cada hora
     @Transactional
-    public void syncHandoffs() {
+    public Map<String, Object> syncHandoffs() {
         List<User> users = userRepository.findByCalendarRefreshTokenIsNotNull();
-        if (users.isEmpty()) return;
+        int totalActivados = 0;
 
-        log.info("Sincronizando HO desde Google Calendar — {} usuarios conectados", users.size());
         for (User user : users) {
             try {
-                syncUserHandoffs(user);
+                totalActivados += syncUserHandoffs(user);
             } catch (Exception e) {
                 log.warn("Error sincronizando HO de {}: {}", user.getEmail(), e.getMessage());
             }
         }
-        // Activar tiendas Self que aún no tienen handoff_activated_at
-        activarTiendasSelf();
+        int selfActivados = activarTiendasSelf();
+        log.info("Sync completo — HO calendar:{} Self:{}", totalActivados, selfActivados);
+        return Map.of("hoActivados", totalActivados, "selfActivados", selfActivados,
+                "usuariosSincronizados", users.size());
     }
 
-    /** Las tiendas Self no necesitan HO — se activan desde onboarding_date al sincronizar */
-    private void activarTiendasSelf() {
-        storeRepository.findAll().stream()
+    private int activarTiendasSelf() {
+        var stores = storeRepository.findAll().stream()
             .filter(s -> Boolean.TRUE.equals(s.getActive()))
             .filter(s -> s.getHandoffActivatedAt() == null)
             .filter(s -> s.getChannel() != null && s.getChannel().toLowerCase().contains("self"))
-            .forEach(s -> {
-                s.setHandoffActivatedAt(
-                    s.getOnboardingDate() != null ? s.getOnboardingDate() : LocalDate.now());
-                storeRepository.save(s);
-                log.info("Self activado automáticamente — tienda:{}", s.getStoreCode());
-            });
+            .toList();
+        stores.forEach(s -> {
+            s.setHandoffActivatedAt(s.getOnboardingDate() != null ? s.getOnboardingDate() : LocalDate.now());
+            storeRepository.save(s);
+        });
+        if (!stores.isEmpty()) log.info("Self activados: {}", stores.size());
+        return stores.size();
     }
 
-    private void syncUserHandoffs(User user) throws GeneralSecurityException, IOException {
+    private int syncUserHandoffs(User user) throws GeneralSecurityException, IOException {
         Calendar calendar = buildCalendarClient(user.getCalendarRefreshToken());
 
-        // Listar todos los calendarios disponibles para diagnóstico
+        // Listar calendarios disponibles
         List<com.google.api.services.calendar.model.CalendarListEntry> cals =
                 calendar.calendarList().list().execute().getItems();
-        log.info("Calendarios de {} — {}", user.getEmail(),
-                cals.stream().map(c -> c.getSummary()).toList());
+        List<String> calNames = cals.stream().map(c -> c.getSummary()).toList();
+        log.info("Calendarios de {}: {}", user.getEmail(), calNames);
 
+        // Buscar "Handoffs" (insensible a mayúsculas/espacios)
         String calendarId = cals.stream()
                 .filter(c -> CALENDAR_NAME.equalsIgnoreCase(c.getSummary().trim()))
                 .map(com.google.api.services.calendar.model.CalendarListEntry::getId)
                 .findFirst().orElse(null);
 
         if (calendarId == null) {
-            log.warn("Usuario {} no tiene calendario '{}' — buscando en todos los calendarios",
-                    user.getEmail(), CALENDAR_NAME);
-            // Fallback: buscar eventos "Comienza a Vender HOY" en el calendario principal
+            log.warn("{} no tiene calendario '{}'. Disponibles: {}", user.getEmail(), CALENDAR_NAME, calNames);
             calendarId = "primary";
         }
 
         Date desde = Date.from(LocalDate.now().minusDays(20)
                 .atStartOfDay(ZoneId.systemDefault()).toInstant());
 
-        // Sin setQ para no perder eventos por diferencias de capitalización o acentos
         Events events = calendar.events().list(calendarId)
                 .setTimeMin(new com.google.api.client.util.DateTime(desde))
                 .setOrderBy("startTime")
@@ -158,49 +157,52 @@ public class GoogleCalendarService {
                 .execute();
 
         List<Event> items = events.getItems();
-        log.info("Eventos encontrados en '{}' para {}: {}", calendarId, user.getEmail(),
-                items == null ? 0 : items.size());
+        log.info("Eventos en '{}' (últimos 20 días) para {}: {}",
+                calendarId, user.getEmail(), items == null ? 0 : items.size());
+        if (items != null) {
+            items.forEach(e -> log.info("  Evento: {}", e.getSummary()));
+        }
 
-        if (items == null || items.isEmpty()) return;
+        if (items == null || items.isEmpty()) return 0;
 
-        int procesados = 0;
+        int activados = 0;
         for (Event event : items) {
-            if (event.getSummary() != null && event.getSummary().contains(TITLE_PREFIX)) {
-                processEvent(event, user);
-                procesados++;
+            String s = event.getSummary();
+            if (s != null && s.contains(TITLE_PREFIX)) {
+                if (processEvent(event, user)) activados++;
             }
         }
-        log.info("Eventos HO procesados para {}: {}", user.getEmail(), procesados);
+        log.info("HO activados para {}: {}", user.getEmail(), activados);
+        return activados;
     }
 
-    private void processEvent(Event event, User user) {
+    private boolean processEvent(Event event, User user) {
         String title = event.getSummary();
-        if (title == null || !title.contains(TITLE_PREFIX)) return;
 
         Matcher matcher = STORE_CODE_PATTERN.matcher(title);
         if (!matcher.find()) {
-            log.warn("No se encontró código en título: {}", title);
-            return;
+            log.warn("Sin código de tienda en: '{}'", title);
+            return false;
         }
 
         String brandId = matcher.group(1);
-        // Buscar por brandId primero; si no encuentra (Excel no reimportado), fallback a storeCode
         Optional<Store> storeOpt = storeRepository.findByBrandId(brandId);
         if (storeOpt.isEmpty()) {
-            log.debug("brandId {} no encontrado, intentando por storeCode", brandId);
             storeOpt = storeRepository.findByStoreCode(brandId);
         }
         if (storeOpt.isEmpty()) {
-            log.warn("Tienda {} no encontrada ni por brandId ni por storeCode — reimportar Excel", brandId);
-            return;
+            log.warn("Tienda brandId/storeCode '{}' no en BD. Título: '{}'", brandId, title);
+            return false;
         }
 
         Store store = storeOpt.get();
 
-        // Validar que el HO fue exitoso: duración > 10 min O asistente externo (no @rappi.com)
-        if (!isHandoffExitoso(event)) {
-            log.debug("HO descartado (duración < 10 min y sin asistente externo) — tienda:{}", brandId);
-            return;
+        // Solo validar HO exitoso para Hunting e Inside — Self ya se activa por otro camino
+        String channel = store.getChannel() != null ? store.getChannel().toLowerCase() : "";
+        boolean esHunting = channel.contains("hunting") || channel.contains("inside");
+        if (esHunting && !isHandoffExitoso(event)) {
+            log.info("HO no exitoso para {} ({}): duración corta y sin externo", brandId, title);
+            return false;
         }
 
         // Extraer fecha del evento
@@ -212,14 +214,15 @@ public class GoogleCalendarService {
                     .toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         }
 
-        // Solo actualizar si no tenía handoff_activated_at o si este evento es más reciente
+        // Siempre actualizar con la fecha más reciente del evento
         if (store.getHandoffActivatedAt() == null || eventDate.isAfter(store.getHandoffActivatedAt())) {
             store.setHadHandoff(true);
             store.setHandoffActivatedAt(eventDate);
             storeRepository.save(store);
-            log.info("HO exitoso registrado — brandId:{} fecha:{} (calendar de {})",
-                    brandId, eventDate, user.getEmail());
+            log.info("HO registrado — brandId:{} canal:{} fecha:{}", brandId, store.getChannel(), eventDate);
+            return true;
         }
+        return false;
     }
 
     /**
