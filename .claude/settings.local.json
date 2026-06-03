@@ -40,7 +40,8 @@
       "Bash(git -C C:/Users/camil/rappi-automation/frontend status --short)",
       "Bash(xargs cat)",
       "Bash(xargs ls)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(grep -v \"test\\\\|//\\\\|\\\\.class\")"
     ]
   }
 }
