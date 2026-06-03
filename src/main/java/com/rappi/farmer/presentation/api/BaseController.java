@@ -284,9 +284,7 @@ public class BaseController {
             Map.of("type","RETENCION","label","Prioridad Retención",
                 "template","Team! Les dejo la base PRIORIDAD RETENCIÓN del día.\n\nLa prioridad está en la columna 2 — empiecen por los 'Prioridad 1'. Hay aliados con AVA MTD desde 6% hacia arriba. Recuerden: para que cuente en retención debe tener AVA del 10%.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}"),
             Map.of("type","AVA_8_14","label","AVA 8-14",
-                "template","Team! Les dejo la base AVA 8-14 del día.\n\nAliados que YA LES CUENTAN PARA AVA. Miren la columna U — filtren por URGENTE!!\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}"),
-            Map.of("type","PRIORIZACION","label","Priorización General",
-                "template","Team! Les dejo las bases de priorización del día.\n\n{mensaje}\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}")
+                "template","Team! Les dejo la base AVA 8-14 del día.\n\nAliados que YA LES CUENTAN PARA AVA. Miren la columna U — filtren por URGENTE!!\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}")
         ));
     }
 
