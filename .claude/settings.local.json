@@ -32,7 +32,15 @@
       "Bash(.\\\\\\\\mvnw.cmd compile *)",
       "Bash(xargs grep -l -i \"farmer\\\\|lider\\\\|gestiones\")",
       "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation'; .\\\\mvnw.cmd spring-boot:run '-Dspring.profiles.active=local'\" -WindowStyle Normal)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "PowerShell(mvn compile *)",
+      "Bash(dir ..)",
+      "Bash(xargs grep -l \"promot\\\\|lider\\\\|Lider\")",
+      "Bash(git -C C:/Users/camil/rappi-automation/frontend status --short)",
+      "Bash(xargs cat)",
+      "Bash(xargs ls)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

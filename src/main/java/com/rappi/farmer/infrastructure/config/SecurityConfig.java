@@ -44,7 +44,8 @@ public class SecurityConfig {
                                 "/api/auth/google",
                                 "/api/auth/google/callback",
                                 "/api/auth/google/configured",
-                                "/api/profile/avatar/**"
+                                "/api/profile/avatar/**",
+                                "/api/calendar/callback"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

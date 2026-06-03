@@ -14,4 +14,5 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
     long countByCountryCode(String countryCode);
     boolean existsByFarmerCode(String farmerCode);
     List<UserEntity> findByCountryCodeAndRole(String countryCode, String role);
+    List<UserEntity> findByCalendarRefreshTokenIsNotNull();
 }

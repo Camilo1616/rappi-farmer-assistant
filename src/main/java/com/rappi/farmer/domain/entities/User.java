@@ -22,6 +22,7 @@ public class User {
     private Long liderId;
     private String nickname;
     private String avatarUrl;
+    private String calendarRefreshToken;
 
     public UserRole getUserRole() {
         try { return UserRole.valueOf(role); } catch (Exception e) { return UserRole.FARMER_MASS; }

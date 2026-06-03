@@ -48,6 +48,9 @@ public class UserEntity {
     @Column(name = "avatar_url", length = 255)
     private String avatarUrl;
 
+    @Column(name = "calendar_refresh_token", length = 512)
+    private String calendarRefreshToken;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

@@ -37,6 +37,7 @@ public class UserRepositoryAdapter implements UserRepository {
         entity.setLiderId(user.getLiderId());
         entity.setNickname(user.getNickname());
         entity.setAvatarUrl(user.getAvatarUrl());
+        entity.setCalendarRefreshToken(user.getCalendarRefreshToken());
         entity.setCreatedAt(createdAt);
 
         return toDomain(jpaRepository.save(entity));
@@ -53,6 +54,9 @@ public class UserRepositoryAdapter implements UserRepository {
     @Override public List<User> findByCountryCodeAndRole(String countryCode, String role) {
         return jpaRepository.findByCountryCodeAndRole(countryCode, role).stream().map(this::toDomain).toList();
     }
+    @Override public List<User> findByCalendarRefreshTokenIsNotNull() {
+        return jpaRepository.findByCalendarRefreshTokenIsNotNull().stream().map(this::toDomain).toList();
+    }
 
     private User toDomain(UserEntity e) {
         return new User(
@@ -60,6 +64,6 @@ public class UserRepositoryAdapter implements UserRepository {
                 e.getRole(), e.getPassword(),
                 e.getFarmerCode(), e.getCountryCode(),
                 e.getAccountStatus(), e.getLiderId(),
-                e.getNickname(), e.getAvatarUrl());
+                e.getNickname(), e.getAvatarUrl(), e.getCalendarRefreshToken());
     }
 }
