@@ -198,9 +198,6 @@ public class GoogleCalendarService {
         // Criterio 2: hay al menos un asistente con email externo a rappi.com
         if (event.getAttendees() != null) {
             boolean tieneExterno = event.getAttendees().stream()
-                    .filter(a -> Boolean.TRUE.equals(a.getAccepted()) || a.getResponseStatus() == null
-                            || "accepted".equals(a.getResponseStatus())
-                            || "needsAction".equals(a.getResponseStatus()))
                     .anyMatch(a -> a.getEmail() != null
                             && !a.getEmail().toLowerCase().endsWith("@rappi.com")
                             && !a.getEmail().toLowerCase().endsWith("@resource.calendar.google.com"));
