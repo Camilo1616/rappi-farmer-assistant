@@ -35,20 +35,40 @@ public class CalendarController {
 
     /** Google redirige aquí con el código de autorización */
     @GetMapping("/callback")
-    public ResponseEntity<?> callback(@RequestParam String code, @RequestParam String state) {
+    public ResponseEntity<String> callback(@RequestParam String code, @RequestParam String state) {
+        String status;
         try {
             Long userId = Long.parseLong(state);
             calendarService.handleCallback(code, userId);
-            // Redirigir al frontend con mensaje de éxito
-            return ResponseEntity.status(302)
-                    .header("Location", "http://localhost:5173/dashboard?calendar=connected")
-                    .build();
+            status = "connected";
         } catch (Exception e) {
             log.error("Error en callback de Google Calendar: {}", e.getMessage());
-            return ResponseEntity.status(302)
-                    .header("Location", "http://localhost:5173/dashboard?calendar=error")
-                    .build();
+            status = "error";
         }
+        // Página HTML que cierra el popup y notifica a la ventana padre
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <body style="font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc">
+                  <div style="text-align:center;padding:32px">
+                    <p style="font-size:32px;margin:0">%s</p>
+                    <p style="font-size:16px;font-weight:600;color:#0f172a;margin:12px 0 4px">%s</p>
+                    <p style="font-size:13px;color:#64748b">Cerrando ventana...</p>
+                  </div>
+                  <script>
+                    window.opener && window.opener.postMessage('%s', '*');
+                    setTimeout(() => window.close(), 1500);
+                  </script>
+                </body>
+                </html>
+                """.formatted(
+                status.equals("connected") ? "✅" : "❌",
+                status.equals("connected") ? "Google Calendar conectado" : "Error al conectar",
+                status
+        );
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/html; charset=UTF-8")
+                .body(html);
     }
 
     /** Estado de conexión del calendar del usuario */
