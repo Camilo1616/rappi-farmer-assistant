@@ -131,7 +131,8 @@ public class StoreImportService {
     }
 
     private Store buildStore(StoreExcelRowDto row, Long farmerId) {
-        LocalDate handoffActivatedAt = Boolean.TRUE.equals(row.getHadHandoff()) ? LocalDate.now() : null;
+        LocalDate handoffActivatedAt = calcularHandoffActivatedAt(
+                row.getChannel(), row.getHadHandoff(), row.getOnboardingDate(), null, null);
         Store s = new Store(null, row.getStoreCode(), row.getStoreName(),
                 row.getPhoneNumber(), row.getChannel(), row.getOnboardingDate(),
                 true, row.getConnectionPercentage(), row.getCurrentStatus(),
@@ -149,13 +150,41 @@ public class StoreImportService {
         if (row.getOnboardingDate() != null) store.setOnboardingDate(row.getOnboardingDate());
         if (farmerId != null) store.setFarmerId(farmerId);
 
-        // Si la tienda acaba de activar handoff (antes NO, ahora SÍ) → registrar la fecha de hoy como día 1
         boolean anteriorSinHandoff = !Boolean.TRUE.equals(store.getHadHandoff());
-        boolean nuevoConHandoff = Boolean.TRUE.equals(row.getHadHandoff());
-        if (anteriorSinHandoff && nuevoConHandoff) {
-            store.setHandoffActivatedAt(LocalDate.now());
-        }
+        boolean nuevoConHandoff    = Boolean.TRUE.equals(row.getHadHandoff());
         store.setHadHandoff(row.getHadHandoff());
+
+        LocalDate nuevaFecha = calcularHandoffActivatedAt(
+                row.getChannel(), row.getHadHandoff(),
+                row.getOnboardingDate() != null ? row.getOnboardingDate() : store.getOnboardingDate(),
+                store.getHandoffActivatedAt(),
+                anteriorSinHandoff && nuevoConHandoff);
+        if (nuevaFecha != null && store.getHandoffActivatedAt() == null) {
+            store.setHandoffActivatedAt(nuevaFecha);
+        }
+    }
+
+    /**
+     * Reglas por canal:
+     *  - Self              → día 1 desde onboarding_date (no necesita HO)
+     *  - Hunting / Inside  → solo si hay HO confirmado (hadHandoff=true, flip NO→SÍ)
+     */
+    private LocalDate calcularHandoffActivatedAt(String channel, Boolean hadHandoff,
+            LocalDate onboardingDate, LocalDate existing, Boolean flipHandoff) {
+        if (existing != null) return null; // ya tiene fecha, no sobreescribir
+        String ch = channel != null ? channel.toLowerCase().trim() : "";
+        if (ch.contains("self")) {
+            // Self: empieza el día de onboarding
+            return onboardingDate != null ? onboardingDate : LocalDate.now();
+        }
+        // Hunting / Inside Sales: solo si HO está confirmado
+        if (Boolean.TRUE.equals(hadHandoff)) {
+            // Flip detectado en esta carga → hoy es día 1
+            if (Boolean.TRUE.equals(flipHandoff)) return LocalDate.now();
+            // Ya tenía HO desde antes → usar onboarding como aproximación
+            return onboardingDate != null ? onboardingDate : LocalDate.now();
+        }
+        return null; // Hunting/Inside sin HO → no activa el ciclo aún
     }
 
     @Transactional

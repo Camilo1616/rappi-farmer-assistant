@@ -107,6 +107,22 @@ public class GoogleCalendarService {
                 log.warn("Error sincronizando HO de {}: {}", user.getEmail(), e.getMessage());
             }
         }
+        // Activar tiendas Self que aún no tienen handoff_activated_at
+        activarTiendasSelf();
+    }
+
+    /** Las tiendas Self no necesitan HO — se activan desde onboarding_date al sincronizar */
+    private void activarTiendasSelf() {
+        storeRepository.findAll().stream()
+            .filter(s -> Boolean.TRUE.equals(s.getActive()))
+            .filter(s -> s.getHandoffActivatedAt() == null)
+            .filter(s -> s.getChannel() != null && s.getChannel().toLowerCase().contains("self"))
+            .forEach(s -> {
+                s.setHandoffActivatedAt(
+                    s.getOnboardingDate() != null ? s.getOnboardingDate() : LocalDate.now());
+                storeRepository.save(s);
+                log.info("Self activado automáticamente — tienda:{}", s.getStoreCode());
+            });
     }
 
     private void syncUserHandoffs(User user) throws GeneralSecurityException, IOException {
