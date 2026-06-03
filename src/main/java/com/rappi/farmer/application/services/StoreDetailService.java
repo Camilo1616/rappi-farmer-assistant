@@ -125,7 +125,9 @@ public class StoreDetailService {
     }
 
     private StoreViewDto toViewDto(Store store) {
-        int aging = store.getAging() != null ? store.getAging()
+        int aging = store.getHandoffActivatedAt() != null
+                ? (int) ChronoUnit.DAYS.between(store.getHandoffActivatedAt(), LocalDate.now())
+                : store.getAging() != null ? store.getAging()
                 : store.getOnboardingDate() != null
                         ? (int) ChronoUnit.DAYS.between(store.getOnboardingDate(), LocalDate.now())
                         : 0;

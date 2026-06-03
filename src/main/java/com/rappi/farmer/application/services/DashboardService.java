@@ -86,7 +86,7 @@ public class DashboardService {
 
         for (Store store : stores) {
             DailyMetric metric = metricsMap.get(store.getId());
-            int aging = store.getAging() != null ? store.getAging() : calcAging(store.getOnboardingDate());
+            int aging = calcAgingEfectivo(store);
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
 
             // AVA < 10% — se evalúa independientemente de las otras secciones
@@ -124,6 +124,20 @@ public class DashboardService {
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
                 avaDropping.size(), healthy.size(), avaLow.size(), recommended.size()
         );
+    }
+
+    /**
+     * Fuente de verdad para el aging:
+     *  1. handoff_activated_at — fecha en que el HO fue confirmado (Hunting/Inside) o el onboarding empezó (Self)
+     *  2. aging del Excel — valor estático de la última carga
+     *  3. onboarding_date — cálculo desde la fecha de inicio
+     */
+    private int calcAgingEfectivo(Store store) {
+        if (store.getHandoffActivatedAt() != null) {
+            return (int) ChronoUnit.DAYS.between(store.getHandoffActivatedAt(), LocalDate.now());
+        }
+        if (store.getAging() != null) return store.getAging();
+        return calcAging(store.getOnboardingDate());
     }
 
     private int calcAging(LocalDate onboardingDate) {

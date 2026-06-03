@@ -98,8 +98,10 @@ public class AdminService {
     }
 
     private boolean isOnboarding(Store s) {
-        if (s.getOnboardingDate() == null) return false;
-        long aging = java.time.temporal.ChronoUnit.DAYS.between(s.getOnboardingDate(), LocalDate.now());
+        java.time.LocalDate ref = s.getHandoffActivatedAt() != null
+                ? s.getHandoffActivatedAt() : s.getOnboardingDate();
+        if (ref == null) return false;
+        long aging = java.time.temporal.ChronoUnit.DAYS.between(ref, LocalDate.now());
         return aging >= 1 && aging <= 8;
     }
 
