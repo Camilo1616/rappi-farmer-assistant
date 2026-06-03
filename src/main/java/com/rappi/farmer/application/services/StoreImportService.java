@@ -131,10 +131,11 @@ public class StoreImportService {
     }
 
     private Store buildStore(StoreExcelRowDto row, Long farmerId) {
+        LocalDate handoffActivatedAt = Boolean.TRUE.equals(row.getHadHandoff()) ? LocalDate.now() : null;
         Store s = new Store(null, row.getStoreCode(), row.getStoreName(),
                 row.getPhoneNumber(), row.getChannel(), row.getOnboardingDate(),
                 true, row.getConnectionPercentage(), row.getCurrentStatus(),
-                row.getHadHandoff(), farmerId, row.getAging());
+                row.getHadHandoff(), handoffActivatedAt, farmerId, row.getAging());
         return s;
     }
 
@@ -144,10 +145,17 @@ public class StoreImportService {
         store.setChannel(row.getChannel());
         store.setConnectionPercentage(row.getConnectionPercentage());
         store.setCurrentStatus(row.getCurrentStatus());
-        store.setHadHandoff(row.getHadHandoff());
         store.setAging(row.getAging());
         if (row.getOnboardingDate() != null) store.setOnboardingDate(row.getOnboardingDate());
         if (farmerId != null) store.setFarmerId(farmerId);
+
+        // Si la tienda acaba de activar handoff (antes NO, ahora SÍ) → registrar la fecha de hoy como día 1
+        boolean anteriorSinHandoff = !Boolean.TRUE.equals(store.getHadHandoff());
+        boolean nuevoConHandoff = Boolean.TRUE.equals(row.getHadHandoff());
+        if (anteriorSinHandoff && nuevoConHandoff) {
+            store.setHandoffActivatedAt(LocalDate.now());
+        }
+        store.setHadHandoff(row.getHadHandoff());
     }
 
     @Transactional

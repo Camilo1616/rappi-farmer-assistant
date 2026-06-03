@@ -21,6 +21,7 @@ public class Store {
     private BigDecimal connectionPercentage;
     private String currentStatus;
     private Boolean hadHandoff;
+    private LocalDate handoffActivatedAt;
     private Long farmerId;
     private Integer aging;
 }

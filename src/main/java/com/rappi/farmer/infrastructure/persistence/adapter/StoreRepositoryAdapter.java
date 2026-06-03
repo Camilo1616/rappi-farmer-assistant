@@ -147,6 +147,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
         entity.setConnectionPercentage(store.getConnectionPercentage());
         entity.setCurrentStatus(store.getCurrentStatus());
         entity.setHadHandoff(store.getHadHandoff());
+        entity.setHandoffActivatedAt(store.getHandoffActivatedAt());
         entity.setAging(store.getAging());
         entity.setUpdatedAt(LocalDateTime.now());
         if (store.getId() == null) entity.setCreatedAt(LocalDateTime.now());
@@ -162,7 +163,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
                 e.getId(), e.getStoreCode(), e.getStoreName(),
                 e.getPhoneNumber(), e.getChannel(), e.getOnboardingDate(),
                 e.getActive(), e.getConnectionPercentage(), e.getCurrentStatus(),
-                e.getHadHandoff(), farmerId, e.getAging()
+                e.getHadHandoff(), e.getHandoffActivatedAt(), farmerId, e.getAging()
         );
     }
 }

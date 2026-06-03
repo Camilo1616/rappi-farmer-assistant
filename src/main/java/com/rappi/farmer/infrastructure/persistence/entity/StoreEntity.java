@@ -47,6 +47,9 @@ public class StoreEntity {
     @Column(name = "had_handoff")
     private Boolean hadHandoff;
 
+    @Column(name = "handoff_activated_at")
+    private LocalDate handoffActivatedAt;
+
     @Column(name = "aging")
     private Integer aging;
 
