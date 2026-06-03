@@ -45,6 +45,7 @@ public class GoogleAuthController {
     private final UserRepository userRepository;
     private final UserService userService;
     private final JwtService jwtService;
+    private final CalendarController calendarController;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** Redirige al usuario a Google para autenticarse. */
@@ -177,5 +178,13 @@ public class GoogleAuthController {
 
     private String enc(String v) throws Exception {
         return URLEncoder.encode(v, StandardCharsets.UTF_8);
+    }
+
+    /** Alias del callback de Google Calendar — la URL configurada en Google Cloud Console */
+    @org.springframework.web.bind.annotation.GetMapping("/google/calendar/callback")
+    public org.springframework.http.ResponseEntity<String> calendarCallback(
+            @org.springframework.web.bind.annotation.RequestParam String code,
+            @org.springframework.web.bind.annotation.RequestParam String state) {
+        return calendarController.callback(code, state);
     }
 }

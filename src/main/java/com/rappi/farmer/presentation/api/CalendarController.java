@@ -33,7 +33,7 @@ public class CalendarController {
         }
     }
 
-    /** Google redirige aquí con el código de autorización */
+    /** Google redirige aquí con el código de autorización (ambas rutas por compatibilidad) */
     @GetMapping("/callback")
     public ResponseEntity<String> callback(@RequestParam String code, @RequestParam String state) {
         String status;
