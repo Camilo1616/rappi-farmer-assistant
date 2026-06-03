@@ -65,7 +65,7 @@ class StoreImportServiceTest {
                 .build();
 
         Store existing = new Store(1L, "CO-001", "Nombre Viejo", "3000000000",
-                "DIGITAL", null, true, null, null, null, null, null);
+                "DIGITAL", null, true, null, null, null, null, null, null);
 
         when(excelReaderService.read(file)).thenReturn(List.of(row));
         when(storeRepository.findByStoreCode("CO-001")).thenReturn(Optional.of(existing));
