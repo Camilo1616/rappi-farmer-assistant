@@ -26,12 +26,15 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         "AND (LOWER(s.currentStatus) LIKE '%m1%' OR LOWER(s.currentStatus) LIKE '%m2%' OR LOWER(s.currentStatus) LIKE '%churn%')")
     List<StoreEntity> findChurnByFarmer(@org.springframework.data.repository.query.Param("farmerId") Long farmerId);
 
-    /** ACTIVE_F7D: días desde que TUVO_HANDOFF pasó a SÍ (handoff_activated_at) */
+    /** ACTIVE_F7D: HO=SI + días 1-8 desde handoff_activated_at; fallback a aging u onboarding_date */
     @org.springframework.data.jpa.repository.Query(value =
-        "SELECT * FROM stores s WHERE s.user_id = :farmerId AND s.active = true " +
-        "AND s.handoff_activated_at IS NOT NULL " +
-        "AND DATEDIFF(CURRENT_DATE(), s.handoff_activated_at) BETWEEN 1 AND 8",
-        nativeQuery = true)
+        "SELECT * FROM stores s WHERE s.user_id = :farmerId AND s.active = true AND s.had_handoff = true " +
+        "AND (" +
+        "  (s.handoff_activated_at IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.handoff_activated_at) BETWEEN 1 AND 8) " +
+        "  OR (s.handoff_activated_at IS NULL AND s.aging IS NOT NULL AND s.aging BETWEEN 1 AND 8) " +
+        "  OR (s.handoff_activated_at IS NULL AND s.aging IS NULL AND s.onboarding_date IS NOT NULL " +
+        "      AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 1 AND 8)" +
+        ")", nativeQuery = true)
     List<StoreEntity> findActiveF7dByFarmer(@org.springframework.data.repository.query.Param("farmerId") Long farmerId);
 
     /** RETENCION: HO=true + AVA entre 1% y 15% */
@@ -62,10 +65,13 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
     List<StoreEntity> findChurnByFarmers(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
 
     @org.springframework.data.jpa.repository.Query(value =
-        "SELECT * FROM stores s WHERE s.user_id IN :farmerIds AND s.active = true " +
-        "AND s.handoff_activated_at IS NOT NULL " +
-        "AND DATEDIFF(CURRENT_DATE(), s.handoff_activated_at) BETWEEN 1 AND 8",
-        nativeQuery = true)
+        "SELECT * FROM stores s WHERE s.user_id IN :farmerIds AND s.active = true AND s.had_handoff = true " +
+        "AND (" +
+        "  (s.handoff_activated_at IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.handoff_activated_at) BETWEEN 1 AND 8) " +
+        "  OR (s.handoff_activated_at IS NULL AND s.aging IS NOT NULL AND s.aging BETWEEN 1 AND 8) " +
+        "  OR (s.handoff_activated_at IS NULL AND s.aging IS NULL AND s.onboarding_date IS NOT NULL " +
+        "      AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 1 AND 8)" +
+        ")", nativeQuery = true)
     List<StoreEntity> findActiveF7dByFarmers(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
 
     @org.springframework.data.jpa.repository.Query(
@@ -96,10 +102,13 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
     List<StoreEntity> findChurnGlobal();
 
     @org.springframework.data.jpa.repository.Query(value =
-        "SELECT * FROM stores s WHERE s.active = true " +
-        "AND s.handoff_activated_at IS NOT NULL " +
-        "AND DATEDIFF(CURRENT_DATE(), s.handoff_activated_at) BETWEEN 1 AND 8",
-        nativeQuery = true)
+        "SELECT * FROM stores s WHERE s.active = true AND s.had_handoff = true " +
+        "AND (" +
+        "  (s.handoff_activated_at IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.handoff_activated_at) BETWEEN 1 AND 8) " +
+        "  OR (s.handoff_activated_at IS NULL AND s.aging IS NOT NULL AND s.aging BETWEEN 1 AND 8) " +
+        "  OR (s.handoff_activated_at IS NULL AND s.aging IS NULL AND s.onboarding_date IS NOT NULL " +
+        "      AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 1 AND 8)" +
+        ")", nativeQuery = true)
     List<StoreEntity> findActiveF7dGlobal();
 
     @org.springframework.data.jpa.repository.Query(
