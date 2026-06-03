@@ -163,10 +163,11 @@ public class GoogleCalendarService {
             return;
         }
 
-        String storeCode = matcher.group(1);
-        Optional<Store> storeOpt = storeRepository.findByStoreCode(storeCode);
+        String brandId = matcher.group(1);
+        // El código en el título del evento es COUNTRY BRAND ID, no COUNTRY STORE ID
+        Optional<Store> storeOpt = storeRepository.findByBrandId(brandId);
         if (storeOpt.isEmpty()) {
-            log.debug("Tienda {} del calendario no encontrada en BD", storeCode);
+            log.debug("Tienda con brandId {} no encontrada en BD", brandId);
             return;
         }
 

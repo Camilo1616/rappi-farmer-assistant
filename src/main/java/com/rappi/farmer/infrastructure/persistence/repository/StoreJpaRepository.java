@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
     Optional<StoreEntity> findByStoreCode(String storeCode);
+    Optional<StoreEntity> findByBrandId(String brandId);
     List<StoreEntity> findByStoreCodeContainingIgnoreCaseOrStoreNameContainingIgnoreCase(String code, String name);
     List<StoreEntity> findByActiveTrue();
     List<StoreEntity> findByUser_IdAndActiveTrue(Long userId);

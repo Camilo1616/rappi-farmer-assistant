@@ -64,7 +64,7 @@ class StoreImportServiceTest {
                 .channel("DIGITAL")
                 .build();
 
-        Store existing = new Store(1L, "CO-001", "Nombre Viejo", "3000000000",
+        Store existing = new Store(1L, "CO-001", null, "Nombre Viejo", "3000000000",
                 "DIGITAL", null, true, null, null, null, null, null, null);
 
         when(excelReaderService.read(file)).thenReturn(List.of(row));

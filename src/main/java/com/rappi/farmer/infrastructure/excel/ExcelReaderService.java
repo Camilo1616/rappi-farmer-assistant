@@ -29,6 +29,7 @@ import java.util.Map;
 public class ExcelReaderService {
 
     private static final String COL_STORE_ID       = "COUNTRY STORE ID";
+    private static final String COL_BRAND_ID       = "COUNTRY BRAND ID";
     private static final String COL_STORE_NAME     = "STORE NAME";
     private static final String COL_PHONE          = "TELEFONO_PRINCIPAL";
     private static final String COL_CHANNEL        = "CANAL";
@@ -65,6 +66,7 @@ public class ExcelReaderService {
 
                     result.add(StoreExcelRowDto.builder()
                             .storeCode(storeCode)
+                            .brandId(getString(row, cols, COL_BRAND_ID))
                             .storeName(getString(row, cols, COL_STORE_NAME))
                             .phoneNumber(getString(row, cols, COL_PHONE))
                             .channel(getString(row, cols, COL_CHANNEL))

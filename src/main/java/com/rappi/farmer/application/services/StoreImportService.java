@@ -133,7 +133,7 @@ public class StoreImportService {
     private Store buildStore(StoreExcelRowDto row, Long farmerId) {
         LocalDate handoffActivatedAt = calcularHandoffActivatedAt(
                 row.getChannel(), row.getHadHandoff(), row.getOnboardingDate(), null, null);
-        Store s = new Store(null, row.getStoreCode(), row.getStoreName(),
+        Store s = new Store(null, row.getStoreCode(), row.getBrandId(), row.getStoreName(),
                 row.getPhoneNumber(), row.getChannel(), row.getOnboardingDate(),
                 true, row.getConnectionPercentage(), row.getCurrentStatus(),
                 row.getHadHandoff(), handoffActivatedAt, farmerId, row.getAging());
@@ -142,6 +142,7 @@ public class StoreImportService {
 
     private void updateStore(Store store, StoreExcelRowDto row, Long farmerId) {
         store.setStoreName(row.getStoreName());
+        if (row.getBrandId() != null) store.setBrandId(row.getBrandId());
         store.setPhoneNumber(row.getPhoneNumber());
         store.setChannel(row.getChannel());
         store.setConnectionPercentage(row.getConnectionPercentage());

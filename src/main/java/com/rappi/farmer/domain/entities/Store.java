@@ -13,6 +13,7 @@ import java.time.LocalDate;
 public class Store {
     private Long id;
     private String storeCode;
+    private String brandId;
     private String storeName;
     private String phoneNumber;
     private String channel;

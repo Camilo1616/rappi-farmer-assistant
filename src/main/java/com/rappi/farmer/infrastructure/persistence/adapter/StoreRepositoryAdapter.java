@@ -32,6 +32,11 @@ public class StoreRepositoryAdapter implements StoreRepository {
     }
 
     @Override
+    public Optional<Store> findByBrandId(String brandId) {
+        return jpaRepository.findByBrandId(brandId).map(this::toDomain);
+    }
+
+    @Override
     public Optional<Store> findById(Long id) {
         return jpaRepository.findById(id).map(this::toDomain);
     }
@@ -139,6 +144,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
         StoreEntity entity = new StoreEntity();
         entity.setId(store.getId());
         entity.setStoreCode(store.getStoreCode());
+        entity.setBrandId(store.getBrandId());
         entity.setStoreName(store.getStoreName());
         entity.setPhoneNumber(store.getPhoneNumber());
         entity.setChannel(store.getChannel());
@@ -160,7 +166,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
     private Store toDomain(StoreEntity e) {
         Long farmerId = e.getUser() != null ? e.getUser().getId() : null;
         return new Store(
-                e.getId(), e.getStoreCode(), e.getStoreName(),
+                e.getId(), e.getStoreCode(), e.getBrandId(), e.getStoreName(),
                 e.getPhoneNumber(), e.getChannel(), e.getOnboardingDate(),
                 e.getActive(), e.getConnectionPercentage(), e.getCurrentStatus(),
                 e.getHadHandoff(), e.getHandoffActivatedAt(), farmerId, e.getAging()

@@ -10,6 +10,7 @@ import java.time.LocalDate;
 @Builder
 public class StoreExcelRowDto {
     private String storeCode;
+    private String brandId;
     private String storeName;
     private String phoneNumber;
     private String channel;

@@ -23,6 +23,9 @@ public class StoreEntity {
     @Column(name = "store_code", unique = true, nullable = false, length = 50)
     private String storeCode;
 
+    @Column(name = "brand_id", length = 50)
+    private String brandId;
+
     @Column(name = "store_name", nullable = false, length = 150)
     private String storeName;
 
