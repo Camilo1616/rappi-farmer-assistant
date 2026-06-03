@@ -128,29 +128,49 @@ public class GoogleCalendarService {
     private void syncUserHandoffs(User user) throws GeneralSecurityException, IOException {
         Calendar calendar = buildCalendarClient(user.getCalendarRefreshToken());
 
-        // Buscar el calendario "Handoffs"
-        String calendarId = findCalendarId(calendar, CALENDAR_NAME);
+        // Listar todos los calendarios disponibles para diagnóstico
+        List<com.google.api.services.calendar.model.CalendarListEntry> cals =
+                calendar.calendarList().list().execute().getItems();
+        log.info("Calendarios de {} — {}", user.getEmail(),
+                cals.stream().map(c -> c.getSummary()).toList());
+
+        String calendarId = cals.stream()
+                .filter(c -> CALENDAR_NAME.equalsIgnoreCase(c.getSummary().trim()))
+                .map(com.google.api.services.calendar.model.CalendarListEntry::getId)
+                .findFirst().orElse(null);
+
         if (calendarId == null) {
-            log.debug("Usuario {} no tiene calendario '{}'", user.getEmail(), CALENDAR_NAME);
-            return;
+            log.warn("Usuario {} no tiene calendario '{}' — buscando en todos los calendarios",
+                    user.getEmail(), CALENDAR_NAME);
+            // Fallback: buscar eventos "Comienza a Vender HOY" en el calendario principal
+            calendarId = "primary";
         }
 
-        // Traer eventos de los últimos 20 días
         Date desde = Date.from(LocalDate.now().minusDays(20)
                 .atStartOfDay(ZoneId.systemDefault()).toInstant());
 
+        // Sin setQ para no perder eventos por diferencias de capitalización o acentos
         Events events = calendar.events().list(calendarId)
                 .setTimeMin(new com.google.api.client.util.DateTime(desde))
                 .setOrderBy("startTime")
                 .setSingleEvents(true)
-                .setQ(TITLE_PREFIX)
+                .setMaxResults(500)
                 .execute();
 
-        if (events.getItems() == null) return;
+        List<Event> items = events.getItems();
+        log.info("Eventos encontrados en '{}' para {}: {}", calendarId, user.getEmail(),
+                items == null ? 0 : items.size());
 
-        for (Event event : events.getItems()) {
-            processEvent(event, user);
+        if (items == null || items.isEmpty()) return;
+
+        int procesados = 0;
+        for (Event event : items) {
+            if (event.getSummary() != null && event.getSummary().contains(TITLE_PREFIX)) {
+                processEvent(event, user);
+                procesados++;
+            }
         }
+        log.info("Eventos HO procesados para {}: {}", user.getEmail(), procesados);
     }
 
     private void processEvent(Event event, User user) {
@@ -159,15 +179,19 @@ public class GoogleCalendarService {
 
         Matcher matcher = STORE_CODE_PATTERN.matcher(title);
         if (!matcher.find()) {
-            log.debug("No se encontró código de tienda en: {}", title);
+            log.warn("No se encontró código en título: {}", title);
             return;
         }
 
         String brandId = matcher.group(1);
-        // El código en el título del evento es COUNTRY BRAND ID, no COUNTRY STORE ID
+        // Buscar por brandId primero; si no encuentra (Excel no reimportado), fallback a storeCode
         Optional<Store> storeOpt = storeRepository.findByBrandId(brandId);
         if (storeOpt.isEmpty()) {
-            log.debug("Tienda con brandId {} no encontrada en BD", brandId);
+            log.debug("brandId {} no encontrado, intentando por storeCode", brandId);
+            storeOpt = storeRepository.findByStoreCode(brandId);
+        }
+        if (storeOpt.isEmpty()) {
+            log.warn("Tienda {} no encontrada ni por brandId ni por storeCode — reimportar Excel", brandId);
             return;
         }
 
@@ -222,14 +246,6 @@ public class GoogleCalendarService {
         }
 
         return false;
-    }
-
-    private String findCalendarId(Calendar calendar, String name) throws IOException {
-        return calendar.calendarList().list().execute().getItems().stream()
-                .filter(c -> name.equalsIgnoreCase(c.getSummary()))
-                .map(com.google.api.services.calendar.model.CalendarListEntry::getId)
-                .findFirst()
-                .orElse(null);
     }
 
     // ── Builders ─────────────────────────────────────────────────────────────
