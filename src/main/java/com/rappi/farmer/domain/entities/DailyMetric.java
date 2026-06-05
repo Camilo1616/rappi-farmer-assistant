@@ -20,4 +20,5 @@ public class DailyMetric {
     private Integer ordersCount;
     private BigDecimal avaL7d;
     private String avaStatus;
+    private BigDecimal avaMtd;
 }

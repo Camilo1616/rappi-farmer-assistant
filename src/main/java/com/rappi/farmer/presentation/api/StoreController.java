@@ -69,12 +69,18 @@ public class StoreController {
     @GetMapping("/by-base-type")
     public ResponseEntity<List<StoreViewDto>> getStoresByBaseType(
             @RequestParam String type,
-            @RequestParam List<Long> farmerIds) {
+            @RequestParam List<Long> farmerIds,
+            @RequestParam(required = false, defaultValue = "7") int activeDays,
+            @RequestParam(required = false, defaultValue = "W1") String churnFilter) {
         if (farmerIds == null || farmerIds.isEmpty()) {
             return ResponseEntity.ok(List.of());
         }
         List<StoreViewDto> stores = switch (type) {
-            case "CHURN"      -> storeDetailService.toViewDtos(storeRepository.findChurnByFarmerIds(farmerIds));
+            case "ACTIVE"     -> storeDetailService.toViewDtos(storeRepository.findActiveByFarmerIdsAndDays(farmerIds, activeDays == 7 ? 0 : 8, activeDays));
+            case "CHURN"      -> storeDetailService.toViewDtos(switch (churnFilter) {
+                case "M1" -> storeRepository.findChurnM1ByFarmerIds(farmerIds);
+                default   -> storeRepository.findChurnByFarmerIds(farmerIds);
+            });
             case "ACTIVE_F7D" -> storeDetailService.toViewDtos(storeRepository.findActiveF7dByFarmerIds(farmerIds));
             case "RETENCION"  -> storeDetailService.toViewDtos(storeRepository.findRetencionByFarmerIds(farmerIds));
             case "AVA_8_14"   -> storeDetailService.toViewDtos(storeRepository.findAva8a14ByFarmerIds(farmerIds));

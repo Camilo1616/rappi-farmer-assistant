@@ -61,6 +61,7 @@ public class DailyMetricRepositoryAdapter implements DailyMetricRepository {
         entity.setOrdersCount(metric.getOrdersCount());
         entity.setAvaL7d(metric.getAvaL7d());
         entity.setAvaStatus(metric.getAvaStatus());
+        entity.setAvaMtd(metric.getAvaMtd());
         return entity;
     }
 
@@ -74,7 +75,8 @@ public class DailyMetricRepositoryAdapter implements DailyMetricRepository {
                 e.getRappiAlliesConnected(),
                 e.getOrdersCount(),
                 e.getAvaL7d(),
-                e.getAvaStatus()
+                e.getAvaStatus(),
+                e.getAvaMtd()
         );
     }
 }

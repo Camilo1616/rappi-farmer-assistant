@@ -28,12 +28,12 @@ public class StoreRepositoryAdapter implements StoreRepository {
 
     @Override
     public Optional<Store> findByStoreCode(String storeCode) {
-        return jpaRepository.findByStoreCode(storeCode).map(this::toDomain);
+        return jpaRepository.findFirstByStoreCode(storeCode).map(this::toDomain);
     }
 
     @Override
     public Optional<Store> findByBrandId(String brandId) {
-        return jpaRepository.findByBrandId(brandId).map(this::toDomain);
+        return jpaRepository.findFirstByBrandId(brandId).map(this::toDomain);
     }
 
     @Override
@@ -140,6 +140,21 @@ public class StoreRepositoryAdapter implements StoreRepository {
         return jpaRepository.findAllActiveByFarmers(farmerIds).stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<Store> findActiveSelfWithoutHandoff() {
+        return jpaRepository.findActiveSelfWithoutHandoff().stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findActiveByFarmerIdsAndDays(List<Long> farmerIds, int minDays, int maxDays) {
+        return jpaRepository.findActiveByFarmerIdsAndDays(farmerIds, minDays, maxDays).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Store> findChurnM1ByFarmerIds(List<Long> farmerIds) {
+        return jpaRepository.findChurnM1ByFarmerIds(farmerIds).stream().map(this::toDomain).toList();
+    }
+
     private StoreEntity toEntity(Store store) {
         StoreEntity entity = new StoreEntity();
         entity.setId(store.getId());
@@ -155,6 +170,10 @@ public class StoreRepositoryAdapter implements StoreRepository {
         entity.setHadHandoff(store.getHadHandoff());
         entity.setHandoffActivatedAt(store.getHandoffActivatedAt());
         entity.setAging(store.getAging());
+        entity.setAgingStage(store.getAgingStage());
+        entity.setLastLoginDate(store.getLastLoginDate());
+        entity.setGestionar(store.getGestionar());
+        entity.setUploadDate(store.getUploadDate());
         entity.setUpdatedAt(LocalDateTime.now());
         if (store.getId() == null) entity.setCreatedAt(LocalDateTime.now());
         if (store.getFarmerId() != null) {
@@ -165,11 +184,15 @@ public class StoreRepositoryAdapter implements StoreRepository {
 
     private Store toDomain(StoreEntity e) {
         Long farmerId = e.getUser() != null ? e.getUser().getId() : null;
-        return new Store(
+        String farmerEmail = e.getUser() != null ? e.getUser().getEmail() : null;
+        Store s = new Store(
                 e.getId(), e.getStoreCode(), e.getBrandId(), e.getStoreName(),
                 e.getPhoneNumber(), e.getChannel(), e.getOnboardingDate(),
                 e.getActive(), e.getConnectionPercentage(), e.getCurrentStatus(),
-                e.getHadHandoff(), e.getHandoffActivatedAt(), farmerId, e.getAging()
+                e.getHadHandoff(), e.getHandoffActivatedAt(), farmerId, e.getAging(),
+                e.getAgingStage(), e.getLastLoginDate(),
+                e.getGestionar(), e.getUploadDate(), farmerEmail
         );
+        return s;
     }
 }

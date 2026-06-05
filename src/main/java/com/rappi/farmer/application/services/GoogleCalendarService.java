@@ -108,17 +108,13 @@ public class GoogleCalendarService {
             }
         }
         int selfActivados = activarTiendasSelf();
-        log.info("Sync completo — HO calendar:{} Self:{}", totalActivados, selfActivados);
+        log.info("Sync completo — HO calendar:{} Self:{} usuarios:{}", totalActivados, selfActivados, users.size());
         return Map.of("hoActivados", totalActivados, "selfActivados", selfActivados,
                 "usuariosSincronizados", users.size());
     }
 
     private int activarTiendasSelf() {
-        var stores = storeRepository.findAll().stream()
-            .filter(s -> Boolean.TRUE.equals(s.getActive()))
-            .filter(s -> s.getHandoffActivatedAt() == null)
-            .filter(s -> s.getChannel() != null && s.getChannel().toLowerCase().contains("self"))
-            .toList();
+        var stores = storeRepository.findActiveSelfWithoutHandoff();
         stores.forEach(s -> {
             s.setHandoffActivatedAt(s.getOnboardingDate() != null ? s.getOnboardingDate() : LocalDate.now());
             storeRepository.save(s);
@@ -130,22 +126,14 @@ public class GoogleCalendarService {
     private int syncUserHandoffs(User user) throws GeneralSecurityException, IOException {
         Calendar calendar = buildCalendarClient(user.getCalendarRefreshToken());
 
-        // Listar calendarios disponibles
+        // Buscar el calendario "Handoffs"; si no existe, usar primary
         List<com.google.api.services.calendar.model.CalendarListEntry> cals =
                 calendar.calendarList().list().execute().getItems();
-        List<String> calNames = cals.stream().map(c -> c.getSummary()).toList();
-        log.info("Calendarios de {}: {}", user.getEmail(), calNames);
-
-        // Buscar "Handoffs" (insensible a mayúsculas/espacios)
         String calendarId = cals.stream()
-                .filter(c -> CALENDAR_NAME.equalsIgnoreCase(c.getSummary().trim()))
+                .filter(c -> CALENDAR_NAME.equalsIgnoreCase(c.getSummary() != null ? c.getSummary().trim() : ""))
                 .map(com.google.api.services.calendar.model.CalendarListEntry::getId)
-                .findFirst().orElse(null);
-
-        if (calendarId == null) {
-            log.warn("{} no tiene calendario '{}'. Disponibles: {}", user.getEmail(), CALENDAR_NAME, calNames);
-            calendarId = "primary";
-        }
+                .findFirst().orElse("primary");
+        log.info("Calendario usado para {}: {}", user.getEmail(), calendarId);
 
         Date desde = Date.from(LocalDate.now().minusDays(20)
                 .atStartOfDay(ZoneId.systemDefault()).toInstant());
@@ -158,20 +146,21 @@ public class GoogleCalendarService {
                 .execute();
 
         List<Event> items = events.getItems();
-        log.info("Eventos en '{}' (últimos 20 días) para {}: {}",
-                calendarId, user.getEmail(), items == null ? 0 : items.size());
-        if (items != null) {
-            items.forEach(e -> log.info("  Evento: {}", e.getSummary()));
-        }
+        log.info("Eventos en calendario primario de {} (últimos 20 días): {}",
+                user.getEmail(), items == null ? 0 : items.size());
 
         if (items == null || items.isEmpty()) return 0;
 
+        List<Event> matching = items.stream()
+                .filter(e -> e.getSummary() != null && e.getSummary().contains(TITLE_PREFIX))
+                .toList();
+
+        log.info("Eventos HO encontrados para {}: {}", user.getEmail(), matching.size());
+        matching.forEach(e -> log.info("  Evento: {}", e.getSummary()));
+
         int activados = 0;
-        for (Event event : items) {
-            String s = event.getSummary();
-            if (s != null && s.contains(TITLE_PREFIX)) {
-                if (processEvent(event, user)) activados++;
-            }
+        for (Event event : matching) {
+            if (processEvent(event, user)) activados++;
         }
         log.info("HO activados para {}: {}", user.getEmail(), activados);
         return activados;

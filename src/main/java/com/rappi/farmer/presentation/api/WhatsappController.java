@@ -86,7 +86,7 @@ public class WhatsappController {
                         store.getId(), store.getStoreCode(), store.getStoreName(),
                         store.getPhoneNumber(), 0, null,
                         store.getConnectionPercentage(), store.getCurrentStatus(),
-                        null, null, null, store.getHadHandoff()))
+                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(), null, null, null, null, store.getFarmerEmail()))
                 .toList();
 
         executor.submit(() -> {

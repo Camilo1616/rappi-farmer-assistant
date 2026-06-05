@@ -134,10 +134,13 @@ public class StoreDetailService {
         String todayResult = managementRepository.findLatestTodayByStoreId(store.getId())
                 .map(Management::getResultType)
                 .orElse(null);
+        Integer diasSinLogin = store.getLastLoginDate() != null
+                ? (int) java.time.temporal.ChronoUnit.DAYS.between(store.getLastLoginDate(), LocalDate.now())
+                : null;
         return new StoreViewDto(
                 store.getId(), store.getStoreCode(), store.getStoreName(),
                 store.getPhoneNumber(), aging, null,
                 store.getConnectionPercentage(), store.getCurrentStatus(), null, todayResult, null,
-                store.getHadHandoff());
+                store.getHadHandoff(), store.getLastLoginDate(), diasSinLogin, store.getAgingStage(), null, null, store.getFarmerEmail());
     }
 }

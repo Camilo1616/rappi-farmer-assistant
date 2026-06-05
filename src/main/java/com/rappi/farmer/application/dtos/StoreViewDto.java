@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
@@ -22,4 +23,16 @@ public class StoreViewDto {
     /** Segmento de prioridad (solo se usa en la sección Recomendado Hoy). */
     private String segmento;
     private Boolean hadHandoff;
+    /** Último login del aliado en la plataforma (de la columna "Último Login" del Excel). */
+    private LocalDate lastLoginDate;
+    /** Días transcurridos desde el último login. Null si no hay fecha. */
+    private Integer diasSinLogin;
+    /** Etapa del aliado según columna AGING del Excel: M1, M2, M2+, NEW, etc. */
+    private String agingStage;
+    /** Estado de churn de la tienda: "Churn", "Prevention W1", "Prevention W2", "Prevention W3". Null si no aplica. */
+    private String churnLabel;
+    /** Estado AVA del Excel: "Churn Ava" (crítico) o "Disminuye" (bajando). Null si no aplica. */
+    private String avaLabel;
+    /** Email del farmer asignado a esta tienda. */
+    private String farmerEmail;
 }

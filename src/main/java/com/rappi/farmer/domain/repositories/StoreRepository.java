@@ -28,7 +28,10 @@ public interface StoreRepository {
     // Queries por tipo de base — para lista de farmers
     List<Store> findChurnByFarmerIds(List<Long> farmerIds);
     List<Store> findActiveF7dByFarmerIds(List<Long> farmerIds);
+    List<Store> findActiveByFarmerIdsAndDays(List<Long> farmerIds, int minDays, int maxDays);
+    List<Store> findChurnM1ByFarmerIds(List<Long> farmerIds);
     List<Store> findRetencionByFarmerIds(List<Long> farmerIds);
     List<Store> findAva8a14ByFarmerIds(List<Long> farmerIds);
     List<Store> findAllActiveByFarmerIds(List<Long> farmerIds);
+    List<Store> findActiveSelfWithoutHandoff();
 }

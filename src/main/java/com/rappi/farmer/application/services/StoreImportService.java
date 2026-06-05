@@ -120,6 +120,7 @@ public class StoreImportService {
         metric.setConnectionPercentage(row.getConnectionPercentage());
         metric.setAvaL7d(row.getAvaL7d());
         metric.setAvaStatus(row.getAvaStatus());
+        metric.setAvaMtd(row.getAvaMtd());
         metric.setRappiAlliesConnected(parseAvaStatus(row.getAvaStatus()));
 
         dailyMetricRepository.save(metric);
@@ -136,7 +137,9 @@ public class StoreImportService {
         Store s = new Store(null, row.getStoreCode(), row.getBrandId(), row.getStoreName(),
                 row.getPhoneNumber(), row.getChannel(), row.getOnboardingDate(),
                 true, row.getConnectionPercentage(), row.getCurrentStatus(),
-                row.getHadHandoff(), handoffActivatedAt, farmerId, row.getAging());
+                row.getHadHandoff(), handoffActivatedAt, farmerId, row.getAging(),
+                row.getAgingStage(), row.getLastLoginDate(),
+                row.getGestionar(), row.getUploadDate(), null);
         return s;
     }
 
@@ -148,6 +151,10 @@ public class StoreImportService {
         store.setConnectionPercentage(row.getConnectionPercentage());
         store.setCurrentStatus(row.getCurrentStatus());
         store.setAging(row.getAging());
+        if (row.getAgingStage() != null) store.setAgingStage(row.getAgingStage());
+        if (row.getLastLoginDate() != null) store.setLastLoginDate(row.getLastLoginDate());
+        if (row.getGestionar() != null) store.setGestionar(row.getGestionar());
+        if (row.getUploadDate() != null) store.setUploadDate(row.getUploadDate());
         if (row.getOnboardingDate() != null) store.setOnboardingDate(row.getOnboardingDate());
         if (farmerId != null) store.setFarmerId(farmerId);
 

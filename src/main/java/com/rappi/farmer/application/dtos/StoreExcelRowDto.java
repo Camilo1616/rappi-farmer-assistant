@@ -23,4 +23,9 @@ public class StoreExcelRowDto {
     private BigDecimal avaL7d;
     private Boolean hadHandoff;
     private String farmerEmail;
+    private LocalDate lastLoginDate;
+    private BigDecimal avaMtd;
+    private String agingStage;
+    private String gestionar;
+    private LocalDate uploadDate;
 }

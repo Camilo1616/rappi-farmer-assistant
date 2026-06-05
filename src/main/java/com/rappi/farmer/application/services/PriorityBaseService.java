@@ -29,6 +29,7 @@ public class PriorityBaseService {
 
     private final PriorityBaseRepository repository;
     private final StoreRepository storeRepository;
+    private final DashboardService dashboardService;
 
     @Transactional
     public PriorityBaseViewDto createBase(Long liderId, CreatePriorityBaseRequest request) {
@@ -52,7 +53,7 @@ public class PriorityBaseService {
             repository.saveAssignment(assignment);
 
             // Jalar tiendas del farmer según el tipo de base
-            List<Store> tiendas = queryStoresByType(request.getBaseType(), farmerId);
+            List<Store> tiendas = queryStoresByType(request.getBaseType(), farmerId, request.getActiveDays(), request.getChurnFilter());
             for (Store store : tiendas) {
                 PriorityBaseStore bs = new PriorityBaseStore(
                         null, saved.getId(), farmerId, null,
@@ -204,14 +205,16 @@ public class PriorityBaseService {
 
     // ── privados ──
 
-    private List<Store> queryStoresByType(String baseType, Long farmerId) {
-        return switch (baseType) {
-            case "CHURN"      -> storeRepository.findChurnByFarmer(farmerId);
-            case "ACTIVE_F7D" -> storeRepository.findActiveF7dByFarmer(farmerId);
-            case "RETENCION"  -> storeRepository.findRetencionByFarmer(farmerId);
-            case "AVA_8_14"   -> storeRepository.findAva8a14ByFarmer(farmerId);
-            default           -> storeRepository.findActiveByUser(farmerId);
-        };
+    private List<Store> queryStoresByType(String baseType, Long farmerId, Integer activeDays, String churnFilter) {
+        if ("ACTIVE".equals(baseType)) {
+            int d = (activeDays != null && activeDays > 0) ? activeDays : 7;
+            int minDays = (d == 7) ? 0 : 8;
+            return storeRepository.findActiveByFarmerIdsAndDays(List.of(farmerId), minDays, d);
+        }
+        if ("CHURN".equals(baseType) && "M1".equals(churnFilter)) {
+            return storeRepository.findChurnM1ByFarmerIds(List.of(farmerId));
+        }
+        return dashboardService.getStoresForBase(farmerId, baseType);
     }
 
     private void updateStatus(Long assignmentId, AssignmentStatus newStatus, String comments) {

@@ -44,4 +44,7 @@ public class DailyMetricEntity {
     /** Estado original de Rappi: "Mejora", "Disminuye", "Estable", etc. */
     @Column(name = "ava_status", length = 50)
     private String avaStatus;
+
+    @Column(name = "ava_mtd", precision = 5, scale = 2)
+    private BigDecimal avaMtd;
 }

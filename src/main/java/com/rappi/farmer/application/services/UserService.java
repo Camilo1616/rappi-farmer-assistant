@@ -148,6 +148,27 @@ public class UserService {
         log.info("Farmer {} actualizado — país:{} líder:{}", user.getEmail(), countryCode, newLiderId);
     }
 
+    public Long findIdByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .map(User::getId)
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado: " + email));
+    }
+
+    public boolean isCalendarConnected(Long userId) {
+        return userRepository.findById(userId)
+                .map(u -> u.getCalendarRefreshToken() != null)
+                .orElse(false);
+    }
+
+    @Transactional
+    public void disconnectCalendar(Long userId) {
+        userRepository.findById(userId).ifPresent(u -> {
+            u.setCalendarRefreshToken(null);
+            userRepository.save(u);
+            log.info("Google Calendar desconectado para usuario {}", u.getEmail());
+        });
+    }
+
     /** Genera código único por país: CO0001, PE0042, MX0100, etc. */
     public String generateFarmerCode(String countryCode) {
         String upper = (countryCode != null ? countryCode : "CO").toUpperCase();

@@ -56,6 +56,18 @@ public class StoreEntity {
     @Column(name = "aging")
     private Integer aging;
 
+    @Column(name = "aging_stage", length = 10)
+    private String agingStage;
+
+    @Column(name = "last_login_date")
+    private LocalDate lastLoginDate;
+
+    @Column(name = "gestionar", length = 5)
+    private String gestionar;
+
+    @Column(name = "upload_date")
+    private LocalDate uploadDate;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity user;

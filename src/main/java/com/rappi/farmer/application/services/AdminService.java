@@ -98,6 +98,8 @@ public class AdminService {
     }
 
     private boolean isOnboarding(Store s) {
+        boolean isSelf = s.getChannel() != null && s.getChannel().toLowerCase().contains("self");
+        if (isSelf) return false;
         java.time.LocalDate ref = s.getHandoffActivatedAt() != null
                 ? s.getHandoffActivatedAt() : s.getOnboardingDate();
         if (ref == null) return false;
@@ -106,8 +108,9 @@ public class AdminService {
     }
 
     private boolean isChurn(Store s) {
-        if (s.getCurrentStatus() == null) return false;
-        String st = s.getCurrentStatus().toLowerCase();
-        return st.contains("m1") || st.contains("m2") || st.contains("churn");
+        String status = s.getCurrentStatus();
+        if (status == null) return false;
+        String st = status.trim().toUpperCase();
+        return st.contains("M1") || st.contains("M2") || st.equals("CHURN");
     }
 }

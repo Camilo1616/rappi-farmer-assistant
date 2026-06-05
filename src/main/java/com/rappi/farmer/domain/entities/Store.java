@@ -25,4 +25,9 @@ public class Store {
     private LocalDate handoffActivatedAt;
     private Long farmerId;
     private Integer aging;
+    private String agingStage;
+    private LocalDate lastLoginDate;
+    private String gestionar;
+    private LocalDate uploadDate;
+    private String farmerEmail;
 }

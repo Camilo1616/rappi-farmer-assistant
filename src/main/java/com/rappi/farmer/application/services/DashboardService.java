@@ -82,48 +82,66 @@ public class DashboardService {
         List<StoreViewDto> churnRisk = new ArrayList<>();
         List<StoreViewDto> avaDropping = new ArrayList<>();
         List<StoreViewDto> healthy = new ArrayList<>();
-        List<StoreViewDto> avaLow = new ArrayList<>();
+        List<StoreViewDto> ava = new ArrayList<>();
 
         for (Store store : stores) {
             DailyMetric metric = metricsMap.get(store.getId());
             int aging = calcAgingEfectivo(store);
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
 
-            // AVA < 10% — se evalúa independientemente de las otras secciones
-            if (isCriticallyLowAva(metric, store)) {
-                avaLow.add(dto);
-            }
+            boolean isSelf = store.getChannel() != null
+                    && store.getChannel().toLowerCase().contains("self");
 
-            if (aging >= 1 && aging <= 8 && hasNoOrders(metric) && isOnboardingEligible(store)) {
+            if (!isSelf && aging >= 1 && aging <= 8) {
                 onboardingCritical.add(dto);
-            } else if (aging > 8 && aging <= 14 && isLowConnection(metric, store)) {
+            } else if (!isSelf && aging > 8 && aging <= 14) {
                 aliados.add(dto);
-            } else if (isChurnRisk(store)) {
+            } else if (isChurnRisk(metric, store)) {
                 churnRisk.add(dto);
-            } else if (aging > 14 && isLowConnection(metric, store)) {
-                avaDropping.add(dto);
-            } else {
+            } else if (resolveAvaLabel(metric) != null) {
+                ava.add(dto);
+            } else if (isHealthy(metric)) {
                 healthy.add(dto);
             }
         }
 
         List<StoreViewDto> recommended = buildRecommended(
-                onboardingCritical, aliados, churnRisk, avaLow, metricsMap);
+                onboardingCritical, aliados, churnRisk, ava, metricsMap);
 
-        log.info("Dashboard cargado — onboarding:{}, aliados:{}, churn:{}, ava:{}, sanos:{}, avaLow:{}, recomendado:{}",
+        log.info("Dashboard cargado — onboarding:{}, aliados:{}, churn:{}, ava:{}, sanos:{}, recomendado:{}",
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
-                avaDropping.size(), healthy.size(), avaLow.size(), recommended.size());
+                ava.size(), healthy.size(), recommended.size());
 
         return new DashboardDataDto(
                 cap(onboardingCritical), cap(aliados),
                 churnRisk,
-                avaDropping,
+                ava,
                 healthy,
-                avaLow,
                 recommended,
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
-                avaDropping.size(), healthy.size(), avaLow.size(), recommended.size()
+                ava.size(), healthy.size(), recommended.size()
         );
+    }
+
+    /** Retorna las tiendas de un farmer clasificadas según el tipo de base, usando los mismos filtros del dashboard. */
+    public List<Store> getStoresForBase(Long farmerId, String baseType) {
+        List<Store> stores = storeRepository.findActiveByUser(farmerId);
+        Map<Long, DailyMetric> metricsMap = dailyMetricRepository.findByDate(LocalDate.now())
+                .stream().collect(Collectors.toMap(DailyMetric::getStoreId, m -> m, (a, b) -> a));
+
+        return stores.stream().filter(store -> {
+            DailyMetric metric = metricsMap.get(store.getId());
+            int aging = calcAgingEfectivo(store);
+            boolean isSelf = store.getChannel() != null
+                    && store.getChannel().toLowerCase().contains("self");
+            return switch (baseType) {
+                case "ACTIVE_F7D" -> !isSelf && aging >= 1 && aging <= 8;
+                case "AVA_8_14"   -> !isSelf && aging > 8 && aging <= 14;
+                case "CHURN"      -> isChurnRisk(metric, store);
+                case "RETENCION"  -> resolveAvaLabel(metric) != null;
+                default           -> true;
+            };
+        }).toList();
     }
 
     /**
@@ -155,7 +173,7 @@ public class DashboardService {
         BigDecimal pct = metric != null && metric.getConnectionPercentage() != null
                 ? metric.getConnectionPercentage()
                 : store.getConnectionPercentage();
-        return pct == null || pct.compareTo(ALIADOS_THRESHOLD) < 0;
+        return pct != null && pct.compareTo(ALIADOS_THRESHOLD) < 0;
     }
 
     /**
@@ -172,18 +190,54 @@ public class DashboardService {
         return true;
     }
 
-    private boolean isCriticallyLowAva(DailyMetric metric, Store store) {
-        BigDecimal pct = metric != null && metric.getConnectionPercentage() != null
-                ? metric.getConnectionPercentage()
-                : store.getConnectionPercentage();
-        if (pct == null) return false;
-        return pct.compareTo(BigDecimal.ONE) > 0 && pct.compareTo(BigDecimal.valueOf(15)) < 0;
+    /** Saludable: AVA_MTD >= 60%. */
+    private boolean isHealthy(DailyMetric metric) {
+        if (metric == null || metric.getAvaMtd() == null) return false;
+        return metric.getAvaMtd().compareTo(BigDecimal.valueOf(60)) >= 0;
     }
 
-    private boolean isChurnRisk(Store store) {
-        if (store.getCurrentStatus() == null) return false;
-        String s = store.getCurrentStatus().toLowerCase();
-        return s.contains("m1") || s.contains("m2") || s.contains("churn");
+    /** Devuelve "Churn Ava" (AVA_MTD 1–15%) o "Disminuye" (AVA STATUS), o null si no aplica. */
+    private String resolveAvaLabel(DailyMetric metric) {
+        if (metric == null) return null;
+        // Crítico: AVA_MTD entre 1% y 15% (sin importar el avaStatus)
+        BigDecimal mtd = metric.getAvaMtd();
+        if (mtd != null
+                && mtd.compareTo(BigDecimal.ONE) >= 0
+                && mtd.compareTo(BigDecimal.valueOf(15)) < 0) {
+            return "Churn Ava";
+        }
+        // Bajando: AVA STATUS = "Disminuye" y AVA_MTD entre 15% y 59.99%
+        if (metric.getAvaStatus() != null
+                && metric.getAvaStatus().trim().equalsIgnoreCase("Disminuye")
+                && mtd != null
+                && mtd.compareTo(BigDecimal.valueOf(15)) >= 0
+                && mtd.compareTo(BigDecimal.valueOf(60)) < 0) {
+            return "Disminuye";
+        }
+        return null;
+    }
+
+    /**
+     * Churn: la columna "Estado Churn AVA" contiene "Churn", "Prevention W1/W2/W3"
+     * y el último login fue hace ≤ 90 días (o no tiene fecha de login).
+     */
+    private boolean isChurnRisk(DailyMetric metric, Store store) {
+        return resolveChurnLabel(store) != null;
+    }
+
+    /** Devuelve la etiqueta de churn o null si la tienda no está en riesgo. */
+    private String resolveChurnLabel(Store store) {
+        String status = store.getCurrentStatus();
+        if (status == null) return null;
+        String s = status.trim();
+        boolean isChurnStatus = s.equalsIgnoreCase("Churn")
+                || s.equalsIgnoreCase("Prevention W1")
+                || s.equalsIgnoreCase("Prevention W2")
+                || s.equalsIgnoreCase("Prevention W3");
+        if (!isChurnStatus) return null;
+        if (store.getLastLoginDate() == null) return null;
+        long dias = ChronoUnit.DAYS.between(store.getLastLoginDate(), LocalDate.now());
+        return dias <= 90 ? s : null;
     }
 
     private List<StoreViewDto> cap(List<StoreViewDto> list) {
@@ -195,6 +249,10 @@ public class DashboardService {
         BigDecimal connection = metric != null && metric.getConnectionPercentage() != null
                 ? metric.getConnectionPercentage()
                 : store.getConnectionPercentage();
+
+        Integer diasSinLogin = store.getLastLoginDate() != null
+                ? (int) ChronoUnit.DAYS.between(store.getLastLoginDate(), LocalDate.now())
+                : null;
 
         return new StoreViewDto(
                 store.getId(),
@@ -208,7 +266,13 @@ public class DashboardService {
                 calcTendencia(metric),
                 managementResult,
                 null,
-                store.getHadHandoff()
+                store.getHadHandoff(),
+                store.getLastLoginDate(),
+                diasSinLogin,
+                store.getAgingStage(),
+                resolveChurnLabel(store),
+                resolveAvaLabel(metric),
+                store.getFarmerEmail()
         );
     }
 
@@ -241,11 +305,10 @@ public class DashboardService {
             List<StoreViewDto> onboarding,
             List<StoreViewDto> aliados,
             List<StoreViewDto> churnRisk,
-            List<StoreViewDto> avaLow,
+            List<StoreViewDto> ava,
             Map<Long, DailyMetric> metricsMap) {
 
         List<StoreViewDto> result = new ArrayList<>();
-        // Tracked por id para evitar duplicados (una tienda puede estar en avaLow Y onboarding/aliados)
         java.util.Set<Long> seen = new java.util.HashSet<>();
 
         for (StoreViewDto s : onboarding) {
@@ -254,21 +317,16 @@ public class DashboardService {
         for (StoreViewDto s : aliados) {
             if (seen.add(s.getId())) result.add(withSegmento(s, "Aliados <60%"));
         }
-
         churnRisk.stream().limit(5).forEach(s -> {
             if (seen.add(s.getId())) {
-                String status = s.getCurrentStatus() != null
-                        ? s.getCurrentStatus().toUpperCase() : "CHURN";
-                String label = status.contains("M1") ? "Churn M1"
-                             : status.contains("M2") ? "Churn M2"
-                             : "Churn";
+                String label = s.getChurnLabel() != null ? s.getChurnLabel() : "Churn";
                 result.add(withSegmento(s, label));
             }
         });
-
-        avaLow.stream().limit(15).forEach(s -> {
-            if (seen.add(s.getId())) result.add(withSegmento(s, "AVA 1-15%"));
-        });
+        ava.stream()
+            .filter(s -> "Churn Ava".equalsIgnoreCase(s.getAvaLabel()))
+            .limit(10)
+            .forEach(s -> { if (seen.add(s.getId())) result.add(withSegmento(s, "AVA Crítico")); });
 
         return result;
     }
@@ -279,6 +337,8 @@ public class DashboardService {
                 original.getPhoneNumber(), original.getAging(), original.getOrdersL4W(),
                 original.getConnectionPercentage(), original.getCurrentStatus(),
                 original.getTendencia(), original.getTodayManagementResult(), segmento,
-                original.getHadHandoff());
+                original.getHadHandoff(), original.getLastLoginDate(), original.getDiasSinLogin(),
+                original.getAgingStage(), original.getChurnLabel(), original.getAvaLabel(),
+                original.getFarmerEmail());
     }
 }

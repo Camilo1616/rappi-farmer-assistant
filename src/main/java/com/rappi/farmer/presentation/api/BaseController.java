@@ -277,8 +277,8 @@ public class BaseController {
     @GetMapping("/templates")
     public ResponseEntity<?> getTemplates() {
         return ResponseEntity.ok(List.of(
-            Map.of("type","ACTIVE_F7D","label","Active F7D",
-                "template","Team! Les dejo la base ACTIVE F7D del día.\n\nAliados que ingresaron hace 8 días — debemos lograr login y activación con órdenes.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}"),
+            Map.of("type","ACTIVE","label","ACTIVE",
+                "template","Team! Les dejo la base ACTIVE del día.\n\nAliados que ingresaron recientemente — debemos lograr login y activación con órdenes.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}"),
             Map.of("type","CHURN","label","Churn",
                 "template","Team! Les dejo la base CHURN del día.\n\nAliados que esta semana nos entran en churn — recuerden que lo ideal es buscar reconexión de por lo menos 5 minutos dentro de horario.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}"),
             Map.of("type","RETENCION","label","Prioridad Retención",

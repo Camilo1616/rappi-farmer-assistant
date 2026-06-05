@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
-    Optional<StoreEntity> findByStoreCode(String storeCode);
-    Optional<StoreEntity> findByBrandId(String brandId);
+    Optional<StoreEntity> findFirstByStoreCode(String storeCode);
+    Optional<StoreEntity> findFirstByBrandId(String brandId);
     List<StoreEntity> findByStoreCodeContainingIgnoreCaseOrStoreNameContainingIgnoreCase(String code, String name);
     List<StoreEntity> findByActiveTrue();
     List<StoreEntity> findByUser_IdAndActiveTrue(Long userId);
@@ -97,6 +97,13 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
 
     // ── Queries globales (sin filtro de farmer) ──
 
+    /** Self sin handoff aún: para activación automática */
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT s FROM StoreEntity s WHERE s.active = true " +
+        "AND s.handoffActivatedAt IS NULL " +
+        "AND LOWER(s.channel) LIKE '%self%'")
+    List<StoreEntity> findActiveSelfWithoutHandoff();
+
     @org.springframework.data.jpa.repository.Query(
         "SELECT s FROM StoreEntity s WHERE s.active = true AND s.hadHandoff = true " +
         "AND (LOWER(s.currentStatus) LIKE '%m1%' OR LOWER(s.currentStatus) LIKE '%m2%' OR LOWER(s.currentStatus) LIKE '%churn%')")
@@ -125,4 +132,30 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         "      AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 8 AND 14)" +
         ")", nativeQuery = true)
     List<StoreEntity> findAva8a14Global();
+
+    /** CHURN M1: AGING stage = M1 y AVA_MTD entre 0% y 10% (última métrica disponible) */
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT s.* FROM stores s " +
+        "JOIN daily_metrics dm ON dm.store_id = s.id " +
+            "AND dm.metric_date = (SELECT MAX(dm2.metric_date) FROM daily_metrics dm2 WHERE dm2.store_id = s.id) " +
+        "WHERE s.active = true " +
+        "AND UPPER(TRIM(s.aging_stage)) = 'M1' " +
+        "AND dm.ava_mtd IS NOT NULL " +
+        "AND dm.ava_mtd >= 0 AND dm.ava_mtd <= 10 " +
+        "AND s.user_id IN :farmerIds", nativeQuery = true)
+    List<StoreEntity> findChurnM1ByFarmerIds(
+        @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    /** ACTIVE: GESTIONAR = SI y upload_date entre :minDays y :maxDays días atrás */
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT * FROM stores s WHERE s.active = true " +
+        "AND UPPER(TRIM(s.gestionar)) = 'SI' " +
+        "AND s.upload_date IS NOT NULL " +
+        "AND DATEDIFF(CURRENT_DATE(), s.upload_date) >= :minDays " +
+        "AND DATEDIFF(CURRENT_DATE(), s.upload_date) <= :maxDays " +
+        "AND s.user_id IN :farmerIds", nativeQuery = true)
+    List<StoreEntity> findActiveByFarmerIdsAndDays(
+        @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds,
+        @org.springframework.data.repository.query.Param("minDays") int minDays,
+        @org.springframework.data.repository.query.Param("maxDays") int maxDays);
 }

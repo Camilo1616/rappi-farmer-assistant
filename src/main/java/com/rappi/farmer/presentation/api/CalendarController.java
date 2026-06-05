@@ -1,7 +1,7 @@
 package com.rappi.farmer.presentation.api;
 
 import com.rappi.farmer.application.services.GoogleCalendarService;
-import com.rappi.farmer.domain.repositories.UserRepository;
+import com.rappi.farmer.application.services.UserService;
 import com.rappi.farmer.infrastructure.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +17,7 @@ import java.util.Map;
 public class CalendarController {
 
     private final GoogleCalendarService calendarService;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final JwtService jwtService;
 
     /** Farmer solicita conectar su Google Calendar — devuelve la URL de autorización */
@@ -75,20 +75,14 @@ public class CalendarController {
     @GetMapping("/status")
     public ResponseEntity<?> status(@RequestHeader("Authorization") String authHeader) {
         Long userId = resolveUserId(authHeader);
-        boolean connected = userRepository.findById(userId)
-                .map(u -> u.getCalendarRefreshToken() != null)
-                .orElse(false);
-        return ResponseEntity.ok(Map.of("connected", connected));
+        return ResponseEntity.ok(Map.of("connected", userService.isCalendarConnected(userId)));
     }
 
     /** Desconectar calendar */
     @DeleteMapping("/disconnect")
     public ResponseEntity<?> disconnect(@RequestHeader("Authorization") String authHeader) {
         Long userId = resolveUserId(authHeader);
-        userRepository.findById(userId).ifPresent(u -> {
-            u.setCalendarRefreshToken(null);
-            userRepository.save(u);
-        });
+        userService.disconnectCalendar(userId);
         return ResponseEntity.ok(Map.of("message", "Google Calendar desconectado"));
     }
 
@@ -105,10 +99,7 @@ public class CalendarController {
     }
 
     private Long resolveUserId(String authHeader) {
-        String token = authHeader.substring(7);
-        String email = jwtService.extractEmail(token);
-        return userRepository.findByEmail(email)
-                .map(com.rappi.farmer.domain.entities.User::getId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        String email = jwtService.extractEmail(authHeader.substring(7));
+        return userService.findIdByEmail(email);
     }
 }

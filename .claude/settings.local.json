@@ -41,7 +41,16 @@
       "Bash(xargs cat)",
       "Bash(xargs ls)",
       "Bash(git check-ignore *)",
-      "Bash(grep -v \"test\\\\|//\\\\|\\\\.class\")"
+      "Bash(grep -v \"test\\\\|//\\\\|\\\\.class\")",
+      "Bash(dir /s /b C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\src\\\\*.java)",
+      "PowerShell(& \"C:\\\\Program Files\\\\JetBrains\\\\IntelliJ IDEA 2026.1.2\\\\plugins\\\\maven\\\\lib\\\\maven3\\\\bin\\\\mvn.cmd\" -f \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\pom.xml\" clean compile -q 2>&1 | Select-Object -Last 10)",
+      "PowerShell(& \"C:\\\\Program Files\\\\JetBrains\\\\IntelliJ IDEA 2026.1.2\\\\plugins\\\\maven\\\\lib\\\\maven3\\\\bin\\\\mvn.cmd\" -f \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\pom.xml\" clean compile -q 2>&1 | Select-Object -Last 5)",
+      "Bash(xargs grep -l \"farmers\\\\|efectivas\\\\|lider.*profile\\\\|profile.*lider\")",
+      "PowerShell(& \"C:\\\\Program Files\\\\JetBrains\\\\IntelliJ IDEA 2026.1.2\\\\plugins\\\\maven\\\\lib\\\\maven3\\\\bin\\\\mvn.cmd\" clean compile -q 2>&1 | Select-Object -Last 5)",
+      "Bash(xargs grep -l -i \"churn\\\\|aging\\\\|lastLogin\\\\|last_login\\\\|ultimoLogin\")",
+      "Bash(grep -v \"password\\\\s*=\\\\s*$\")",
+      "PowerShell(& \"C:\\\\Program Files\\\\JetBrains\\\\IntelliJ IDEA 2026.1.2\\\\plugins\\\\maven\\\\lib\\\\maven3\\\\bin\\\\mvn.cmd\" -f \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\pom.xml\" clean compile -q 2>&1 | Select-Object -Last 15)",
+      "Bash(xargs grep -l \"baseType\")"
     ]
   }
 }

@@ -38,10 +38,15 @@ public class ExcelReaderService {
     private static final String COL_CHURN_STATUS   = "Estado Churn AVA";
     private static final String COL_ORDERS_L4W     = "Ordenes L4W Hoy";
     private static final String COL_AGING          = "AGING";
+    private static final String COL_AGING_STAGE    = "AGING"; // mismo campo, leído como String
     private static final String COL_AVA_STATUS     = "AVA STATUS";
     private static final String COL_HANDOFF        = "TUVO_HANDOFF";
     private static final String COL_AVA_L7D        = "AVA_L7D";
     private static final String COL_FARMER         = "FARMER";
+    private static final String COL_LAST_LOGIN     = "Último Login";
+    private static final String COL_AVA_MTD        = "AVA_MTD";
+    private static final String COL_GESTIONAR      = "GESTIONAR";
+    private static final String COL_UPLOAD_DATE    = "FECHA DE CARGUE";
 
     public List<StoreExcelRowDto> read(File file) throws IOException {
         log.info("Leyendo archivo: {}", file.getName());
@@ -75,10 +80,15 @@ public class ExcelReaderService {
                             .currentStatus(getString(row, cols, COL_CHURN_STATUS))
                             .ordersL4W(getInteger(row, cols, COL_ORDERS_L4W))
                             .aging(getInteger(row, cols, COL_AGING))
+                            .agingStage(getString(row, cols, COL_AGING_STAGE))
                             .avaStatus(getString(row, cols, COL_AVA_STATUS))
                             .avaL7d(getPercentage(row, cols, COL_AVA_L7D))
                             .hadHandoff(parseHandoff(getString(row, cols, COL_HANDOFF)))
                             .farmerEmail(getString(row, cols, COL_FARMER))
+                            .lastLoginDate(getDate(row, cols, COL_LAST_LOGIN))
+                            .avaMtd(getPercentage(row, cols, COL_AVA_MTD))
+                            .gestionar(getString(row, cols, COL_GESTIONAR))
+                            .uploadDate(getDate(row, cols, COL_UPLOAD_DATE))
                             .build());
 
                 } catch (Exception e) {
@@ -108,8 +118,12 @@ public class ExcelReaderService {
         Map<String, Integer> map = new HashMap<>();
         for (Cell cell : headerRow) {
             String name = cell.toString().trim();
-            if (!name.isBlank()) map.put(name, cell.getColumnIndex());
+            if (!name.isBlank()) {
+                map.put(name, cell.getColumnIndex());
+                map.put(name.toUpperCase(), cell.getColumnIndex());
+            }
         }
+        log.info("Columnas detectadas en Excel: {}", map.keySet());
         return map;
     }
 
