@@ -49,11 +49,17 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 
+    private boolean isRappiEmail(String email) {
+        return email != null && email.toLowerCase().endsWith("@rappi.com");
+    }
+
     @PostMapping("/send-pin")
     public ResponseEntity<?> sendPin(@RequestBody Map<String, String> body) {
         String email = body.get("email");
         if (email == null || email.isBlank())
             return ResponseEntity.badRequest().body(Map.of("message", "Email requerido"));
+        if (!isRappiEmail(email))
+            return ResponseEntity.badRequest().body(Map.of("message", "Solo se permiten correos corporativos @rappi.com"));
         try {
             emailPinService.sendPin(email);
             return ResponseEntity.ok(Map.of("message", "PIN enviado a " + email));
@@ -64,6 +70,8 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        if (!isRappiEmail(request.email()))
+            return ResponseEntity.badRequest().body(Map.of("message", "Solo se permiten correos corporativos @rappi.com"));
         if (!emailPinService.verifyPin(request.email(), request.pin()))
             return ResponseEntity.badRequest().body(Map.of("message", "Código incorrecto o expirado"));
         try {
