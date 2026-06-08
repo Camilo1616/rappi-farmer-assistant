@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
+import CalendarCallbackPage from './pages/CalendarCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import LiderDashboardPage from './pages/LiderDashboardPage'
 
@@ -26,6 +27,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/calendar-callback" element={<CalendarCallbackPage />} />
       <Route path="/" element={<PrivateRoute><IndexRedirect /></PrivateRoute>} />
       <Route
         path="/dashboard"

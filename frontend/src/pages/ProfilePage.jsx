@@ -154,40 +154,35 @@ export default function ProfilePage() {
 
   const handleConnectCalendar = async () => {
     setCalLoading(true)
+    // Limpiar resultado anterior para evitar falsos positivos
+    localStorage.removeItem('calendar_auth_result')
     try {
       const { data } = await connectCalendar()
-      const popup = window.open(data.authUrl, 'google-calendar-auth', 'width=520,height=620')
+      window.open(data.authUrl, 'google-calendar-auth', 'width=520,height=620,noopener=no')
 
-      // Polling: pregunta al backend cada 2s si ya se conectó
-      // (postMessage no funciona por COOP de Google OAuth)
-      const interval = setInterval(async () => {
-        try {
-          const { data: status } = await getCalendarStatus()
-          if (status.connected) {
-            clearInterval(interval)
-            setCalConnected(true)
-            flash('Google Calendar conectado')
-            setCalLoading(false)
-            try { popup?.close() } catch {}
-            return
-          }
-        } catch {}
-        // Si el usuario cerró el popup sin autorizar
-        try {
-          if (popup?.closed) {
-            clearInterval(interval)
-            setCalLoading(false)
-          }
-        } catch {
-          // COOP puede bloquear popup.closed también — timeout de seguridad 3 min
+      // Escucha el resultado via storage event (funciona aunque COOP bloquee window.opener)
+      const onStorage = async (e) => {
+        if (e.key !== 'calendar_auth_result') return
+        window.removeEventListener('storage', onStorage)
+        clearTimeout(timeout)
+        localStorage.removeItem('calendar_auth_result')
+        const status = (e.newValue || '').split('_')[0]
+        if (status === 'connected') {
+          setCalConnected(true)
+          flash('Google Calendar conectado ✅')
+        } else {
+          flash('Error al conectar Google Calendar', 'err')
         }
-      }, 2000)
-
-      // Timeout de seguridad: dejar de hacer polling a los 3 minutos
-      setTimeout(() => {
-        clearInterval(interval)
         setCalLoading(false)
-      }, 180000)
+      }
+
+      window.addEventListener('storage', onStorage)
+
+      // Timeout de seguridad: 5 minutos
+      const timeout = setTimeout(() => {
+        window.removeEventListener('storage', onStorage)
+        setCalLoading(false)
+      }, 300000)
 
     } catch (e) {
       flash('Error al iniciar conexión', 'err')
