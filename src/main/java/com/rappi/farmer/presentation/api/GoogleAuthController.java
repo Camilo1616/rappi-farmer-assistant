@@ -42,6 +42,9 @@ public class GoogleAuthController {
     @Value("${cors.allowed-origins:http://localhost:5173}")
     private String frontendOrigin;
 
+    @Value("${google.oauth.redirect-uri:http://localhost:8080/api/auth/google/callback}")
+    private String googleRedirectUri;
+
     private final UserRepository userRepository;
     private final UserService userService;
     private final JwtService jwtService;
@@ -173,7 +176,7 @@ public class GoogleAuthController {
     }
 
     private String buildRedirectUri() {
-        return "http://localhost:8080/api/auth/google/callback";
+        return googleRedirectUri;
     }
 
     private String enc(String v) throws Exception {
