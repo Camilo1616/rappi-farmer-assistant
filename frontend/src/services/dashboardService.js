@@ -12,3 +12,5 @@ export const registerManagement     = (storeId, body) => api.post(`/stores/${sto
 export const getTodayManagements    = () => api.get('/stores/managements/today')
 export const updateManagement       = (id, body) => api.put(`/stores/managements/${id}`, body)
 export const deleteManagement       = (id) => api.delete(`/stores/managements/${id}`)
+export const getBasesForLider       = () => api.get('/bases/lider')
+export const getFarmerManagements   = (farmerId) => api.get(`/stores/managements/today?farmerId=${farmerId}`)

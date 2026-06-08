@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface BaseStoreJpaRepository extends JpaRepository<BaseStoreEntity, Long> {
     List<BaseStoreEntity> findByBaseId(Long baseId);
+    long countByBaseId(Long baseId);
     void deleteByBaseId(Long baseId);
 }

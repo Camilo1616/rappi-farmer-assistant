@@ -339,6 +339,24 @@ public class BaseController {
         dto.put("leida",      assignments.stream().filter(a -> "LEIDA".equals(a.getStatus())).count());
         dto.put("enProceso",  assignments.stream().filter(a -> "EN_PROCESO".equals(a.getStatus())).count());
         dto.put("completado", assignments.stream().filter(a -> "COMPLETADO".equals(a.getStatus())).count());
+
+        List<Map<String, Object>> assignmentDtos = assignments.stream().map(a -> {
+            Map<String, Object> ad = new LinkedHashMap<>();
+            ad.put("id", a.getId());
+            ad.put("farmerId", a.getFarmerId());
+            ad.put("status", a.getStatus());
+            ad.put("readAt", a.getReadAt());
+            ad.put("startedAt", a.getStartedAt());
+            ad.put("completedAt", a.getCompletedAt());
+            ad.put("assignedAt", a.getAssignedAt());
+            String farmerName = userRepository.findById(a.getFarmerId())
+                    .map(u -> u.getFullName()).orElse("Farmer #" + a.getFarmerId());
+            ad.put("farmerName", farmerName);
+            long storeCount = baseStoreRepo.countByBaseId(b.getId());
+            ad.put("storeCount", storeCount);
+            return ad;
+        }).toList();
+        dto.put("assignments", assignmentDtos);
         return dto;
     }
 
