@@ -1,24 +1,27 @@
 package com.rappi.farmer.application.services;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EmailVerificationService {
 
-    private static final int CODE_EXPIRY_SECONDS = 600; // 10 minutos
+    private static final int CODE_EXPIRY_SECONDS = 600;
 
-    private final JavaMailSender mailSender;
+    @Value("${resend.api.key:}")
+    private String resendApiKey;
+
+    private final RestTemplate restTemplate = new RestTemplate();
     private final ConcurrentMap<String, Entry> pending = new ConcurrentHashMap<>();
 
     /** Genera y envía un código de 6 dígitos al correo indicado. */
@@ -27,18 +30,26 @@ public class EmailVerificationService {
         pending.put(email.toLowerCase(),
                 new Entry(code, Instant.now().plusSeconds(CODE_EXPIRY_SECONDS)));
 
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setTo(email);
-        msg.setSubject("Código de verificación — Rappi Farmer Assistant");
-        msg.setText(
-                "Hola!\n\n" +
-                "Tu código de verificación es:\n\n" +
-                "  " + code + "\n\n" +
-                "Válido por 10 minutos.\n\n" +
-                "Si no solicitaste este código, ignora este mensaje.\n\n" +
-                "— Rappi Farmer Assistant");
-        mailSender.send(msg);
-        log.info("Código de verificación enviado a {}", email);
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(resendApiKey);
+
+            Map<String, Object> body = Map.of(
+                "from", "Rappi Farmer <onboarding@resend.dev>",
+                "to", new String[]{email},
+                "subject", "Código de verificación — Rappi Farmer Assistant",
+                "text", "Hola!\n\nTu código de verificación es:\n\n  " + code +
+                        "\n\nVálido por 10 minutos.\n\nSi no solicitaste este código, ignora este mensaje.\n\n— Rappi Farmer Assistant"
+            );
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity("https://api.resend.com/emails", request, String.class);
+            log.info("Código de verificación enviado a {} vía Resend", email);
+        } catch (Exception e) {
+            log.error("Error enviando código a {}: {}", email, e.getMessage());
+            throw new RuntimeException("Error al enviar el código de verificación");
+        }
     }
 
     /** @return true si el código es correcto y no ha expirado */
