@@ -57,6 +57,9 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
           <thead>
             <tr>
               <th>Tienda</th>
+              <th>Brand ID</th>
+              <th>Store ID</th>
+              <th>Teléfono</th>
               {isChurn
                 ? <>
                     <th>Días sin conectar</th>
@@ -92,6 +95,17 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                       <span className={styles.storeName}>{s.storeName}</span>
                       <span className={styles.storeCode}>{s.storeCode}</span>
                     </div>
+                  </td>
+                  <td>
+                    <span style={{ fontWeight: 700, color: '#ff441f', fontSize: 12 }}>{s.brandId || s.storeCode || '—'}</span>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{s.id || '—'}</span>
+                  </td>
+                  <td>
+                    {s.phoneNumber
+                      ? <span style={{ fontSize: 12, color: '#0f172a' }}>{s.phoneNumber}</span>
+                      : <span style={{ fontSize: 11, color: '#ef4444' }}>Sin tel.</span>}
                   </td>
 
                   {isChurn
