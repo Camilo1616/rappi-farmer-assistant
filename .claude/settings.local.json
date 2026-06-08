@@ -70,7 +70,12 @@
       "PowerShell(Select-String *)",
       "Bash(xargs grep -l \"management\\\\|gestion\")",
       "Bash(xargs grep -n \"template\\\\|whatsapp\")",
-      "Bash(xargs grep -n \"template\\\\|Template\")"
+      "Bash(xargs grep -n \"template\\\\|Template\")",
+      "Bash(mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt)",
+      "PowerShell(node -e \"const bcrypt = require\\('bcrypt'\\); bcrypt.hash\\('rappi2025', 10\\).then\\(h => console.log\\(h\\)\\)\" 2>$null)",
+      "PowerShell(python -c \"import bcrypt; print\\(bcrypt.hashpw\\(b'rappi2025', bcrypt.gensalt\\(10\\)\\).decode\\(\\)\\)\" 2>$null)",
+      "Bash(dir \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20)"
     ]
   }
 }

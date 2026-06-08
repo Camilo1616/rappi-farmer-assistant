@@ -26,10 +26,10 @@
   justify-content: space-between;
   width: 100%;
   padding: 9px 14px;
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #8B93A8;
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -37,7 +37,7 @@
   text-align: left;
   transition: border-color 0.15s;
 }
-.trigger:hover { border-color: rgba(255,255,255,0.2); color: #F0F2F8; }
+.trigger:hover { border-color: var(--text-secondary); color: var(--text-primary); }
 
 .arrow { font-size: 9px; }
 
@@ -45,13 +45,13 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0; right: 0;
-  background: #1C2333;
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 10px;
   z-index: 100;
   max-height: 220px;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: var(--shadow-md);
 }
 
 .option {
@@ -62,8 +62,8 @@
   padding: 9px 14px;
   background: none;
   border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  color: #8B93A8;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -72,17 +72,17 @@
   transition: background 0.1s;
 }
 .option:last-child { border-bottom: none; }
-.option:hover { background: rgba(255,255,255,0.04); color: #F0F2F8; }
+.option:hover { background: var(--border-subtle); color: var(--text-primary); }
 .optionSelected { color: inherit; font-weight: 700; }
 
 .check {
   width: 14px; height: 14px;
-  border: 1.5px solid rgba(255,255,255,0.2);
+  border: 1.5px solid var(--border);
   border-radius: 4px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 9px;
-  color: #fff;
+  color: var(--text-primary);
 }

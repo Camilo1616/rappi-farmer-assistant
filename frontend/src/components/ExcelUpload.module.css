@@ -12,7 +12,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  background: linear-gradient(135deg, #1C2333 0%, #161B27 60%, rgba(255,68,31,0.06) 100%);
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 60%, rgba(255,68,31,0.06) 100%);
   border: 1px solid rgba(255,68,31,0.15);
   border-radius: 18px;
   padding: 32px 28px;
@@ -50,7 +50,7 @@
 .heroTitle {
   font-size: 26px;
   font-weight: 900;
-  color: #F0F2F8;
+  color: var(--text-primary);
   letter-spacing: -0.8px;
   margin: 0 0 10px;
 }
@@ -107,8 +107,8 @@
   display: flex;
   align-items: center;
   gap: 0;
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   padding: 20px 24px;
 }
@@ -144,13 +144,13 @@
 .flowTitle {
   font-size: 12px;
   font-weight: 700;
-  color: #F0F2F8;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .flowText {
   font-size: 11px;
-  color: #545E75;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.4;
 }
@@ -158,7 +158,7 @@
 .flowArrow {
   width: 24px;
   height: 1px;
-  background: rgba(255,255,255,0.08);
+  background: var(--border);
   flex-shrink: 0;
   position: relative;
 }
@@ -173,8 +173,8 @@
 
 /* ─────────────────── Columnas ─────────────────── */
 .colSection {
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -199,7 +199,7 @@
 
 /* when table is open, keep bottom border */
 .colSection:has(.colTable) .colHeader {
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border-subtle);
   border-radius: 14px 14px 0 0;
 }
 
@@ -212,7 +212,7 @@
 .colHeaderTitle {
   font-size: 13px;
   font-weight: 700;
-  color: #F0F2F8;
+  color: var(--text-primary);
 }
 
 .colHeaderBadge {
@@ -227,7 +227,7 @@
 
 .colChevron {
   font-size: 20px;
-  color: #545E75;
+  color: var(--text-muted);
   line-height: 1;
   transform: rotate(90deg);
   transition: transform 0.22s ease, color 0.15s;
@@ -248,7 +248,7 @@
   grid-template-columns: 220px 160px 1fr;
   padding: 8px 20px;
   background: rgba(255,255,255,0.03);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .colTableHead span {
@@ -294,7 +294,7 @@
 
 .colDesc {
   font-size: 12px;
-  color: #545E75;
+  color: var(--text-muted);
 }
 
 /* ─────────────────── Dropzone ─────────────────── */
@@ -357,7 +357,7 @@
 
 .dropOr {
   font-size: 13px;
-  color: #545E75;
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -372,7 +372,7 @@
 .dropFormats {
   font-size: 11px;
   color: #3A4255;
-  background: rgba(255,255,255,0.04);
+  background: var(--border-subtle);
   padding: 4px 12px;
   border-radius: 99px;
   border: 1px solid rgba(255,255,255,0.05);
@@ -395,7 +395,7 @@
 .filePillName {
   font-size: 15px;
   font-weight: 700;
-  color: #F0F2F8;
+  color: var(--text-primary);
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -412,9 +412,9 @@
 
 .filePillRemove {
   width: 30px; height: 30px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: #545E75;
+  background: var(--border-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
   border-radius: 50%;
   cursor: pointer;
   font-size: 12px;
@@ -430,8 +430,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 18px 20px;
 }
@@ -445,7 +445,7 @@
 .progressLabel {
   font-size: 13px;
   font-weight: 600;
-  color: #8B93A8;
+  color: var(--text-secondary);
 }
 
 .progressPct {
@@ -499,7 +499,7 @@
   margin-left: auto;
   background: none;
   border: none;
-  color: #545E75;
+  color: var(--text-muted);
   font-size: 13px;
   cursor: pointer;
   padding: 2px;
@@ -540,7 +540,7 @@
 .btnOutline {
   padding: 14px 22px;
   background: none;
-  color: #8B93A8;
+  color: var(--text-secondary);
   border: 1.5px solid rgba(255,255,255,0.09);
   border-radius: 10px;
   font-size: 14px;
@@ -552,7 +552,7 @@
 
 .btnOutline:hover {
   border-color: rgba(255,255,255,0.22);
-  color: #F0F2F8;
+  color: var(--text-primary);
 }
 
 /* ─────────────────── Resultado detallado ─────────────────── */
@@ -566,7 +566,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  background: linear-gradient(135deg, #1C2333, rgba(34,197,94,0.05));
+  background: linear-gradient(135deg, var(--bg-card), rgba(34,197,94,0.05));
   border: 1px solid rgba(34,197,94,0.2);
   border-radius: 16px;
   padding: 24px 28px;
@@ -588,14 +588,14 @@
 .resultTitle {
   font-size: 20px;
   font-weight: 900;
-  color: #F0F2F8;
+  color: var(--text-primary);
   letter-spacing: -0.4px;
   margin: 0;
 }
 
 .resultSub {
   font-size: 13px;
-  color: #545E75;
+  color: var(--text-muted);
   margin: 3px 0 0;
 }
 
@@ -603,7 +603,7 @@
 .statStrip {
   display: flex;
   background: #0F131C;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -637,15 +637,15 @@
 
 /* Detail section */
 .resultDetail {
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   overflow: hidden;
 }
 
 .resultTabs {
   display: flex;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border-subtle);
   overflow-x: auto;
 }
 
@@ -657,7 +657,7 @@
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #545E75;
+  color: var(--text-muted);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
@@ -667,9 +667,9 @@
   margin-bottom: -1px;
 }
 
-.resultTab:hover { color: #8B93A8; }
+.resultTab:hover { color: var(--text-secondary); }
 
-.resultTabActive { color: #F0F2F8; }
+.resultTabActive { color: var(--text-primary); }
 
 .resultTabDot {
   width: 7px; height: 7px;
@@ -682,8 +682,8 @@
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 99px;
-  background: rgba(255,255,255,0.06);
-  color: #545E75;
+  background: var(--border-subtle);
+  color: var(--text-muted);
   transition: background 0.15s, color 0.15s;
 }
 
@@ -734,7 +734,7 @@
 .resultCode {
   font-family: 'Courier New', monospace;
   font-size: 12px;
-  color: #8B93A8 !important;
+  color: var(--text-secondary) !important;
 }
 
 .resultError {
@@ -743,15 +743,15 @@
 }
 
 .resultMuted {
-  color: #545E75 !important;
+  color: var(--text-muted) !important;
   font-size: 12px;
 }
 
 .resultTag {
   display: inline-block;
   background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.07);
-  color: #8B93A8;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;

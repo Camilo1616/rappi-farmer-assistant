@@ -7,8 +7,8 @@
 }
 
 .modal {
-  background: #1C2333;
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 16px;
   width: 100%; max-width: 520px;
   overflow: hidden;
@@ -23,25 +23,25 @@
 .header {
   display: flex; align-items: flex-start; justify-content: space-between;
   padding: 20px 24px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid var(--border);
 }
 
-.storeName { font-size: 16px; font-weight: 700; color: #F0F2F8; margin: 0; }
-.storeCode { font-size: 12px; color: #545E75; margin: 3px 0 0; }
+.storeName { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
+.storeCode { font-size: 12px; color: var(--text-muted); margin: 3px 0 0; }
 
 .closeBtn {
-  background: none; border: none; color: #545E75;
+  background: none; border: none; color: var(--text-muted);
   font-size: 16px; cursor: pointer; padding: 4px;
   transition: color 0.15s;
 }
-.closeBtn:hover { color: #F0F2F8; }
+.closeBtn:hover { color: var(--text-primary); }
 
 .body { padding: 20px 24px; display: flex; flex-direction: column; gap: 18px; }
 
 .field { display: flex; flex-direction: column; gap: 8px; }
 
 .label {
-  font-size: 11px; font-weight: 700; color: #545E75;
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.8px;
 }
 
@@ -51,49 +51,49 @@
 
 .chip {
   padding: 6px 12px;
-  background: #242B3D;
-  border: 1.5px solid rgba(255,255,255,0.07);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
   border-radius: 99px;
-  font-size: 12px; font-weight: 600; color: #8B93A8;
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
   cursor: pointer; transition: all 0.15s; font-family: inherit;
 }
-.chip:hover { border-color: rgba(255,255,255,0.2); color: #F0F2F8; }
+.chip:hover { border-color: var(--text-secondary); color: var(--text-primary); }
 .chipActive { background: rgba(255,68,31,0.12); border-color: #FF441F; color: #FF6B4A !important; }
 .chipResult { background: rgba(34,197,94,0.1); border-color: #22C55E; color: #22C55E !important; }
 
 .textarea {
   width: 100%; padding: 10px 14px;
-  background: #242B3D;
-  border: 1.5px solid rgba(255,255,255,0.07);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
   border-radius: 8px;
-  font-size: 13px; color: #F0F2F8;
+  font-size: 13px; color: var(--text-primary);
   resize: vertical; outline: none; font-family: inherit;
   transition: border-color 0.18s;
 }
-.textarea:focus { border-color: #FF441F; }
-.textarea::placeholder { color: #545E75; }
+.textarea:focus { border-color: var(--rappi-orange); }
+.textarea::placeholder { color: var(--text-muted); }
 
 .error { font-size: 13px; color: #ff6b6b; background: rgba(239,68,68,0.08);
   border: 1px solid rgba(239,68,68,0.2); padding: 10px 14px; border-radius: 8px; margin: 0; }
 
 .footer {
   padding: 16px 24px;
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid var(--border);
   display: flex; justify-content: flex-end; gap: 10px;
 }
 
 .btnPrimary {
-  padding: 10px 20px; background: #FF441F; color: #fff;
+  padding: 10px 20px; background: var(--rappi-orange); color: #fff;
   border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
   cursor: pointer; transition: background 0.18s; font-family: inherit;
 }
-.btnPrimary:hover:not(:disabled) { background: #D93510; }
+.btnPrimary:hover:not(:disabled) { background: var(--rappi-orange-dark); }
 .btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btnGhost {
-  padding: 10px 16px; background: none; color: #8B93A8;
-  border: 1.5px solid rgba(255,255,255,0.08);
+  padding: 10px 16px; background: none; color: var(--text-secondary);
+  border: 1.5px solid var(--border);
   border-radius: 8px; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: all 0.18s; font-family: inherit;
 }
-.btnGhost:hover { border-color: rgba(255,255,255,0.2); color: #F0F2F8; }
+.btnGhost:hover { border-color: var(--text-secondary); color: var(--text-primary); }

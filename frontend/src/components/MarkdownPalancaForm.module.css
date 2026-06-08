@@ -22,7 +22,7 @@
 .label {
   font-size: 11px;
   font-weight: 700;
-  color: #8B93A8;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -32,17 +32,17 @@
 
 .chip {
   padding: 6px 14px;
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 99px;
-  color: #8B93A8;
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
 }
-.chip:hover { border-color: rgba(255,255,255,0.2); color: #F0F2F8; }
+.chip:hover { border-color: var(--text-secondary); color: var(--text-primary); }
 
 .chipActive {
   background: rgba(249,115,22,0.12);
@@ -61,10 +61,10 @@
 }
 
 .input {
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #F0F2F8;
+  color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;
   padding: 9px 12px;

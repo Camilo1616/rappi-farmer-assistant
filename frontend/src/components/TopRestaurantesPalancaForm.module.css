@@ -36,7 +36,7 @@
 .sectionLabel {
   font-size: 12px;
   font-weight: 700;
-  color: #8B93A8;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
@@ -45,10 +45,10 @@
 
 .siNoBtn {
   padding: 4px 14px;
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 99px;
-  color: #545E75;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -67,10 +67,10 @@
 }
 
 .select {
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  color: #F0F2F8;
+  color: var(--text-primary);
   font-size: 12px;
   font-family: inherit;
   padding: 4px;
@@ -80,6 +80,6 @@
   min-height: 80px;
 }
 .select:focus { border-color: rgba(234,179,8,0.4); }
-.select option { background: #1C2333; padding: 5px 8px; }
+.select option { background: var(--bg-card); padding: 5px 8px; }
 .select option:checked { background: rgba(234,179,8,0.2); color: #EAB308; }
-.hint { font-size: 10px; color: #545E75; margin: 2px 0 0; font-style: italic; }
+.hint { font-size: 10px; color: var(--text-muted); margin: 2px 0 0; font-style: italic; }
