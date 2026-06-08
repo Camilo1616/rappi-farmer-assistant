@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { getProfile, updateNickname, uploadAvatar, getFarmers, promote, demote, assignCountry, removeCountry,
-         getPerformance, changePassword, getNotes, createNote, updateNote, deleteNote } from '../services/profileService'
+         getPerformance, changePassword, getNotes, createNote, updateNote, deleteNote,
+         getCalendarStatus, connectCalendar, disconnectCalendar, syncCalendar } from '../services/profileService'
 import { getLiderDashboard } from '../services/dashboardService'
 import styles from './ProfilePage.module.css'
 
@@ -30,6 +31,8 @@ export default function ProfilePage() {
   const [pwdNew,        setPwdNew]        = useState('')
   const [pwdConfirm,    setPwdConfirm]    = useState('')
   const [pwdSaving,     setPwdSaving]     = useState(false)
+  const [calConnected,  setCalConnected]  = useState(false)
+  const [calLoading,    setCalLoading]    = useState(false)
   const avatarRef = useRef()
 
   const isAdmin = profile?.role === 'ADMIN'
@@ -56,6 +59,7 @@ export default function ProfilePage() {
     load()
     getPerformance().then(r => setPerf(r.data)).catch(() => {})
     getNotes().then(r => setNotes(r.data)).catch(() => {})
+    getCalendarStatus().then(r => setCalConnected(r.data.connected)).catch(() => {})
   }, [])
 
   const flash = (text, type = 'ok') => {
@@ -138,6 +142,54 @@ export default function ProfilePage() {
   const handleRemoveCountry = async (id, code) => {
     try { await removeCountry(id, code); flash(`País ${code} removido`); load() }
     catch (e) { flash(e.response?.data?.message || 'Error', 'err') }
+  }
+
+  const handleConnectCalendar = async () => {
+    setCalLoading(true)
+    try {
+      const { data } = await connectCalendar()
+      const popup = window.open(data.authUrl, 'google-calendar-auth', 'width=520,height=620')
+      const handler = (e) => {
+        if (e.data === 'connected') {
+          setCalConnected(true)
+          flash('Google Calendar conectado')
+          popup?.close()
+        } else if (e.data === 'error') {
+          flash('Error al conectar Google Calendar', 'err')
+          popup?.close()
+        }
+        window.removeEventListener('message', handler)
+        setCalLoading(false)
+      }
+      window.addEventListener('message', handler)
+      // Si el usuario cierra el popup sin autorizar
+      const interval = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(interval)
+          window.removeEventListener('message', handler)
+          setCalLoading(false)
+        }
+      }, 800)
+    } catch (e) {
+      flash('Error al iniciar conexión', 'err')
+      setCalLoading(false)
+    }
+  }
+
+  const handleDisconnectCalendar = async () => {
+    if (!confirm('¿Desconectar Google Calendar?')) return
+    try { await disconnectCalendar(); setCalConnected(false); flash('Google Calendar desconectado') }
+    catch (e) { flash('Error al desconectar', 'err') }
+  }
+
+  const handleSyncCalendar = async () => {
+    setCalLoading(true)
+    try {
+      const { data } = await syncCalendar()
+      flash(`Sync completado: ${data.activated ?? 0} tiendas activadas`)
+    } catch (e) {
+      flash(e.response?.data?.message || 'Error en sync', 'err')
+    } finally { setCalLoading(false) }
   }
 
   if (!profile) return (
@@ -360,6 +412,35 @@ export default function ProfilePage() {
                 <span className={styles.barLabel}>{d.label}</span>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Google Calendar (solo farmer) ── */}
+      {!isManager && (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>📅 Google Calendar</h2>
+          <p className={styles.fieldLabel} style={{ marginBottom: 12 }}>
+            Conecta tu cuenta de Google para sincronizar automáticamente las activaciones de Handoff.
+          </p>
+          <div className={styles.fieldRow}>
+            <span className={`${styles.metaChip}`} style={{ background: calConnected ? '#dcfce7' : '#fee2e2', color: calConnected ? '#166534' : '#991b1b' }}>
+              {calConnected ? '✅ Conectado' : '❌ No conectado'}
+            </span>
+            {!calConnected ? (
+              <button className={styles.btnPrimary} onClick={handleConnectCalendar} disabled={calLoading}>
+                {calLoading ? 'Abriendo...' : 'Conectar Google Calendar'}
+              </button>
+            ) : (
+              <>
+                <button className={styles.btnGhost} onClick={handleSyncCalendar} disabled={calLoading}>
+                  {calLoading ? 'Sincronizando...' : '🔄 Sincronizar ahora'}
+                </button>
+                <button className={styles.btnDemote} onClick={handleDisconnectCalendar}>
+                  Desconectar
+                </button>
+              </>
+            )}
           </div>
         </section>
       )}

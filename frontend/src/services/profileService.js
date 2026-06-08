@@ -18,3 +18,8 @@ export const promote       = (id)           => api.patch(`/profile/${id}/promote
 export const demote        = (id)           => api.patch(`/profile/${id}/demote`)
 export const assignCountry = (id, code)     => api.patch(`/profile/${id}/country`, { countryCode: code })
 export const removeCountry = (id, code)     => api.delete(`/profile/${id}/country/${code}`)
+
+export const getCalendarStatus   = ()   => api.get('/calendar/status')
+export const connectCalendar     = ()   => api.get('/calendar/connect')
+export const disconnectCalendar  = ()   => api.delete('/calendar/disconnect')
+export const syncCalendar        = ()   => api.post('/calendar/sync')
