@@ -158,7 +158,7 @@ export default function ProfilePage() {
     localStorage.removeItem('calendar_auth_result')
     try {
       const { data } = await connectCalendar()
-      window.open(data.authUrl, 'google-calendar-auth', 'width=520,height=620,noopener=no')
+      window.open(data.authUrl, 'google-calendar-auth', 'width=520,height=620')
 
       // Escucha el resultado via storage event (funciona aunque COOP bloquee window.opener)
       const onStorage = async (e) => {

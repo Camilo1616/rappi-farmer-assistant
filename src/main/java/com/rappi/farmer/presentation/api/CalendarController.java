@@ -22,8 +22,8 @@ public class CalendarController {
     private final UserService userService;
     private final JwtService jwtService;
 
-    @Value("${cors.allowed-origins:http://localhost:5173}")
-    private String frontendOrigin;
+    @Value("${frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     /** Farmer solicita conectar su Google Calendar — devuelve la URL de autorización */
     @GetMapping("/connect")
@@ -52,7 +52,7 @@ public class CalendarController {
             status = "error";
         }
         // Redirige al frontend (mismo origen que el opener) para que pueda usar localStorage
-        response.sendRedirect(frontendOrigin + "/calendar-callback?status=" + status);
+        response.sendRedirect(frontendUrl + "/calendar-callback?status=" + status);
     }
 
     /** Estado de conexión del calendar del usuario */
