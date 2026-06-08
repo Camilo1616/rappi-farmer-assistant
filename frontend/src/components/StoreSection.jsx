@@ -97,10 +97,10 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontWeight: 700, color: '#ff441f', fontSize: 12 }}>{s.brandId || s.storeCode || '—'}</span>
+                    <span style={{ fontWeight: 700, color: '#ff441f', fontSize: 12 }}>{s.brandId || '—'}</span>
                   </td>
                   <td>
-                    <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{s.id || '—'}</span>
+                    <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{s.storeCode || '—'}</span>
                   </td>
                   <td>
                     {s.phoneNumber

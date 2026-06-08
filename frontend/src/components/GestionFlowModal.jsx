@@ -81,8 +81,9 @@ export default function GestionFlowModal({ store, onClose, onSaved }) {
 
   const handleMeetLink = val => {
     setMeetLink(val)
-    if (val.trim() && !val.trim().toLowerCase().includes(MEET_LINK)) {
-      setMeetError(`El link debe ser ${MEET_LINK}`)
+    const clean = val.trim().toLowerCase().replace(/^https?:\/\//, '')
+    if (val.trim() && !clean.startsWith('meet.google.')) {
+      setMeetError('El link debe ser de Google Meet (meet.google.com/...)')
     } else {
       setMeetError('')
     }
