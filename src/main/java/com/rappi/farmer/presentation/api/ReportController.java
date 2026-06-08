@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -15,8 +16,9 @@ public class ReportController {
     private final ReportService reportService;
 
     @GetMapping("/daily")
-    public ResponseEntity<Map<String, Object>> daily() {
-        return ResponseEntity.ok(reportService.getDailyReport());
+    public ResponseEntity<Map<String, Object>> daily(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(reportService.getDailyReport(date));
     }
 
     @GetMapping("/portfolio")

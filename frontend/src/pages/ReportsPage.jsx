@@ -82,26 +82,37 @@ function StatCard({ label, value, sub, color, progress, progressMax, progressOk 
   )
 }
 
+const todayStr = () => new Date().toISOString().split('T')[0]
+
 export default function ReportsPage() {
-  const [daily,     setDaily]     = useState(null)
-  const [portfolio, setPortfolio] = useState(null)
-  const [loading,   setLoading]   = useState(true)
+  const [daily,        setDaily]        = useState(null)
+  const [portfolio,    setPortfolio]    = useState(null)
+  const [loading,      setLoading]      = useState(true)
   const [tab,          setTab]          = useState('daily')
   const [typeFilter,   setTypeFilter]   = useState(null)
   const [resultFilter, setResultFilter] = useState(null)
   const [modalSection, setModalSection] = useState(null)
+  const [selectedDate, setSelectedDate] = useState(todayStr())
 
-  const load = async () => {
+  const load = async (date) => {
     setLoading(true)
     try {
-      const [d, p] = await Promise.all([getDailyReport(), getPortfolioReport()])
+      const [d, p] = await Promise.all([getDailyReport(date), getPortfolioReport()])
       setDaily(d.data)
       setPortfolio(p.data)
     } catch {}
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(selectedDate) }, [])
+
+  const handleDateChange = (e) => {
+    const date = e.target.value
+    setSelectedDate(date)
+    setTypeFilter(null)
+    setResultFilter(null)
+    load(date)
+  }
 
   const rows = daily?.rows ?? []
   const filteredRows = rows.filter(r =>
@@ -119,7 +130,7 @@ export default function ReportsPage() {
           <h1 className={styles.title}>Reportes</h1>
           <p className={styles.sub}>Resumen de actividad y estado de cartera</p>
         </div>
-        <button className={styles.btnRefresh} onClick={load}>🔄 Actualizar</button>
+        <button className={styles.btnRefresh} onClick={() => load(selectedDate)}>🔄 Actualizar</button>
       </div>
 
       {/* Tabs */}
@@ -135,6 +146,23 @@ export default function ReportsPage() {
       {/* ── Gestiones del día ── */}
       {!loading && tab === 'daily' && daily && (
         <div className={styles.section}>
+
+          {/* Filtro de fecha */}
+          <div className={styles.dateFilterRow}>
+            <label className={styles.dateFilterLabel}>📅 Fecha:</label>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={selectedDate}
+              max={todayStr()}
+              onChange={handleDateChange}
+            />
+            {selectedDate !== todayStr() && (
+              <button className={styles.btnToday} onClick={() => { setSelectedDate(todayStr()); setTypeFilter(null); setResultFilter(null); load(todayStr()) }}>
+                Ir a hoy
+              </button>
+            )}
+          </div>
 
           {/* Metas */}
           <div className={styles.metaRow}>

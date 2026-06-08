@@ -56,6 +56,13 @@ public interface ManagementJpaRepository extends JpaRepository<ManagementEntity,
                                               @Param("end") LocalDateTime end);
 
     @Query("SELECT m FROM ManagementEntity m JOIN FETCH m.store LEFT JOIN FETCH m.user " +
+           "WHERE m.user.id = :userId AND m.managementDate >= :start AND m.managementDate < :end " +
+           "ORDER BY m.managementDate DESC")
+    List<ManagementEntity> findByUserIdAndDateRange(@Param("userId") Long userId,
+                                                     @Param("start") LocalDateTime start,
+                                                     @Param("end") LocalDateTime end);
+
+    @Query("SELECT m FROM ManagementEntity m JOIN FETCH m.store LEFT JOIN FETCH m.user " +
            "WHERE m.user.id = :userId AND m.managementDate >= :start " +
            "ORDER BY m.managementDate DESC")
     List<ManagementEntity> findByUserIdSince(@Param("userId") Long userId,

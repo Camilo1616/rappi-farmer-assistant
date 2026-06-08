@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -22,9 +23,11 @@ public class ReportService {
     private final SessionContext sessionContext;
 
     @Transactional(readOnly = true)
-    public Map<String, Object> getDailyReport() {
+    public Map<String, Object> getDailyReport(LocalDate date) {
         Long userId = sessionContext.getCurrentUserId();
-        List<Management> all = managementRepository.findTodayByUser(userId);
+        List<Management> all = (date == null)
+                ? managementRepository.findTodayByUser(userId)
+                : managementRepository.findByDateAndUser(userId, date);
 
         // Solo las reales (no brandSync)
         List<Management> real = all.stream().filter(m -> !m.isBrandSync()).toList();

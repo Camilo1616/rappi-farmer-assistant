@@ -99,6 +99,14 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
     }
 
     @Override
+    public List<Management> findByDateAndUser(Long userId, java.time.LocalDate date) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        return managementJpaRepository.findByUserIdAndDateRange(userId, start, end)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public void deleteByStoreId(Long storeId) {
         managementJpaRepository.deleteByStoreId(storeId);
     }
