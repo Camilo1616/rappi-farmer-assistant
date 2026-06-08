@@ -35,7 +35,7 @@ public class EmailVerificationService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("api-key", resendApiKey);
 
-            Map<String, Object> sender = Map.of("name", "Rappi Farmer Assistant", "email", "adebda001@smtp-brevo.com");
+            Map<String, Object> sender = Map.of("name", "Rappi Farmer Assistant", "email", "cristianariza068@gmail.com");
             Map<String, Object> recipient = Map.of("email", email);
             Map<String, Object> body = Map.of(
                 "sender", sender,
