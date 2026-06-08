@@ -2,12 +2,14 @@ FROM node:20-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    python3 make g++ git curl \
+# git es requerido por dependencias transitivas de baileys
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ git \
+    && git --version \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json .
-RUN npm install --omit=dev
+COPY package.json .npmrc ./
+RUN npm install --omit=dev --no-audit --prefer-offline || npm install --omit=dev --no-audit
 
 COPY index.js .
 
