@@ -12,8 +12,6 @@ RUN npm install --omit=dev
 
 COPY index.js .
 
-# Volumen para persistir la sesión de WhatsApp
-VOLUME ["/app/auth_info"]
 ENV AUTH_DIR=/app/auth_info
 
 EXPOSE 3000
