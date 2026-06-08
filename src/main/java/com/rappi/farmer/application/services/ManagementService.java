@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -30,22 +31,53 @@ public class ManagementService {
 
     @Transactional
     public Management register(RegisterManagementRequest request) {
+        Long userId = sessionContext.getCurrentUserId();
+        LocalDateTime now = LocalDateTime.now();
+
+        // Bloquear si ya existe gestión hoy para esta tienda o cualquier hermana de la misma brand
+        if (managementRepository.findLatestTodayByStoreId(request.getStoreId()).isPresent()) {
+            throw new com.rappi.farmer.domain.exceptions.BusinessException(
+                    "Ya se registró una gestión hoy para esta tienda");
+        }
+        storeRepository.findById(request.getStoreId()).ifPresent(origin -> {
+            if (origin.getBrandId() != null) {
+                storeRepository.findAllByBrandId(origin.getBrandId()).forEach(sibling -> {
+                    if (!sibling.getId().equals(request.getStoreId())
+                            && managementRepository.findLatestTodayByStoreId(sibling.getId()).isPresent()) {
+                        throw new com.rappi.farmer.domain.exceptions.BusinessException(
+                                "Ya se registró una gestión hoy para otra tienda de esta marca (Brand ID: " + origin.getBrandId() + ")");
+                    }
+                });
+            }
+        });
+
         Management management = new Management(
-                null,
-                request.getStoreId(),
-                null,
-                null,
-                sessionContext.getCurrentUserId(),
-                request.getManagementType(),
-                request.getResultType(),
-                request.getComments(),
-                LocalDateTime.now(),
-                null,
-                null
+                null, request.getStoreId(), null, null, userId,
+                request.getManagementType(), request.getResultType(),
+                request.getComments(), now, null, null, false
         );
         Management saved = managementRepository.save(management);
         log.info("Gestión registrada — tienda:{} tipo:{} resultado:{}",
                 request.getStoreId(), request.getManagementType(), request.getResultType());
+
+        // Registrar la misma gestión en todas las tiendas de la misma Brand ID
+        storeRepository.findById(request.getStoreId()).ifPresent(origin -> {
+            if (origin.getBrandId() != null) {
+                List<com.rappi.farmer.domain.entities.Store> siblings =
+                        storeRepository.findAllByBrandId(origin.getBrandId());
+                for (com.rappi.farmer.domain.entities.Store sibling : siblings) {
+                    if (sibling.getId().equals(request.getStoreId())) continue;
+                    Management m = new Management(
+                            null, sibling.getId(), null, null, userId,
+                            request.getManagementType(), request.getResultType(),
+                            request.getComments(), now, null, null, true
+                    );
+                    managementRepository.save(m);
+                    log.info("Gestión en hermana brandId:{} tienda:{}", origin.getBrandId(), sibling.getId());
+                }
+            }
+        });
+
         return saved;
     }
 
@@ -56,11 +88,23 @@ public class ManagementService {
         return updated;
     }
 
+    @Transactional
+    public void deleteManagement(Long managementId) {
+        Management m = managementRepository.findById(managementId)
+                .orElseThrow(() -> new com.rappi.farmer.domain.exceptions.BusinessException("Gestión no encontrada"));
+        if (!m.getManagementDate().toLocalDate().equals(LocalDate.now())) {
+            throw new com.rappi.farmer.domain.exceptions.BusinessException("Solo se pueden eliminar gestiones del día actual");
+        }
+        managementRepository.deleteById(managementId);
+        log.info("Gestión eliminada — id:{}", managementId);
+    }
+
     public Optional<String> getTodayResultForStore(Long storeId) {
         return managementRepository.findLatestTodayByStoreId(storeId)
                 .map(Management::getResultType);
     }
 
+    @Transactional(readOnly = true)
     public List<ManagementViewDto> getTodayManagements() {
         Long userId = sessionContext.getCurrentUserId();
         boolean isLider = sessionContext.getCurrentUserRole() != null
@@ -105,7 +149,8 @@ public class ManagementService {
                 m.getManagementDate() != null ? m.getManagementDate().format(TIME_FMT) : "",
                 m.getFarmerName(),
                 m.getFarmerCode(),
-                hadHandoff
+                hadHandoff,
+                m.isBrandSync()
         );
     }
 }

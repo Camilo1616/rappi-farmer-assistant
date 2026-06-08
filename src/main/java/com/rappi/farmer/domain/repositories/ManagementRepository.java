@@ -13,4 +13,6 @@ public interface ManagementRepository {
     List<Management> findAllToday();
     List<Management> findTodayByUser(Long userId);
     void deleteByStoreId(Long storeId);
+    void deleteById(Long id);
+    Optional<Management> findById(Long id);
 }

@@ -178,12 +178,10 @@ public class ProfileController {
                     .filter(u -> !u.getId().equals(caller.getId()))
                     .map(this::toDto).toList());
         }
-        // LIDER ve solo los farmers de sus países + otros líderes
+        // LIDER ve solo los FARMER_MASS de sus propios países — no ve otros Líderes
         List<User> farmersDesusPaises = userService.findFarmersByLider(caller.getId());
-        java.util.Set<Long> farmerIds = farmersDesusPaises.stream().map(User::getId).collect(java.util.stream.Collectors.toSet());
-        return ResponseEntity.ok(userRepository.findAll().stream()
+        return ResponseEntity.ok(farmersDesusPaises.stream()
                 .filter(u -> !u.getId().equals(caller.getId()))
-                .filter(u -> u.getRole().equals(UserRole.LIDER.name()) || farmerIds.contains(u.getId()))
                 .map(this::toDto).toList());
     }
 

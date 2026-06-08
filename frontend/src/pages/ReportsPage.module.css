@@ -1,0 +1,188 @@
+.page { padding: 32px; display: flex; flex-direction: column; gap: 24px; max-width: 1200px; }
+
+.header { display: flex; align-items: flex-start; justify-content: space-between; }
+.title  { font-size: 1.5rem; font-weight: 700; color: #F0F2F8; margin: 0; }
+.sub    { font-size: 0.82rem; color: #6B7280; margin: 4px 0 0; }
+.btnRefresh {
+  padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #9CA3AF; cursor: pointer; transition: background 0.15s;
+}
+.btnRefresh:hover { background: rgba(255,255,255,0.1); }
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 8px; }
+.tab {
+  padding: 9px 20px; border-radius: 9px; font-size: 0.85rem; font-weight: 500;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  color: #6B7280; cursor: pointer; transition: all 0.15s;
+}
+.tab:hover  { background: rgba(255,255,255,0.08); color: #D1D5DB; }
+.tabActive  { background: rgba(59,130,246,0.12); border-color: #3B82F6; color: #3B82F6; font-weight: 600; }
+
+.loading { color: #6B7280; font-size: 0.85rem; padding: 24px 0; }
+.section { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Metas ── */
+.metaRow { display: flex; gap: 14px; flex-wrap: wrap; }
+.metaCard {
+  flex: 1; min-width: 220px;
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: #161B27; position: relative; overflow: hidden;
+}
+.metaOk      { border-color: rgba(34,197,94,0.25);  background: rgba(34,197,94,0.06); }
+.metaWarn    { border-color: rgba(245,158,11,0.25);  background: rgba(245,158,11,0.06); }
+.metaPending { border-color: rgba(255,255,255,0.07); background: #161B27; }
+.metaIcon  { font-size: 1.4rem; flex-shrink: 0; }
+.metaLabel { font-size: 0.75rem; color: #9CA3AF; font-weight: 500; }
+.metaVal   { font-size: 1.1rem; font-weight: 700; color: #F0F2F8; }
+.metaBar   {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: rgba(255,255,255,0.06);
+}
+.metaBarFill { height: 100%; background: #22C55E; transition: width 0.4s ease; }
+
+/* ── Stats grid ── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+.statCard {
+  background: #161B27; border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.statLabel { font-size: 0.72rem; color: #6B7280; font-weight: 500; }
+.statValue { font-size: 1.5rem; font-weight: 700; }
+.statSub   { font-size: 0.68rem; color: #6B7280; }
+.progressWrap { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.progressBg   { flex: 1; height: 5px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; }
+.progressFill { height: 100%; border-radius: 99px; transition: width 0.4s; }
+.progressPct  { font-size: 0.65rem; color: #6B7280; width: 28px; text-align: right; }
+
+/* ── Filtros ── */
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.filterLabel { font-size: 0.75rem; color: #6B7280; font-weight: 600; }
+.chip {
+  padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 500;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  color: #6B7280; cursor: pointer; transition: all 0.12s;
+}
+.chip:hover  { background: rgba(255,255,255,0.08); color: #D1D5DB; }
+.chipActive  { background: rgba(255,255,255,0.08); font-weight: 600; }
+
+/* ── Tabla ── */
+.tableWrap { overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255,255,255,0.07); }
+.table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.table thead tr { background: rgba(255,255,255,0.03); }
+.table th {
+  padding: 10px 14px; text-align: left;
+  font-size: 0.72rem; font-weight: 600; color: #6B7280;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #D1D5DB; }
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.tdHora    { font-size: 0.78rem; color: #6B7280; white-space: nowrap; }
+.storeName { display: block; font-weight: 500; color: #F0F2F8; }
+.storeCode { display: block; font-size: 0.7rem; color: #6B7280; }
+.badge     { padding: 3px 9px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+.tdComment { font-size: 0.78rem; color: #9CA3AF; max-width: 280px; }
+.empty     { text-align: center; padding: 32px; color: #6B7280; }
+
+/* ── Portfolio ── */
+.portfolioTotal {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 20px 24px; background: #161B27;
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 12px;
+}
+.portfolioTotalNum   { font-size: 2.5rem; font-weight: 800; color: #F0F2F8; }
+.portfolioTotalLabel { font-size: 0.9rem; color: #6B7280; }
+
+.portfolioGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.portfolioCard {
+  background: #161B27; border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 16px;
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.portfolioIcon  { font-size: 1.5rem; }
+.portfolioLabel { font-size: 0.72rem; color: #9CA3AF; font-weight: 500; text-align: center; }
+.portfolioVal   { font-size: 1.8rem; font-weight: 800; }
+.portfolioBar   { width: 100%; height: 5px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; }
+.portfolioBarFill { height: 100%; border-radius: 99px; transition: width 0.4s; }
+.portfolioPct   { font-size: 0.68rem; color: #6B7280; }
+.portfolioHint  { font-size: 0.68rem; color: #6B7280; margin-top: 2px; }
+.portfolioCardClickable { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.portfolioCardClickable:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+
+/* ── Modal de tiendas ── */
+.overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.modal {
+  background: #1A2030; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px; width: 100%; max-width: 520px;
+  display: flex; flex-direction: column; max-height: 80vh;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.modalHeader {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 1rem; font-weight: 700; color: #F0F2F8;
+}
+.modalCount {
+  font-size: 0.75rem; color: #6B7280;
+  background: rgba(255,255,255,0.06); padding: 2px 10px; border-radius: 99px;
+}
+.modalClose {
+  margin-left: auto; background: none; border: none;
+  color: #6B7280; cursor: pointer; font-size: 1rem; padding: 2px 6px;
+  border-radius: 6px; transition: background 0.12s;
+}
+.modalClose:hover { background: rgba(255,255,255,0.08); color: #F0F2F8; }
+.modalSearch {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 0.82rem; color: #6B7280;
+}
+.modalSearchInput {
+  flex: 1; background: none; border: none; outline: none;
+  color: #F0F2F8; font-size: 0.85rem;
+}
+.clearBtn { background: none; border: none; color: #6B7280; cursor: pointer; font-size: 0.8rem; }
+.modalList { overflow-y: auto; flex: 1; }
+.modalList::-webkit-scrollbar { width: 4px; }
+.modalList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.modalRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.1s;
+}
+.modalRow:last-child { border-bottom: none; }
+.modalRow:hover { background: rgba(255,255,255,0.03); }
+.modalStoreInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.modalStoreMeta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.phoneOk  { font-size: 0.72rem; color: #22C55E; }
+.phoneNo  { font-size: 0.68rem; color: #F59E0B; background: rgba(245,158,11,0.1); padding: 1px 6px; border-radius: 4px; }
+.statusTag { font-size: 0.65rem; color: #9CA3AF; background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; }
+
+.alertsRow { display: flex; gap: 12px; flex-wrap: wrap; }
+.alertCard {
+  flex: 1; min-width: 160px;
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; border-radius: 10px;
+  background: #161B27; border: 1px solid;
+}
+.alertVal   { font-size: 1.4rem; font-weight: 700; color: #F0F2F8; }
+.alertLabel { font-size: 0.72rem; color: #9CA3AF; }

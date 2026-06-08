@@ -59,7 +59,8 @@ public class AdminService {
                                 ? m.getManagementDate().format(TIME_FMT) : "",
                         null,
                         null,
-                        m.getStore() != null ? m.getStore().getHadHandoff() : null))
+                        m.getStore() != null ? m.getStore().getHadHandoff() : null,
+                        m.isBrandSync()))
                 .collect(Collectors.toList());
     }
 

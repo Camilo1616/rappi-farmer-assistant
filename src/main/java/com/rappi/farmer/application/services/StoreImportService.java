@@ -38,6 +38,7 @@ public class StoreImportService {
     private final UserRepository userRepository;
     private final SessionContext sessionContext;
     private final PasswordEncoder encoder;
+    private final StoreDeleteService storeDeleteService;
 
     // Cache email → userId para no consultar BD por cada fila (thread-safe)
     private final java.util.Map<String, Long> farmerEmailCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -48,12 +49,13 @@ public class StoreImportService {
         LocalDate today = LocalDate.now();
         farmerEmailCache.clear();
 
-        String emailLogueado = sessionContext.getCurrentUserEmail() != null
-                ? sessionContext.getCurrentUserEmail().toLowerCase().trim() : null;
-        boolean esLider = sessionContext.getCurrentUserRole() != null
-                && com.rappi.farmer.domain.enums.UserRole.LIDER == sessionContext.getCurrentUserRole();
 
-        int created = 0, updated = 0, skipped = 0, errors = 0;
+
+        ImportResultDto result = new ImportResultDto();
+
+        // Códigos procesados en este Excel (para limpiar sobrantes al final)
+        java.util.Set<String> codesInExcel    = new java.util.HashSet<>();
+        java.util.Set<Long>   farmerIdsTouched = new java.util.HashSet<>();
 
         for (StoreExcelRowDto row : rows) {
             try {
@@ -62,27 +64,24 @@ public class StoreImportService {
 
                 // Sin email en la columna FARMER → ignorar siempre
                 if (farmerEmail == null || farmerEmail.isBlank()) {
-                    skipped++;
+                    result.setSkipped(result.getSkipped() + 1);
+                    result.getSkippedList().add(new ImportResultDto.StoreResultRow(
+                            row.getStoreCode(), row.getStoreName(), null, row.getChannel()));
                     continue;
                 }
 
-                Long farmerId;
-                if (esLider) {
-                    // Líder: procesa todas las filas, asigna según la columna FARMER
-                    farmerId = resolverFarmerPorEmail(farmerEmail);
-                } else {
-                    // Farmer: solo procesa filas donde FARMER = su propio email
-                    if (!farmerEmail.equals(emailLogueado)) {
-                        skipped++;
-                        continue;
-                    }
-                    farmerId = sessionContext.getCurrentUserId();
-                }
+                // Siempre usar el email de la columna FARMER para asignar la tienda
+                Long farmerId = resolverFarmerPorEmail(farmerEmail);
 
                 if (farmerId == null) {
-                    skipped++;
+                    result.setSkipped(result.getSkipped() + 1);
+                    result.getSkippedList().add(new ImportResultDto.StoreResultRow(
+                            row.getStoreCode(), row.getStoreName(), farmerEmail, row.getChannel()));
                     continue;
                 }
+
+                codesInExcel.add(row.getStoreCode());
+                farmerIdsTouched.add(farmerId);
 
                 Store savedStore;
                 Optional<Store> existing = storeRepository.findByStoreCode(row.getStoreCode());
@@ -90,24 +89,57 @@ public class StoreImportService {
                 if (existing.isPresent()) {
                     updateStore(existing.get(), row, farmerId);
                     savedStore = storeRepository.save(existing.get());
-                    updated++;
+                    result.setUpdated(result.getUpdated() + 1);
+                    result.getUpdatedList().add(new ImportResultDto.StoreResultRow(
+                            row.getStoreCode(), row.getStoreName(), farmerEmail, row.getChannel()));
                 } else {
                     savedStore = storeRepository.save(buildStore(row, farmerId));
-                    created++;
+                    result.setCreated(result.getCreated() + 1);
+                    result.getCreatedList().add(new ImportResultDto.StoreResultRow(
+                            row.getStoreCode(), row.getStoreName(), farmerEmail, row.getChannel()));
                 }
 
                 saveDailyMetric(savedStore.getId(), row, today);
 
             } catch (Exception e) {
                 log.error("Error importando tienda {}: {}", row.getStoreCode(), e.getMessage());
-                errors++;
+                result.setErrors(result.getErrors() + 1);
+                result.getErrorList().add(new ImportResultDto.ErrorRow(row.getStoreCode(), e.getMessage()));
             }
         }
 
-        log.info("Importación completa — total:{} creadas:{} actualizadas:{} ignoradas:{} errores:{}",
-                rows.size(), created, updated, skipped, errors);
+        // Eliminar tiendas de los farmers tocados que NO aparecieron en este Excel
+        for (Long farmerId : farmerIdsTouched) {
+            List<Store> storesEnBD = storeRepository.findByUserId(farmerId);
+            for (Store s : storesEnBD) {
+                if (s.getStoreCode() != null && codesInExcel.contains(s.getStoreCode())) continue;
+                try {
+                    storeDeleteService.deleteStore(s.getId());
+                    result.setRemoved(result.getRemoved() + 1);
+                    result.getRemovedList().add(new ImportResultDto.StoreResultRow(
+                            s.getStoreCode(), s.getStoreName(), null, s.getChannel()));
+                } catch (Exception e) {
+                    log.warn("No se pudo eliminar tienda {} ({}): {}", s.getStoreCode(), s.getId(), e.getMessage());
+                }
+            }
+        }
 
-        return new ImportResultDto(rows.size(), created, updated, errors);
+        result.setTotal(rows.size());
+
+        log.info("Importación completa — total:{} creadas:{} actualizadas:{} ignoradas:{} errores:{} eliminadas:{}",
+                rows.size(), result.getCreated(), result.getUpdated(),
+                result.getSkipped(), result.getErrors(), result.getRemoved());
+
+        // Registrar que el usuario realizó el cargue hoy
+        Long currentUserId = sessionContext.getCurrentUserId();
+        if (currentUserId != null) {
+            userRepository.findById(currentUserId).ifPresent(u -> {
+                u.setLastImportDate(today);
+                userRepository.save(u);
+            });
+        }
+
+        return result;
     }
 
     private void saveDailyMetric(Long storeId, StoreExcelRowDto row, LocalDate date) {
@@ -195,7 +227,7 @@ public class StoreImportService {
         return null; // Hunting/Inside sin HO → no activa el ciclo aún
     }
 
-    @Transactional
+    // Sin @Transactional propio — cada tienda se borra en su propia transacción (REQUIRES_NEW)
     public int clearStores(Long userId, UserRole role, List<Long> farmerIds) {
         List<Store> stores;
         if (UserRole.ADMIN == role) {
@@ -209,14 +241,18 @@ public class StoreImportService {
         } else {
             stores = storeRepository.findByUserId(userId);
         }
+
+        int deleted = 0;
         for (Store s : stores) {
-            managementRepository.deleteByStoreId(s.getId());
-            whatsappMessageRepository.deleteByStoreId(s.getId());
-            dailyMetricRepository.deleteByStoreId(s.getId());
-            storeRepository.deleteById(s.getId());
+            try {
+                storeDeleteService.deleteStore(s.getId());
+                deleted++;
+            } catch (Exception e) {
+                log.warn("No se pudo eliminar tienda {} ({}): {}", s.getStoreCode(), s.getId(), e.getMessage());
+            }
         }
-        log.info("Cartera limpiada — {} tiendas eliminadas (userId:{} role:{})", stores.size(), userId, role);
-        return stores.size();
+        log.info("Cartera limpiada — {}/{} tiendas eliminadas (userId:{} role:{})", deleted, stores.size(), userId, role);
+        return deleted;
     }
 
     /**
@@ -237,7 +273,7 @@ public class StoreImportService {
                         .collect(java.util.stream.Collectors.joining(" "));
                 Long liderId = sessionContext.getCurrentUserId();
                 User nuevo = new User(null, nombre, k, "FARMER_MASS",
-                        encoder.encode("rappi2025"), null, "CO", "ACTIVE", liderId, null, null, null);
+                        encoder.encode("rappi2025"), null, "CO", "ACTIVE", liderId, null, null, null, null, null);
                 User guardado = userRepository.save(nuevo);
                 log.info("Farmer auto-registrado desde Excel: {} ({})", nombre, k);
                 return guardado.getId();

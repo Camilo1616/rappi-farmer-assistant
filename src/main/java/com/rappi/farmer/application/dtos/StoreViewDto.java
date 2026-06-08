@@ -11,6 +11,7 @@ import java.time.LocalDate;
 public class StoreViewDto {
     private Long id;
     private String storeCode;
+    private String brandId;
     private String storeName;
     private String phoneNumber;
     private int aging;
@@ -35,4 +36,16 @@ public class StoreViewDto {
     private String avaLabel;
     /** Email del farmer asignado a esta tienda. */
     private String farmerEmail;
+    /** AVA_MTD: porcentaje de AVA del mes actual. */
+    private BigDecimal avaMtd;
+    /** AVA_L4W: porcentaje de AVA últimas 4 semanas (= connectionPercentage). */
+    private BigDecimal avaL4w;
+    /** AVA_L7D: porcentaje de AVA últimos 7 días. */
+    private BigDecimal avaL7d;
+    /** Sección del dashboard donde clasifica esta tienda. */
+    private String dashboardSegment;
+    /** Texto del último contacto: tipo, resultado y fecha. */
+    private String lastContact;
+    /** Canal de adquisición: Hunting, Inside Sales, Self. */
+    private String channel;
 }

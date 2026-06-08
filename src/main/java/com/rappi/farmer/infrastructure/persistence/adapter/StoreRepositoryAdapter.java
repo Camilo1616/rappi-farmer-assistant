@@ -37,6 +37,11 @@ public class StoreRepositoryAdapter implements StoreRepository {
     }
 
     @Override
+    public List<Store> findAllByBrandId(String brandId) {
+        return jpaRepository.findAllByBrandId(brandId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public Optional<Store> findById(Long id) {
         return jpaRepository.findById(id).map(this::toDomain);
     }
@@ -59,14 +64,14 @@ public class StoreRepositoryAdapter implements StoreRepository {
     @Override
     public List<Store> searchByCodeOrName(String query) {
         return jpaRepository
-                .findByStoreCodeContainingIgnoreCaseOrStoreNameContainingIgnoreCase(query, query)
+                .searchByAnyField(query)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
     public List<Store> searchByCodeOrNameAndUser(String query, Long userId) {
         return jpaRepository
-                .findByStoreCodeContainingIgnoreCaseOrStoreNameContainingIgnoreCaseAndUser_Id(query, query, userId)
+                .searchByAnyFieldAndUser(query, userId)
                 .stream().map(this::toDomain).toList();
     }
 

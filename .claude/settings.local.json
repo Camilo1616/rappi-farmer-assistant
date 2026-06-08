@@ -50,7 +50,27 @@
       "Bash(xargs grep -l -i \"churn\\\\|aging\\\\|lastLogin\\\\|last_login\\\\|ultimoLogin\")",
       "Bash(grep -v \"password\\\\s*=\\\\s*$\")",
       "PowerShell(& \"C:\\\\Program Files\\\\JetBrains\\\\IntelliJ IDEA 2026.1.2\\\\plugins\\\\maven\\\\lib\\\\maven3\\\\bin\\\\mvn.cmd\" -f \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\pom.xml\" clean compile -q 2>&1 | Select-Object -Last 15)",
-      "Bash(xargs grep -l \"baseType\")"
+      "Bash(xargs grep -l \"baseType\")",
+      "Bash(\"C:\\\\Program Files\\\\JetBrains\\\\IntelliJ IDEA 2026.1.2\\\\plugins\\\\maven\\\\lib\\\\maven3\\\\bin\\\\mvn.cmd\" test -pl . -Dtest=GoogleCalendarServiceTest -q)",
+      "Bash(\"C:\\\\Program Files\\\\JetBrains\\\\IntelliJ IDEA 2026.1.2\\\\plugins\\\\maven\\\\lib\\\\maven3\\\\bin\\\\mvn.cmd\" test -Dtest=GoogleCalendarServiceTest)",
+      "Bash(\"C:\\\\Program Files\\\\JetBrains\\\\IntelliJ IDEA 2026.1.2\\\\plugins\\\\maven\\\\lib\\\\maven3\\\\bin\\\\mvn.cmd\" compile -q)",
+      "PowerShell($mvn = \"C:\\\\Users\\\\camil\\\\.m2\\\\wrapper\\\\dists\\\\apache-maven-3.9.16-bin\\\\5grr65jo27hi51sujmtcldfovl\\\\apache-maven-3.9.16\\\\bin\\\\mvn.cmd\"; cd \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\"; & $mvn clean compile 2>&1 | Where-Object { $_ -match \"ERROR|error:|cannot find|symbol|BUILD\" } | Select-Object -Last 50)",
+      "Bash(rm -f App.css App.jsx index.css assets/react.svg)",
+      "Bash(mkdir -p pages components styles services hooks context)",
+      "Bash(xargs grep -l \"WebSocket\\\\|STOMP\\\\|MessageBroker\")",
+      "PowerShell($mvn = \"C:\\\\Users\\\\camil\\\\.m2\\\\wrapper\\\\dists\\\\apache-maven-3.9.16-bin\\\\5grr65jo27hi51sujmtcldfovl\\\\apache-maven-3.9.16\\\\bin\\\\mvn.cmd\"; & $mvn -f \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\pom.xml\" compile -q 2>&1 | Where-Object { $_ -match \"ERROR|error:|cannot find|BUILD\" } | Select-Object -Last 20)",
+      "Bash(dir C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\frontend\\\\src\\\\pages *)",
+      "PowerShell(Start-Process powershell -ArgumentList '-NoExit', '-Command', 'cd \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\frontend\"; npm run dev')",
+      "Bash(xargs grep -l -i \"excel\\\\|import\\\\|upload\")",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\src\\\\main\\\\java\\\\com\\\\rappi\\\\farmer\\\\presentation\\\\api\\\\ImportController.java\" -Pattern \"@\\(Post|Get|Put|Delete\\)Mapping\" | Select-Object -First 20 | ForEach-Object { $_.Line.Trim\\(\\) })",
+      "Bash(npx vite *)",
+      "Bash(git *)",
+      "Bash(npx --prefix \"C:/Users/camil/rappi-automation/rappi-automation/frontend\" vite build --mode development)",
+      "PowerShell(git *)",
+      "PowerShell(Select-String *)",
+      "Bash(xargs grep -l \"management\\\\|gestion\")",
+      "Bash(xargs grep -n \"template\\\\|whatsapp\")",
+      "Bash(xargs grep -n \"template\\\\|Template\")"
     ]
   }
 }

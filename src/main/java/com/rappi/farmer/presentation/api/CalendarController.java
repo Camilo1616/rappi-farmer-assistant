@@ -98,6 +98,21 @@ public class CalendarController {
         }
     }
 
+    /** HO que no pasaron validación en el último sync */
+    @GetMapping("/failed-handoffs")
+    public ResponseEntity<?> failedHandoffs(@RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(calendarService.getFailedHandoffs());
+    }
+
+    /** Todos los HO en ventana -14/+7 días, diferenciados por exitoso/no exitoso */
+    @GetMapping("/handoff-summary")
+    public ResponseEntity<?> handoffSummary(@RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(Map.of(
+                "meetConectado", calendarService.isMeetApiAccesible(),
+                "handoffs", calendarService.getHandoffSummary()
+        ));
+    }
+
     private Long resolveUserId(String authHeader) {
         String email = jwtService.extractEmail(authHeader.substring(7));
         return userService.findIdByEmail(email);

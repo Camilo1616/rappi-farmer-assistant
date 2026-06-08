@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
     Optional<StoreEntity> findFirstByStoreCode(String storeCode);
     Optional<StoreEntity> findFirstByBrandId(String brandId);
+    List<StoreEntity> findAllByBrandId(String brandId);
     List<StoreEntity> findByStoreCodeContainingIgnoreCaseOrStoreNameContainingIgnoreCase(String code, String name);
     List<StoreEntity> findByActiveTrue();
     List<StoreEntity> findByUser_IdAndActiveTrue(Long userId);
@@ -17,6 +18,25 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
     void deleteByUser_Id(Long userId);
     List<StoreEntity> findByStoreCodeContainingIgnoreCaseOrStoreNameContainingIgnoreCaseAndUser_Id(
             String code, String name, Long userId);
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT s FROM StoreEntity s WHERE s.active = true AND (" +
+        "  LOWER(s.storeCode)    LIKE LOWER(CONCAT('%',:q,'%')) OR " +
+        "  LOWER(s.storeName)    LIKE LOWER(CONCAT('%',:q,'%')) OR " +
+        "  LOWER(s.brandId)      LIKE LOWER(CONCAT('%',:q,'%')) OR " +
+        "  LOWER(s.phoneNumber)  LIKE LOWER(CONCAT('%',:q,'%')))")
+    List<StoreEntity> searchByAnyField(
+        @org.springframework.data.repository.query.Param("q") String q);
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT s FROM StoreEntity s WHERE s.user.id = :userId AND s.active = true AND (" +
+        "  LOWER(s.storeCode)    LIKE LOWER(CONCAT('%',:q,'%')) OR " +
+        "  LOWER(s.storeName)    LIKE LOWER(CONCAT('%',:q,'%')) OR " +
+        "  LOWER(s.brandId)      LIKE LOWER(CONCAT('%',:q,'%')) OR " +
+        "  LOWER(s.phoneNumber)  LIKE LOWER(CONCAT('%',:q,'%')))")
+    List<StoreEntity> searchByAnyFieldAndUser(
+        @org.springframework.data.repository.query.Param("q") String q,
+        @org.springframework.data.repository.query.Param("userId") Long userId);
 
     // ── Queries para bases de priorización ──
 
@@ -133,15 +153,14 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         ")", nativeQuery = true)
     List<StoreEntity> findAva8a14Global();
 
-    /** CHURN M1: AGING stage = M1 y AVA_MTD entre 0% y 10% (última métrica disponible) */
+    /** CHURN M1: AGING stage = M1 y AVA_MTD <= 10% o sin dato (última métrica disponible) */
     @org.springframework.data.jpa.repository.Query(value =
         "SELECT s.* FROM stores s " +
-        "JOIN daily_metrics dm ON dm.store_id = s.id " +
+        "LEFT JOIN daily_metrics dm ON dm.store_id = s.id " +
             "AND dm.metric_date = (SELECT MAX(dm2.metric_date) FROM daily_metrics dm2 WHERE dm2.store_id = s.id) " +
         "WHERE s.active = true " +
         "AND UPPER(TRIM(s.aging_stage)) = 'M1' " +
-        "AND dm.ava_mtd IS NOT NULL " +
-        "AND dm.ava_mtd >= 0 AND dm.ava_mtd <= 10 " +
+        "AND (dm.ava_mtd IS NULL OR (dm.ava_mtd >= 0 AND dm.ava_mtd <= 10)) " +
         "AND s.user_id IN :farmerIds", nativeQuery = true)
     List<StoreEntity> findChurnM1ByFarmerIds(
         @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);

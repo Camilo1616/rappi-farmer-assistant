@@ -28,6 +28,7 @@ public class WhatsappController {
     private final WhatsappService whatsappService;
     private final StoreRepository storeRepository;
     private final SessionContext sessionContext;
+    private final com.rappi.farmer.application.services.MessageTemplateService messageTemplateService;
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -56,7 +57,7 @@ public class WhatsappController {
                 "open", open,
                 "connected", connected,
                 "sentToday", sentToday,
-                "remaining", Math.max(0, 40 - sentToday)
+                "remaining", Integer.MAX_VALUE
         ));
     }
 
@@ -83,10 +84,11 @@ public class WhatsappController {
                 .map(id -> storeRepository.findById(id).orElse(null))
                 .filter(java.util.Objects::nonNull)
                 .map(store -> new StoreViewDto(
-                        store.getId(), store.getStoreCode(), store.getStoreName(),
+                        store.getId(), store.getStoreCode(), store.getBrandId(), store.getStoreName(),
                         store.getPhoneNumber(), 0, null,
                         store.getConnectionPercentage(), store.getCurrentStatus(),
-                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(), null, null, null, null, store.getFarmerEmail()))
+                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(), null, null, null, null, store.getFarmerEmail(),
+                        null, null, null, null, null, store.getChannel()))
                 .toList();
 
         executor.submit(() -> {
@@ -105,6 +107,11 @@ public class WhatsappController {
         });
 
         return emitter;
+    }
+
+    @GetMapping("/templates")
+    public ResponseEntity<?> getTemplates() {
+        return ResponseEntity.ok(messageTemplateService.getAll());
     }
 
     public record TestRequest(@NotBlank String phone, @NotBlank String message) {}

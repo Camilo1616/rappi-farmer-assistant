@@ -41,6 +41,11 @@ public class DailyMetricRepositoryAdapter implements DailyMetricRepository {
     }
 
     @Override
+    public Optional<LocalDate> findLatestDate() {
+        return jpaRepository.findTop1ByOrderByMetricDateDesc().map(e -> e.getMetricDate());
+    }
+
+    @Override
     public Optional<DailyMetric> findByStoreIdAndDate(Long storeId, LocalDate date) {
         return jpaRepository.findByStore_IdAndMetricDate(storeId, date).map(this::toDomain);
     }

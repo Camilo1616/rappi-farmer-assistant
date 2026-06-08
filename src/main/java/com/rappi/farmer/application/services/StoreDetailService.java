@@ -16,8 +16,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Servicio de consulta para el diálogo de detalle de tienda.
@@ -38,7 +41,9 @@ public class StoreDetailService {
         List<Store> stores = userId != null
                 ? storeRepository.findActiveByUser(userId)
                 : storeRepository.findActive();
-        return stores.stream().map(this::toViewDto).toList();
+        List<StoreViewDto> dtos = stores.stream().map(this::toViewDto).collect(Collectors.toList());
+        propagateBrandManagement(dtos);
+        return dtos;
     }
 
     public List<StoreViewDto> searchStores(String query) {
@@ -49,7 +54,46 @@ public class StoreDetailService {
         } else {
             stores = storeRepository.searchByCodeOrName(query);
         }
-        return stores.stream().map(this::toViewDto).toList();
+        List<StoreViewDto> dtos = stores.stream().map(this::toViewDto).collect(Collectors.toList());
+        propagateBrandManagement(dtos);
+        return dtos;
+    }
+
+    /**
+     * Si cualquier tienda de una brand está gestionada hoy, marca todas sus hermanas
+     * presentes en la lista como bloqueadas — aunque el registro de hermana no se haya
+     * guardado aún (e.g. brandSync pendiente de commit).
+     */
+    private void propagateBrandManagement(List<StoreViewDto> dtos) {
+        Set<String> managedBrands = dtos.stream()
+                .filter(d -> d.getTodayManagementResult() != null && d.getBrandId() != null)
+                .map(StoreViewDto::getBrandId)
+                .collect(Collectors.toSet());
+
+        // También consultar en BD si hay alguna gestión hoy para cualquier tienda de esa brand
+        // (cubre el caso en que las hermanas no aparecen en los resultados de búsqueda)
+        Set<String> allBrandsInResults = dtos.stream()
+                .filter(d -> d.getBrandId() != null)
+                .map(StoreViewDto::getBrandId)
+                .collect(Collectors.toSet());
+
+        for (String brandId : allBrandsInResults) {
+            if (!managedBrands.contains(brandId)) {
+                boolean anyManaged = storeRepository.findAllByBrandId(brandId).stream()
+                        .anyMatch(s -> managementRepository.findLatestTodayByStoreId(s.getId()).isPresent());
+                if (anyManaged) managedBrands.add(brandId);
+            }
+        }
+
+        if (managedBrands.isEmpty()) return;
+
+        dtos.forEach(d -> {
+            if (d.getTodayManagementResult() == null
+                    && d.getBrandId() != null
+                    && managedBrands.contains(d.getBrandId())) {
+                d.setTodayManagementResult("BRAND_SYNC");
+            }
+        });
     }
 
     public List<StoreViewDto> toViewDtos(List<Store> stores) {
@@ -135,12 +179,71 @@ public class StoreDetailService {
                 .map(Management::getResultType)
                 .orElse(null);
         Integer diasSinLogin = store.getLastLoginDate() != null
-                ? (int) java.time.temporal.ChronoUnit.DAYS.between(store.getLastLoginDate(), LocalDate.now())
+                ? (int) ChronoUnit.DAYS.between(store.getLastLoginDate(), LocalDate.now())
                 : null;
+        String lastContact = managementRepository.findLatestByStoreId(store.getId())
+                .map(m -> {
+                    long dias = ChronoUnit.DAYS.between(m.getManagementDate().toLocalDate(), LocalDate.now());
+                    String label = dias == 0 ? "Hoy" : dias == 1 ? "Ayer" : "Hace " + dias + "d";
+                    return label + " · " + m.getResultType().replace("_", " ").toLowerCase();
+                })
+                .orElse(null);
+        DailyMetric metric = dailyMetricRepository.findLatestByStoreId(store.getId()).orElse(null);
+        String segment    = resolveDashboardSegment(store, aging, metric);
+        String churnLabel = detectChurnLabel(store.getCurrentStatus());
+        if (churnLabel == null) churnLabel = detectChurnLabel(store.getGestionar());
+        String avaLabel   = resolveAvaLabel(store, metric);
         return new StoreViewDto(
-                store.getId(), store.getStoreCode(), store.getStoreName(),
+                store.getId(), store.getStoreCode(), store.getBrandId(), store.getStoreName(),
                 store.getPhoneNumber(), aging, null,
                 store.getConnectionPercentage(), store.getCurrentStatus(), null, todayResult, null,
-                store.getHadHandoff(), store.getLastLoginDate(), diasSinLogin, store.getAgingStage(), null, null, store.getFarmerEmail());
+                store.getHadHandoff(), store.getLastLoginDate(), diasSinLogin, store.getAgingStage(),
+                churnLabel, avaLabel, store.getFarmerEmail(),
+                null, null, null, segment, lastContact, store.getChannel());
+    }
+
+    private String resolveDashboardSegment(Store store, int aging, DailyMetric metric) {
+        boolean isSelf = store.getChannel() != null && store.getChannel().toLowerCase().contains("self");
+        if (!isSelf && aging >= 1 && aging <= 8)  return "Onboarding";
+        if (!isSelf && aging > 8  && aging <= 14) return "Aliados";
+        String churn = detectChurnLabel(store.getCurrentStatus());
+        if (churn == null) churn = detectChurnLabel(store.getGestionar());
+        if (churn != null) return "Churn";
+        if (metric != null && metric.getAvaMtd() != null) {
+            BigDecimal pct = toPercent(metric.getAvaMtd());
+            if (pct.compareTo(java.math.BigDecimal.valueOf(60)) >= 0) return "Saludable";
+            if (pct.compareTo(java.math.BigDecimal.ZERO) > 0) return "AVA Bajando";
+        }
+        return "Sin clasificar";
+    }
+
+    private BigDecimal toPercent(BigDecimal val) {
+        if (val == null) return BigDecimal.ZERO;
+        return val.compareTo(BigDecimal.ONE) <= 0
+                ? val.multiply(BigDecimal.valueOf(100))
+                : val;
+    }
+
+    private static String detectChurnLabel(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String up = raw.trim().toUpperCase();
+        if (up.equals("CHURN") || up.startsWith("CHURN:") || up.startsWith("MAX RISK")) return "Churn";
+        if (up.contains("PREVENTION W3") || up.contains("PREVENTION_W3")) return "Prevention W3";
+        if (up.contains("PREVENTION W2") || up.contains("PREVENTION_W2")) return "Prevention W2";
+        if (up.contains("PREVENTION W1") || up.contains("PREVENTION_W1")) return "Prevention W1";
+        if (up.contains("PREVENTION")) return "Prevention W1";
+        return null;
+    }
+
+    private String resolveAvaLabel(Store store, DailyMetric metric) {
+        if (metric == null || metric.getAvaMtd() == null) return null;
+        BigDecimal pct = toPercent(metric.getAvaMtd());
+        if (pct.compareTo(BigDecimal.ZERO) <= 0) return null;
+        if (pct.compareTo(java.math.BigDecimal.valueOf(60)) < 0) {
+            // Churn Ava = crítico (muy bajo, por debajo de un umbral adicional)
+            if (pct.compareTo(java.math.BigDecimal.valueOf(30)) < 0) return "Churn Ava";
+            return "Disminuye";
+        }
+        return null;
     }
 }

@@ -37,4 +37,7 @@ public class ManagementEntity {
 
     @Column(name = "management_date")
     private LocalDateTime managementDate;
+
+    @Column(name = "brand_sync", nullable = false)
+    private boolean brandSync = false;
 }

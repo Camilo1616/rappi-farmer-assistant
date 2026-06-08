@@ -1,0 +1,88 @@
+.wrap {
+  background: rgba(139,92,246,0.05);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #A78BFA;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8B93A8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.sublabel { font-size: 12px; color: #8B93A8; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chip {
+  padding: 6px 14px;
+  background: #161B27;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 99px;
+  color: #8B93A8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.chip:hover { border-color: rgba(255,255,255,0.2); color: #F0F2F8; }
+.chipActive {
+  background: rgba(139,92,246,0.15);
+  border-color: #A78BFA;
+  color: #A78BFA;
+}
+
+.montoRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.montoField { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+
+.montoInput {
+  display: flex;
+  align-items: center;
+  background: #161B27;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.montoInput:focus-within { border-color: rgba(139,92,246,0.4); }
+
+.currency {
+  padding: 0 10px;
+  color: #A78BFA;
+  font-weight: 700;
+  font-size: 13px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+.input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #F0F2F8;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 9px 10px;
+}
+.input::placeholder { color: #545E75; }

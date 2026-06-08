@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,6 +22,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private final UserRepository userRepository;
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -32,6 +34,21 @@ public class DataInitializer implements ApplicationRunner {
         createIfNotExists("Valentina Rios",  "valentina.rios@rappi.com",  "rappi2025", UserRole.FARMER_MASS.name(), "CO");
         createIfNotExists("Andres Moreno",   "andres.moreno@rappi.com",   "rappi2025", UserRole.FARMER_MASS.name(), "CO");
         createIfNotExists("Camila Herrera",  "camila.herrera@rappi.com",  "rappi2025", UserRole.FARMER_MASS.name(), "CO");
+
+        // Resetear contraseñas conocidas al hash correcto
+        resetPassword("cristian.guillen@rappi.com", "Rappi2025");
+        resetPassword("valentina.restrepo@rappi.com", "Rappi2025");
+        resetPassword("santiago.morales@rappi.com", "Rappi2025");
+        resetPassword("andres.moreno@rappi.com", "rappi2025");
+        resetPassword("valentina.rios@rappi.com", "rappi2025");
+    }
+
+    private void resetPassword(String email, String rawPassword) {
+        userRepository.findByEmail(email).ifPresent(u -> {
+            u.setPasswordHash(passwordEncoder.encode(rawPassword));
+            userRepository.save(u);
+            log.info("Contraseña reseteada para: {}", email);
+        });
     }
 
     private void createIfNotExists(String fullName, String email, String password, String role, String country) {

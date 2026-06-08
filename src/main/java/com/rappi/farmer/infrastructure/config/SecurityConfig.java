@@ -41,12 +41,17 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register",
+                                "/api/auth/send-pin",
+                                "/api/auth/check-email",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password",
                                 "/api/auth/google",
                                 "/api/auth/google/callback",
                                 "/api/auth/google/configured",
                                 "/api/profile/avatar/**",
                                 "/api/calendar/callback",
-                                "/api/auth/google/calendar/callback"
+                                "/api/auth/google/calendar/callback",
+                                "/ws/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

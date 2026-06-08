@@ -18,4 +18,5 @@ public class ManagementViewDto {
     private String farmerName;
     private String farmerCode;
     private Boolean hadHandoff;
+    private boolean brandSync;
 }

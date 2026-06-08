@@ -9,6 +9,7 @@ import com.rappi.farmer.domain.repositories.DailyMetricRepository;
 import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.domain.repositories.ManagementRepository;
 import com.rappi.farmer.domain.repositories.StoreRepository;
+import com.rappi.farmer.domain.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class DashboardService {
     private final StoreRepository storeRepository;
     private final DailyMetricRepository dailyMetricRepository;
     private final ManagementRepository managementRepository;
+    private final UserRepository userRepository;
     private final SessionContext sessionContext;
 
     public DashboardDataDto load() {
@@ -62,9 +64,13 @@ public class DashboardService {
             stores = storeRepository.findActive();
         }
 
-        Map<Long, DailyMetric> metricsMap = dailyMetricRepository
-                .findByDate(today)
-                .stream()
+        List<DailyMetric> metrics = dailyMetricRepository.findByDate(today);
+        if (metrics.isEmpty()) {
+            LocalDate latestDate = dailyMetricRepository.findLatestDate().orElse(today);
+            metrics = dailyMetricRepository.findByDate(latestDate);
+            log.info("No hay métricas para hoy ({}), usando fecha más reciente: {}", today, latestDate);
+        }
+        Map<Long, DailyMetric> metricsMap = metrics.stream()
                 .collect(Collectors.toMap(DailyMetric::getStoreId, m -> m));
 
         // Mapa storeId → resultado de la primera gestión registrada hoy
@@ -78,23 +84,24 @@ public class DashboardService {
                 ));
 
         List<StoreViewDto> onboardingCritical = new ArrayList<>();
-        List<StoreViewDto> aliados = new ArrayList<>();
-        List<StoreViewDto> churnRisk = new ArrayList<>();
-        List<StoreViewDto> avaDropping = new ArrayList<>();
-        List<StoreViewDto> healthy = new ArrayList<>();
-        List<StoreViewDto> ava = new ArrayList<>();
+        List<StoreViewDto> aliados            = new ArrayList<>();
+        List<StoreViewDto> churnRisk          = new ArrayList<>();
+        List<StoreViewDto> ava                = new ArrayList<>();
+        List<StoreViewDto> healthy            = new ArrayList<>();
+        List<StoreViewDto> selfOnboarding     = new ArrayList<>();
 
         for (Store store : stores) {
             DailyMetric metric = metricsMap.get(store.getId());
             int aging = calcAgingEfectivo(store);
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
-
             boolean isSelf = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("self");
 
-            if (!isSelf && aging >= 1 && aging <= 8) {
+            if (isSelf) {
+                selfOnboarding.add(dto);
+            } else if (aging >= 1 && aging <= 8) {
                 onboardingCritical.add(dto);
-            } else if (!isSelf && aging > 8 && aging <= 14) {
+            } else if (aging > 8 && aging <= 14) {
                 aliados.add(dto);
             } else if (isChurnRisk(metric, store)) {
                 churnRisk.add(dto);
@@ -108,26 +115,40 @@ public class DashboardService {
         List<StoreViewDto> recommended = buildRecommended(
                 onboardingCritical, aliados, churnRisk, ava, metricsMap);
 
-        log.info("Dashboard cargado — onboarding:{}, aliados:{}, churn:{}, ava:{}, sanos:{}, recomendado:{}",
+        log.info("Dashboard cargado — onboarding:{}, aliados:{}, churn:{}, ava:{}, sanos:{}, self:{}, recomendado:{}",
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
-                ava.size(), healthy.size(), recommended.size());
+                ava.size(), healthy.size(), selfOnboarding.size(), recommended.size());
+
+        java.time.LocalDate lastImport = null;
+        if (userId != null) {
+            lastImport = userRepository.findById(userId)
+                    .map(u -> u.getLastImportDate()).orElse(null);
+        }
+        boolean needsRefresh = lastImport == null || lastImport.isBefore(today);
 
         return new DashboardDataDto(
                 cap(onboardingCritical), cap(aliados),
-                churnRisk,
-                ava,
-                healthy,
-                recommended,
+                churnRisk, ava, healthy, recommended,
+                selfOnboarding,
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
-                ava.size(), healthy.size(), recommended.size()
+                ava.size(), healthy.size(), recommended.size(),
+                stores.size(),
+                selfOnboarding.size(),
+                needsRefresh, lastImport
         );
     }
 
     /** Retorna las tiendas de un farmer clasificadas según el tipo de base, usando los mismos filtros del dashboard. */
     public List<Store> getStoresForBase(Long farmerId, String baseType) {
         List<Store> stores = storeRepository.findActiveByUser(farmerId);
-        Map<Long, DailyMetric> metricsMap = dailyMetricRepository.findByDate(LocalDate.now())
-                .stream().collect(Collectors.toMap(DailyMetric::getStoreId, m -> m, (a, b) -> a));
+        LocalDate now = LocalDate.now();
+        List<DailyMetric> baseMetrics = dailyMetricRepository.findByDate(now);
+        if (baseMetrics.isEmpty()) {
+            now = dailyMetricRepository.findLatestDate().orElse(now);
+            baseMetrics = dailyMetricRepository.findByDate(now);
+        }
+        Map<Long, DailyMetric> metricsMap = baseMetrics.stream()
+                .collect(Collectors.toMap(DailyMetric::getStoreId, m -> m, (a, b) -> a));
 
         return stores.stream().filter(store -> {
             DailyMetric metric = metricsMap.get(store.getId());
@@ -193,28 +214,30 @@ public class DashboardService {
     /** Saludable: AVA_MTD >= 60%. */
     private boolean isHealthy(DailyMetric metric) {
         if (metric == null || metric.getAvaMtd() == null) return false;
-        return metric.getAvaMtd().compareTo(BigDecimal.valueOf(60)) >= 0;
+        return toPercent(metric.getAvaMtd()).compareTo(BigDecimal.valueOf(60)) >= 0;
     }
 
-    /** Devuelve "Churn Ava" (AVA_MTD 1–15%) o "Disminuye" (AVA STATUS), o null si no aplica. */
+    /**
+     * Crítico: AVA_MTD 1%–15%.
+     * Bajando: AVA_MTD > 15% y < 60%.
+     * 0% → va a Churn, no a AVA.
+     */
     private String resolveAvaLabel(DailyMetric metric) {
         if (metric == null) return null;
-        // Crítico: AVA_MTD entre 1% y 15% (sin importar el avaStatus)
         BigDecimal mtd = metric.getAvaMtd();
-        if (mtd != null
-                && mtd.compareTo(BigDecimal.ONE) >= 0
-                && mtd.compareTo(BigDecimal.valueOf(15)) < 0) {
-            return "Churn Ava";
-        }
-        // Bajando: AVA STATUS = "Disminuye" y AVA_MTD entre 15% y 59.99%
-        if (metric.getAvaStatus() != null
-                && metric.getAvaStatus().trim().equalsIgnoreCase("Disminuye")
-                && mtd != null
-                && mtd.compareTo(BigDecimal.valueOf(15)) >= 0
-                && mtd.compareTo(BigDecimal.valueOf(60)) < 0) {
-            return "Disminuye";
-        }
+        if (mtd == null) return null;
+        BigDecimal pct = toPercent(mtd);
+        if (pct.compareTo(BigDecimal.ZERO) > 0 && pct.compareTo(BigDecimal.valueOf(15)) <= 0) return "Crítico";
+        if (pct.compareTo(BigDecimal.valueOf(15)) > 0 && pct.compareTo(BigDecimal.valueOf(60)) < 0) return "Bajando";
         return null;
+    }
+
+    /** Normaliza avaMtd: si está en escala 0-1 (decimal), convierte a 0-100 (porcentaje). */
+    private BigDecimal toPercent(BigDecimal val) {
+        if (val == null) return BigDecimal.ZERO;
+        return val.compareTo(BigDecimal.ONE) <= 0
+                ? val.multiply(BigDecimal.valueOf(100))
+                : val;
     }
 
     /**
@@ -227,17 +250,29 @@ public class DashboardService {
 
     /** Devuelve la etiqueta de churn o null si la tienda no está en riesgo. */
     private String resolveChurnLabel(Store store) {
-        String status = store.getCurrentStatus();
-        if (status == null) return null;
-        String s = status.trim();
-        boolean isChurnStatus = s.equalsIgnoreCase("Churn")
-                || s.equalsIgnoreCase("Prevention W1")
-                || s.equalsIgnoreCase("Prevention W2")
-                || s.equalsIgnoreCase("Prevention W3");
-        if (!isChurnStatus) return null;
+        // Buscar en currentStatus (col "Estado Churn AVA") y en gestionar (col "GESTIONAR")
+        // Se revisan los DOS — el primero que haga match gana
+        String label = detectChurnLabel(store.getCurrentStatus());
+        if (label == null) label = detectChurnLabel(store.getGestionar());
+        if (label == null) return null;
+
+        // Sin fecha de login → no incluir
         if (store.getLastLoginDate() == null) return null;
+        // Más de 90 días sin login → no incluir
         long dias = ChronoUnit.DAYS.between(store.getLastLoginDate(), LocalDate.now());
-        return dias <= 90 ? s : null;
+        if (dias > 90) return null;
+        return label;
+    }
+
+    /** Extrae la etiqueta de churn de un texto, o null si no hay match. */
+    private static String detectChurnLabel(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String up = raw.trim().toUpperCase();
+        if (up.equals("CHURN") || up.startsWith("CHURN:") || up.startsWith("MAX RISK")) return "Churn";
+        if (up.contains("PREVENTION W1") || up.contains("PREVENTION 1W")) return "Prevention W1";
+        if (up.contains("PREVENTION W2") || up.contains("PREVENTION 2W")) return "Prevention W2";
+        if (up.contains("PREVENTION W3") || up.contains("PREVENTION 3W")) return "Prevention W3";
+        return null;
     }
 
     private List<StoreViewDto> cap(List<StoreViewDto> list) {
@@ -257,6 +292,7 @@ public class DashboardService {
         return new StoreViewDto(
                 store.getId(),
                 store.getStoreCode(),
+                store.getBrandId(),
                 store.getStoreName(),
                 store.getPhoneNumber(),
                 aging,
@@ -272,7 +308,13 @@ public class DashboardService {
                 store.getAgingStage(),
                 resolveChurnLabel(store),
                 resolveAvaLabel(metric),
-                store.getFarmerEmail()
+                store.getFarmerEmail(),
+                metric != null ? toPercent(metric.getAvaMtd()) : null,
+                metric != null ? toPercent(metric.getConnectionPercentage()) : null,
+                metric != null ? toPercent(metric.getAvaL7d()) : null,
+                null,
+                null,
+                store.getChannel()
         );
     }
 
@@ -333,12 +375,13 @@ public class DashboardService {
 
     private StoreViewDto withSegmento(StoreViewDto original, String segmento) {
         return new StoreViewDto(
-                original.getId(), original.getStoreCode(), original.getStoreName(),
+                original.getId(), original.getStoreCode(), original.getBrandId(), original.getStoreName(),
                 original.getPhoneNumber(), original.getAging(), original.getOrdersL4W(),
                 original.getConnectionPercentage(), original.getCurrentStatus(),
                 original.getTendencia(), original.getTodayManagementResult(), segmento,
                 original.getHadHandoff(), original.getLastLoginDate(), original.getDiasSinLogin(),
                 original.getAgingStage(), original.getChurnLabel(), original.getAvaLabel(),
-                original.getFarmerEmail());
+                original.getFarmerEmail(), original.getAvaMtd(), original.getAvaL4w(), original.getAvaL7d(),
+                original.getDashboardSegment(), original.getLastContact(), original.getChannel());
     }
 }

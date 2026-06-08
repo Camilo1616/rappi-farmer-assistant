@@ -26,8 +26,11 @@ public class UserService {
     private final StoreRepository storeRepository;
     private final PasswordEncoder encoder;
 
+    public record LoginResult(User user, int calendarSyncDays) {}
+
     /** Autentica al usuario. Lanza BusinessException si las credenciales son incorrectas. */
-    public User login(String email, String rawPassword) {
+    @org.springframework.transaction.annotation.Transactional
+    public LoginResult login(String email, String rawPassword) {
         if (email == null || !email.toLowerCase().endsWith(RAPPI_DOMAIN)) {
             throw new BusinessException("El correo debe ser @rappi.com");
         }
@@ -36,8 +39,11 @@ public class UserService {
         if (!encoder.matches(rawPassword, user.getPasswordHash())) {
             throw new BusinessException("Contraseña incorrecta");
         }
-        log.info("Login exitoso — {} ({})", user.getFullName(), user.getUserRole());
-        return user;
+        int syncDays = user.getLastLoginAt() == null ? 20 : 14;
+        user.setLastLoginAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
+        log.info("Login exitoso — {} ({}) syncDays:{}", user.getFullName(), user.getUserRole(), syncDays);
+        return new LoginResult(user, syncDays);
     }
 
     @Transactional
@@ -57,7 +63,7 @@ public class UserService {
         User user = new User(null, request.getFullName(),
                 request.getEmail().toLowerCase(),
                 request.getRole() != null ? request.getRole() : UserRole.FARMER_MASS.name(),
-                hash, code, country, "ACTIVE", request.getLiderId(), nickname, null, null);
+                hash, code, country, "ACTIVE", request.getLiderId(), nickname, null, null, null, null);
         User saved = userRepository.save(user);
         log.info("Usuario creado: {} ({})", saved.getEmail(), saved.getRole());
         return saved;
@@ -152,6 +158,19 @@ public class UserService {
         return userRepository.findByEmail(email)
                 .map(User::getId)
                 .orElseThrow(() -> new BusinessException("Usuario no encontrado: " + email));
+    }
+
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email.toLowerCase().trim());
+    }
+
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
+        user.setPasswordHash(encoder.encode(newPassword));
+        userRepository.save(user);
+        log.info("Contraseña reseteada para {}", email);
     }
 
     public boolean isCalendarConnected(Long userId) {

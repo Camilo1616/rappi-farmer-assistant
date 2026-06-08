@@ -10,6 +10,7 @@ public interface DailyMetricRepository {
     DailyMetric save(DailyMetric metric);
     List<DailyMetric> findByDate(LocalDate date);
     Optional<DailyMetric> findLatestByStoreId(Long storeId);
+    Optional<LocalDate> findLatestDate();
     Optional<DailyMetric> findByStoreIdAndDate(Long storeId, LocalDate date);
     void deleteByStoreId(Long storeId);
 }

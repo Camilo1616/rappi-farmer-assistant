@@ -47,6 +47,7 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
         entity.setResultType(management.getResultType());
         entity.setComments(management.getComments());
         entity.setManagementDate(management.getManagementDate());
+        entity.setBrandSync(management.isBrandSync());
 
         return toDomain(managementJpaRepository.save(entity));
     }
@@ -102,6 +103,16 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
         managementJpaRepository.deleteByStoreId(storeId);
     }
 
+    @Override
+    public void deleteById(Long id) {
+        managementJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public Optional<Management> findById(Long id) {
+        return managementJpaRepository.findById(id).map(this::toDomain);
+    }
+
     private Management toDomain(ManagementEntity e) {
         return new Management(
                 e.getId(),
@@ -114,7 +125,8 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
                 e.getComments(),
                 e.getManagementDate(),
                 e.getUser() != null ? e.getUser().getFullName() : null,
-                e.getUser() != null ? e.getUser().getFarmerCode() : null
+                e.getUser() != null ? e.getUser().getFarmerCode() : null,
+                e.isBrandSync()
         );
     }
 }

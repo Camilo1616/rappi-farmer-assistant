@@ -6,6 +6,8 @@ import com.rappi.farmer.domain.enums.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -23,6 +25,8 @@ public class User {
     private String nickname;
     private String avatarUrl;
     private String calendarRefreshToken;
+    private LocalDateTime lastLoginAt;
+    private LocalDate lastImportDate;
 
     public UserRole getUserRole() {
         try { return UserRole.valueOf(role); } catch (Exception e) { return UserRole.FARMER_MASS; }

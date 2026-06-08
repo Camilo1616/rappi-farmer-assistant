@@ -25,4 +25,8 @@ public interface PriorityBaseStoreJpaRepository extends JpaRepository<PriorityBa
     long countManagedByBaseAndFarmer(@Param("baseId") Long baseId, @Param("farmerId") Long farmerId);
 
     void deleteByBaseId(Long baseId);
+
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+    @Query("DELETE FROM PriorityBaseStoreEntity s WHERE s.store.id = :storeId")
+    void deleteByStoreId(@Param("storeId") Long storeId);
 }

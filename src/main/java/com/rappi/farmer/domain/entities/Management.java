@@ -21,4 +21,5 @@ public class Management {
     private LocalDateTime managementDate;
     private String farmerName;
     private String farmerCode;
+    private boolean brandSync; // true = registrada por propagación de hermana, no cuenta en métricas
 }

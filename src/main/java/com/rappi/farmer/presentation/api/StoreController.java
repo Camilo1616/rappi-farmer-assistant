@@ -94,6 +94,27 @@ public class StoreController {
         return ResponseEntity.ok(managementService.getTodayManagements());
     }
 
+    @PutMapping("/managements/{id}")
+    public ResponseEntity<?> updateManagement(@PathVariable Long id,
+            @Valid @RequestBody ManagementRequest request) {
+        try {
+            Management updated = managementService.update(id, request.managementType(), request.resultType(), request.comments());
+            return ResponseEntity.ok(updated);
+        } catch (BusinessException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/managements/{id}")
+    public ResponseEntity<?> deleteManagement(@PathVariable Long id) {
+        try {
+            managementService.deleteManagement(id);
+            return ResponseEntity.ok(Map.of("message", "Gestión eliminada"));
+        } catch (BusinessException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     public record ManagementRequest(
             @NotBlank String managementType,
             @NotBlank String resultType,

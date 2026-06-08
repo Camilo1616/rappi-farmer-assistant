@@ -3,9 +3,10 @@ package com.rappi.farmer.application.services;
 import com.rappi.farmer.application.dtos.MessageTemplateDto;
 import com.rappi.farmer.infrastructure.persistence.entity.MessageTemplateEntity;
 import com.rappi.farmer.infrastructure.persistence.repository.MessageTemplateJpaRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,8 +21,7 @@ public class MessageTemplateService {
 
     private final MessageTemplateJpaRepository repository;
 
-    /** Crea plantillas por defecto si la tabla está vacía. */
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void seedDefaultTemplates() {
         if (repository.count() > 0) return;

@@ -48,6 +48,15 @@ public class ExcelReaderService {
     private static final String COL_GESTIONAR      = "GESTIONAR";
     private static final String COL_UPLOAD_DATE    = "FECHA DE CARGUE";
 
+    // Columnas mínimas que deben estar presentes para que el archivo sea válido
+    private static final List<String> REQUIRED_COLS = List.of(
+            "COUNTRY STORE ID", "STORE NAME", "FARMER", "CANAL",
+            "AVA_L4W", "AVA_MTD", "AVA_L7D", "AGING", "TUVO_HANDOFF",
+            "Estado Churn AVA", "AVA STATUS", "Ordenes L4W Hoy",
+            "GESTIONAR", "Fecha de cargue", "Fecha inicio store",
+            "TELEFONO_PRINCIPAL", "Último Login", "COUNTRY BRAND ID"
+    );
+
     public List<StoreExcelRowDto> read(File file) throws IOException {
         log.info("Leyendo archivo: {}", file.getName());
 
@@ -56,10 +65,14 @@ public class ExcelReaderService {
             int headerRow = findHeaderRowIndex(sheet);
 
             if (headerRow < 0) {
-                throw new IllegalArgumentException("No se encontró la fila de encabezado en el archivo");
+                throw new IllegalArgumentException(
+                        "No se encontró el encabezado del archivo. " +
+                        "Asegúrate de usar la plantilla oficial de Rappi Farmer. " +
+                        "La primera columna obligatoria es «COUNTRY STORE ID».");
             }
 
             Map<String, Integer> cols = buildColumnMap(sheet.getRow(headerRow));
+            validateRequiredColumns(cols, file.getName());
             List<StoreExcelRowDto> result = new ArrayList<>();
 
             for (int i = headerRow + 1; i <= sheet.getLastRowNum(); i++) {
@@ -207,5 +220,23 @@ public class ExcelReaderService {
     private Boolean parseHandoff(String value) {
         if (value == null) return null;
         return value.trim().equalsIgnoreCase("SI") || value.trim().equalsIgnoreCase("SÍ");
+    }
+
+    /**
+     * Verifica que el archivo contenga todas las columnas requeridas.
+     * Si falta alguna, lanza una excepción con el listado exacto de columnas ausentes.
+     */
+    private void validateRequiredColumns(Map<String, Integer> cols, String fileName) {
+        List<String> missing = REQUIRED_COLS.stream()
+                .filter(req -> !cols.containsKey(req) && !cols.containsKey(req.toUpperCase()))
+                .toList();
+
+        if (!missing.isEmpty()) {
+            String missingList = String.join(", ", missing);
+            throw new IllegalArgumentException(
+                    "El archivo «" + fileName + "» no es la plantilla correcta de Rappi Farmer. " +
+                    "Faltan " + missing.size() + " columna(s) requerida(s): " + missingList + ". " +
+                    "Descarga la plantilla oficial desde el botón «Descargar plantilla Excel».");
+        }
     }
 }

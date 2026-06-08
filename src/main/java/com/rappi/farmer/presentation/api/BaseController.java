@@ -347,7 +347,8 @@ public class BaseController {
             @NotBlank String type,
             String message,
             @NotEmpty List<Long> farmerIds,
-            List<Long> storeIds) {}
+            List<Long> storeIds,
+            String churnFilter) {}
 
     public record StatusRequest(String status) {}
 }

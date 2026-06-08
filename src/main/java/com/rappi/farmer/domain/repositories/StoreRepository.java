@@ -9,6 +9,7 @@ public interface StoreRepository {
     Store save(Store store);
     Optional<Store> findByStoreCode(String storeCode);
     Optional<Store> findByBrandId(String brandId);
+    List<Store> findAllByBrandId(String brandId);
     Optional<Store> findById(Long id);
     List<Store> findAll();
     List<Store> findActive();
