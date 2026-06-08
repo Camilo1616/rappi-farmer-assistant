@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Dependencias del sistema que necesita Baileys
 RUN apt-get update && apt-get install -y \
-    python3 make g++ \
+    python3 make g++ git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json .
