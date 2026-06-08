@@ -3,7 +3,7 @@ import { getStores } from '../services/storeService'
 import GestionFlowModal from './GestionFlowModal'
 import styles from './FollowUpModal.module.css'
 
-export default function FollowUpModal({ onClose }) {
+export default function FollowUpModal({ onClose, onSaved }) {
   const [query, setQuery]     = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -31,7 +31,7 @@ export default function FollowUpModal({ onClose }) {
       <GestionFlowModal
         store={selected}
         onClose={() => setSelected(null)}
-        onSaved={() => { setSelected(null); onClose() }}
+        onSaved={() => { setSelected(null); onSaved?.(); onClose() }}
       />
     )
   }

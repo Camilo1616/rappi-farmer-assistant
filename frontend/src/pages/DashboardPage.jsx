@@ -440,7 +440,12 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      {followUpOpen && <FollowUpModal onClose={() => setFollowUpOpen(false)} />}
+      {followUpOpen && (
+        <FollowUpModal
+          onClose={() => setFollowUpOpen(false)}
+          onSaved={() => { setFollowUpOpen(false); loadDash(); loadStores() }}
+        />
+      )}
     </div>
   )
 }
