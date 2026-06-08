@@ -14,3 +14,4 @@ export const updateManagement       = (id, body) => api.put(`/stores/managements
 export const deleteManagement       = (id) => api.delete(`/stores/managements/${id}`)
 export const getBasesForLider       = () => api.get('/bases/lider')
 export const getFarmerManagements   = (farmerId) => api.get(`/stores/managements/today?farmerId=${farmerId}`)
+export const getBaseStores          = (baseId) => api.get(`/bases/${baseId}/stores`)

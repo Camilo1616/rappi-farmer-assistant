@@ -32,6 +32,7 @@ public class BaseController {
     private final NotificationJpaRepository notifRepo;
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
+    private final ManagementJpaRepository managementJpaRepo;
     private final JwtService jwtService;
 
     // SSE emitters por userId
@@ -237,6 +238,54 @@ public class BaseController {
         }).toList();
 
         return ResponseEntity.ok(Map.of("counts", counts, "detail", detail));
+    }
+
+    /** Tiendas de una base con gestión del día por farmer — para vista en tiempo real del líder */
+    @GetMapping("/{baseId}/stores")
+    public ResponseEntity<?> getBaseStores(@PathVariable Long baseId,
+            @RequestHeader("Authorization") String authHeader) {
+        List<Long> storeIds = baseStoreRepo.findByBaseId(baseId).stream()
+                .map(BaseStoreEntity::getStoreId).toList();
+
+        if (storeIds.isEmpty()) return ResponseEntity.ok(List.of());
+
+        LocalDateTime startOfDay = java.time.LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay   = startOfDay.plusDays(1);
+
+        // Gestiones de hoy para estas tiendas
+        List<ManagementEntity> todayMgts = managementJpaRepo
+                .findTodayByStoreIds(storeIds, startOfDay, endOfDay);
+
+        Map<Long, List<ManagementEntity>> mgtsByStore = todayMgts.stream()
+                .collect(java.util.stream.Collectors.groupingBy(m -> m.getStore().getId()));
+
+        List<Map<String, Object>> result = storeIds.stream().map(storeId -> {
+            var storeOpt = storeRepository.findById(storeId);
+            if (storeOpt.isEmpty()) return null;
+            var store = storeOpt.get();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("storeId", storeId);
+            row.put("storeName", store.getStoreName());
+            row.put("brandId", store.getStoreCode());
+            row.put("phoneNumber", store.getPhoneNumber());
+            List<Map<String, Object>> mgts = mgtsByStore.getOrDefault(storeId, List.of()).stream()
+                    .map(m -> {
+                        Map<String, Object> md = new LinkedHashMap<>();
+                        md.put("id", m.getId());
+                        md.put("type", m.getManagementType());
+                        md.put("result", m.getResultType());
+                        md.put("comment", m.getComments());
+                        md.put("farmerName", m.getUser() != null ? m.getUser().getFullName() : "—");
+                        md.put("time", m.getManagementDate());
+                        md.put("brandSync", m.isBrandSync());
+                        return md;
+                    }).toList();
+            row.put("managements", mgts);
+            row.put("gestionada", !mgts.isEmpty());
+            return row;
+        }).filter(Objects::nonNull).toList();
+
+        return ResponseEntity.ok(result);
     }
 
     // ── Notificaciones ───────────────────────────────────────────────────────

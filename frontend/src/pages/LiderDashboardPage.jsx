@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getLiderDashboard, getBasesForLider, getTodayManagements,
-         getNotifications, getUnreadCount, markAllNotifRead } from '../services/dashboardService'
+         getNotifications, getUnreadCount, markAllNotifRead, getBaseStores } from '../services/dashboardService'
 import { useAuth } from '../context/AuthContext'
 import { logout } from '../services/authService'
 import ProfilePage from './ProfilePage'
@@ -62,6 +62,8 @@ export default function LiderDashboardPage() {
   const [sort, setSort]           = useState('semaforo')
   const [expandedFarmer, setExpandedFarmer] = useState(null)
   const [expandedBase, setExpandedBase]     = useState(null)
+  const [baseStoresData, setBaseStoresData] = useState({}) // baseId -> stores array
+  const [baseStoresLoading, setBaseStoresLoading] = useState({})
   const [activeTab, setActiveTab] = useState('gestiones') // 'gestiones' | 'bases'
 
   // Notificaciones
@@ -99,6 +101,33 @@ export default function LiderDashboardPage() {
     const interval = setInterval(() => { poll(); load() }, 30000)
     return () => clearInterval(interval)
   }, [load])
+
+  // Cargar tiendas de una base con sus gestiones del día
+  const loadBaseStores = useCallback(async (baseId) => {
+    setBaseStoresLoading(prev => ({ ...prev, [baseId]: true }))
+    try {
+      const r = await getBaseStores(baseId)
+      setBaseStoresData(prev => ({ ...prev, [baseId]: r.data || [] }))
+    } catch {
+      setBaseStoresData(prev => ({ ...prev, [baseId]: [] }))
+    } finally {
+      setBaseStoresLoading(prev => ({ ...prev, [baseId]: false }))
+    }
+  }, [])
+
+  // Polling en tiempo real para la base expandida — cada 15s
+  const expandedBaseRef = useRef(null)
+  useEffect(() => {
+    expandedBaseRef.current = expandedBase
+    if (expandedBase != null) loadBaseStores(expandedBase)
+  }, [expandedBase, loadBaseStores])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (expandedBaseRef.current != null) loadBaseStores(expandedBaseRef.current)
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [loadBaseStores])
 
   // Cerrar notif dropdown al clicar fuera
   useEffect(() => {
@@ -454,31 +483,93 @@ export default function LiderDashboardPage() {
                                   </div>
                                 </div>
 
-                                {/* Detalle por farmer */}
+                                {/* Detalle expandido: farmers + tiendas en tiempo real */}
                                 {isExp && (
                                   <div style={{ borderTop: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                                    {assignments.length === 0
-                                      ? <p style={{ padding: '16px 20px', color: '#94a3b8', fontSize: 13 }}>Sin asignaciones</p>
-                                      : assignments.map((a, i) => {
-                                        const sc = STATUS_COLOR[a.status] || STATUS_COLOR.SIN_LEER
-                                        return (
-                                          <div key={a.id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
-                                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#475569', flexShrink: 0 }}>
-                                              {a.farmerName?.[0]?.toUpperCase() || '?'}
+                                    {/* Resumen por farmer */}
+                                    {assignments.length > 0 && (
+                                      <div style={{ padding: '10px 20px', display: 'flex', flexWrap: 'wrap', gap: 8, borderBottom: '1px solid #e2e8f0' }}>
+                                        {assignments.map((a, i) => {
+                                          const sc = STATUS_COLOR[a.status] || STATUS_COLOR.SIN_LEER
+                                          return (
+                                            <div key={a.id || i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '6px 12px' }}>
+                                              <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#475569', flexShrink: 0 }}>
+                                                {a.farmerName?.[0]?.toUpperCase() || '?'}
+                                              </div>
+                                              <div>
+                                                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#0f172a' }}>{a.farmerName || `Farmer #${a.farmerId}`}</p>
+                                                <p style={{ margin: 0, fontSize: 10, color: '#64748b' }}>{a.storeCount ?? 0} tiendas</p>
+                                              </div>
+                                              <Chip label={sc.label} scheme={sc} />
                                             </div>
-                                            <div style={{ flex: 1 }}>
-                                              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{a.farmerName || `Farmer #${a.farmerId}`}</p>
-                                              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b' }}>
-                                                {a.storeCount ?? 0} tiendas asignadas
-                                                {a.startedAt && ` · Inició: ${new Date(a.startedAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`}
-                                                {a.completedAt && ` · Completó: ${new Date(a.completedAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`}
-                                              </p>
+                                          )
+                                        })}
+                                      </div>
+                                    )}
+
+                                    {/* Tabla de tiendas en tiempo real */}
+                                    <div style={{ padding: '12px 20px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                          Tipificaciones en tiempo real
+                                        </p>
+                                        <span style={{ fontSize: 10, color: '#94a3b8' }}>· actualiza cada 15s</span>
+                                        {baseStoresLoading[base.id] && (
+                                          <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #ff441f', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+                                        )}
+                                        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#16a34a', fontWeight: 700 }}>
+                                          {(baseStoresData[base.id] || []).filter(s => s.gestionada).length} / {(baseStoresData[base.id] || []).length} gestionadas
+                                        </span>
+                                      </div>
+                                      {!baseStoresData[base.id]
+                                        ? <p style={{ color: '#94a3b8', fontSize: 12 }}>Cargando tiendas...</p>
+                                        : baseStoresData[base.id].length === 0
+                                          ? <p style={{ color: '#94a3b8', fontSize: 12 }}>Sin tiendas en esta base</p>
+                                          : (
+                                            <div style={{ overflowX: 'auto' }}>
+                                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                                <thead>
+                                                  <tr style={{ background: '#f1f5f9' }}>
+                                                    {['Estado', 'Tienda', 'Brand ID', 'Farmer', 'Tipo', 'Resultado', 'Comentario', 'Hora'].map(h => (
+                                                      <th key={h} style={{ padding: '7px 12px', textAlign: 'left', fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                                                    ))}
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {baseStoresData[base.id].map((s, si) => {
+                                                    const mgts = s.managements || []
+                                                    const firstMgt = mgts[0]
+                                                    return (
+                                                      <tr key={s.storeId || si} style={{ borderBottom: '1px solid #f1f5f9', background: s.gestionada ? '#f0fdf4' : '#fff' }}>
+                                                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                                          <span title={s.gestionada ? 'Gestionada' : 'Sin gestión'} style={{ fontSize: 16 }}>
+                                                            {s.gestionada ? '✅' : '⬜'}
+                                                          </span>
+                                                        </td>
+                                                        <td style={{ padding: '8px 12px', fontWeight: 600, color: '#0f172a', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.storeName || '—'}</td>
+                                                        <td style={{ padding: '8px 12px', color: '#ff441f', fontWeight: 700 }}>{s.brandId || '—'}</td>
+                                                        <td style={{ padding: '8px 12px', color: '#475569' }}>{firstMgt?.farmerName || '—'}</td>
+                                                        <td style={{ padding: '8px 12px' }}>
+                                                          {firstMgt ? <Chip label={firstMgt.type} scheme={TIPO_COLOR[firstMgt.type]} /> : <span style={{ color: '#cbd5e1' }}>—</span>}
+                                                        </td>
+                                                        <td style={{ padding: '8px 12px' }}>
+                                                          {firstMgt ? <Chip label={firstMgt.result} scheme={RESULTADO_COLOR[firstMgt.result]} /> : <span style={{ color: '#cbd5e1' }}>—</span>}
+                                                        </td>
+                                                        <td style={{ padding: '8px 12px', color: '#475569', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                          {firstMgt?.comment || '—'}
+                                                        </td>
+                                                        <td style={{ padding: '8px 12px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                                                          {firstMgt?.time ? new Date(firstMgt.time).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                                        </td>
+                                                      </tr>
+                                                    )
+                                                  })}
+                                                </tbody>
+                                              </table>
                                             </div>
-                                            <Chip label={sc.label} scheme={sc} />
-                                          </div>
-                                        )
-                                      })
-                                    }
+                                          )
+                                      }
+                                    </div>
                                   </div>
                                 )}
                               </div>

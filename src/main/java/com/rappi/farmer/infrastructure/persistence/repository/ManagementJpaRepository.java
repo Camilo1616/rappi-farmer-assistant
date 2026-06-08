@@ -61,6 +61,13 @@ public interface ManagementJpaRepository extends JpaRepository<ManagementEntity,
     List<ManagementEntity> findByUserIdSince(@Param("userId") Long userId,
                                               @Param("start") LocalDateTime start);
 
+    @Query("SELECT m FROM ManagementEntity m JOIN FETCH m.store LEFT JOIN FETCH m.user " +
+           "WHERE m.store.id IN :storeIds AND m.managementDate >= :start AND m.managementDate < :end " +
+           "ORDER BY m.managementDate DESC")
+    List<ManagementEntity> findTodayByStoreIds(@Param("storeIds") List<Long> storeIds,
+                                               @Param("start") LocalDateTime start,
+                                               @Param("end") LocalDateTime end);
+
     @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM ManagementEntity m WHERE m.user.id = :userId")
     void deleteByUserId(@Param("userId") Long userId);
