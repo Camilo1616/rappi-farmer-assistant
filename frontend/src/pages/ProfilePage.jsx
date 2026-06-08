@@ -149,27 +149,38 @@ export default function ProfilePage() {
     try {
       const { data } = await connectCalendar()
       const popup = window.open(data.authUrl, 'google-calendar-auth', 'width=520,height=620')
-      const handler = (e) => {
-        if (e.data === 'connected') {
-          setCalConnected(true)
-          flash('Google Calendar conectado')
-          popup?.close()
-        } else if (e.data === 'error') {
-          flash('Error al conectar Google Calendar', 'err')
-          popup?.close()
+
+      // Polling: pregunta al backend cada 2s si ya se conectó
+      // (postMessage no funciona por COOP de Google OAuth)
+      const interval = setInterval(async () => {
+        try {
+          const { data: status } = await getCalendarStatus()
+          if (status.connected) {
+            clearInterval(interval)
+            setCalConnected(true)
+            flash('Google Calendar conectado')
+            setCalLoading(false)
+            try { popup?.close() } catch {}
+            return
+          }
+        } catch {}
+        // Si el usuario cerró el popup sin autorizar
+        try {
+          if (popup?.closed) {
+            clearInterval(interval)
+            setCalLoading(false)
+          }
+        } catch {
+          // COOP puede bloquear popup.closed también — timeout de seguridad 3 min
         }
-        window.removeEventListener('message', handler)
+      }, 2000)
+
+      // Timeout de seguridad: dejar de hacer polling a los 3 minutos
+      setTimeout(() => {
+        clearInterval(interval)
         setCalLoading(false)
-      }
-      window.addEventListener('message', handler)
-      // Si el usuario cierra el popup sin autorizar
-      const interval = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(interval)
-          window.removeEventListener('message', handler)
-          setCalLoading(false)
-        }
-      }, 800)
+      }, 180000)
+
     } catch (e) {
       flash('Error al iniciar conexión', 'err')
       setCalLoading(false)
