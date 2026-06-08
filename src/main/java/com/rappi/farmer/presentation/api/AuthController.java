@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +27,9 @@ public class AuthController {
     private final JwtService jwtService;
     private final GoogleCalendarService calendarService;
     private final com.rappi.farmer.application.services.EmailPinService emailPinService;
+
+    @Value("${lider.invite.code:}")
+    private String liderInviteCode;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
@@ -75,9 +79,12 @@ public class AuthController {
         if (!emailPinService.verifyPin(request.email(), request.pin()))
             return ResponseEntity.badRequest().body(Map.of("message", "Código incorrecto o expirado"));
         try {
+            boolean isLider = !liderInviteCode.isBlank()
+                    && liderInviteCode.equals(request.liderCode());
+            String role = isLider ? "LIDER" : "FARMER_MASS";
             CreateUserRequest dto = new CreateUserRequest(
                     request.fullName(), request.email(), request.password(),
-                    "FARMER_MASS", request.countryCode(), null, null);
+                    role, request.countryCode(), null, null);
             User user = userService.createUser(dto);
             String token = jwtService.generateToken(user.getEmail(), user.getUserRole().name());
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -122,7 +129,7 @@ public class AuthController {
 
     public record RegisterRequest(
             String fullName, String email, String password,
-            String countryCode, String pin) {}
+            String countryCode, String pin, String liderCode) {}
 
     public record LoginRequest(
             @NotBlank @Email String email,

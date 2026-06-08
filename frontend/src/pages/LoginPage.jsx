@@ -165,7 +165,7 @@ export default function LoginPage() {
           <div className={styles.divider}><span>¿Eres nuevo?</span></div>
 
           <button className={styles.btnRegister} onClick={() => setShowRegister(true)}>
-            ✨ Crear cuenta de Farmer
+            ✨ Crear cuenta
           </button>
         </div>
       </div>
@@ -195,6 +195,7 @@ function RegisterModal({ onSuccess, onClose }) {
   const [resending,   setResending]   = useState(false)
   const [emailExists, setEmailExists] = useState(false)
   const [checkingEmail, setCheckingEmail] = useState(false)
+  const [liderCode,   setLiderCode]   = useState('')
 
   const COUNTRIES = ['CO','MX','AR','PE','BR','EC','CL','CR','UY','BO','PA','HN']
 
@@ -240,7 +241,7 @@ function RegisterModal({ onSuccess, onClose }) {
     if (pin.length !== 6) { setError('El código debe tener 6 dígitos'); return }
     setLoading(true); setError('')
     try {
-      const data = await register({ fullName, email, password, countryCode: country, pin })
+      const data = await register({ fullName, email, password, countryCode: country, pin, liderCode: liderCode || undefined })
       onSuccess(data)
     } catch (err) {
       setError(err.response?.data?.message || 'Código incorrecto')
@@ -254,7 +255,7 @@ function RegisterModal({ onSuccess, onClose }) {
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <div>
-            <h3 className={styles.modalTitle}>Crear cuenta de Farmer</h3>
+            <h3 className={styles.modalTitle}>Crear cuenta</h3>
             <div className={styles.modalSteps}>
               <span className={`${styles.stepDot} ${step >= 1 ? styles.stepDotActive : ''}`}>1</span>
               <span className={styles.stepLine} />
@@ -284,6 +285,15 @@ function RegisterModal({ onSuccess, onClose }) {
               <select className={styles.modalInput} value={country} onChange={e => setCountry(e.target.value)}>
                 {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+            <div className={styles.modalField}>
+              <label className={styles.modalLabel}>
+                Código de líder <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem' }}>(opcional)</span>
+              </label>
+              <input className={styles.modalInput} type="password"
+                placeholder="Déjalo vacío si eres Farmer"
+                value={liderCode} onChange={e => setLiderCode(e.target.value)}
+                autoComplete="off" />
             </div>
             <div className={styles.modalField}>
               <label className={styles.modalLabel}>Contraseña</label>
