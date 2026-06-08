@@ -17,7 +17,9 @@ api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
+      const theme = localStorage.getItem('theme')
       localStorage.clear()
+      if (theme) localStorage.setItem('theme', theme)
       window.location.href = '/login'
     }
     return Promise.reject(error)
