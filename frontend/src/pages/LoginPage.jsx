@@ -214,6 +214,7 @@ function RegisterModal({ onSuccess, onClose }) {
   const handleSendPin = async (e) => {
     e.preventDefault()
     setError('')
+    if (!email.toLowerCase().endsWith('@rappi.com')) { setError('Solo se permiten correos corporativos @rappi.com'); return }
     if (password !== confirmPwd) { setError('Las contraseñas no coinciden'); return }
     if (password.length < 6)    { setError('La contraseña debe tener al menos 6 caracteres'); return }
     setLoading(true)

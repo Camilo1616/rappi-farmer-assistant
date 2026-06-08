@@ -91,6 +91,8 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
         String email = body.get("email");
+        if (!isRappiEmail(email))
+            return ResponseEntity.badRequest().body(Map.of("message", "Solo se permiten correos corporativos @rappi.com"));
         if (!userService.existsByEmail(email))
             return ResponseEntity.badRequest().body(Map.of("message", "No existe una cuenta con ese correo"));
         try {
