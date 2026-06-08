@@ -33,7 +33,7 @@ export default function ProfilePage() {
   const [pwdSaving,     setPwdSaving]     = useState(false)
   const [calConnected,  setCalConnected]  = useState(false)
   const [calLoading,    setCalLoading]    = useState(false)
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
   const avatarRef = useRef()
 
   const toggleTheme = () => {
