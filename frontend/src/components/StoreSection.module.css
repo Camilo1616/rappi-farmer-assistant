@@ -1,6 +1,6 @@
 .section {
-  background: #1C2333;
-  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -14,18 +14,18 @@
   user-select: none;
   transition: background 0.15s;
 }
-.sectionHeader:hover { background: rgba(255,255,255,0.03); }
+.sectionHeader:hover { background: var(--border-subtle); }
 
 .sectionLeft { display: flex; align-items: center; gap: 10px; }
 .sectionIcon { font-size: 16px; }
-.sectionTitle { font-size: 14px; font-weight: 700; color: #F0F2F8; }
+.sectionTitle { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .sectionCount { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 99px; }
-.chevron { font-size: 9px; color: #545E75; }
+.chevron { font-size: 9px; color: var(--text-muted); }
 
 /* ── Tabla ── */
 .tableWrap {
   overflow-x: auto;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .table {
@@ -37,26 +37,26 @@
 .table thead th {
   font-size: 11px;
   font-weight: 700;
-  color: #545E75;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.6px;
   padding: 10px 16px;
   text-align: left;
   white-space: nowrap;
-  background: #161B27;
+  background: var(--bg-secondary);
 }
 
 .row {
-  border-top: 1px solid rgba(255,255,255,0.04);
+  border-top: 1px solid var(--border-subtle);
   transition: background 0.12s;
 }
-.row:hover { background: rgba(255,255,255,0.02); }
+.row:hover { background: var(--border-subtle); }
 
 .table td { padding: 10px 16px; vertical-align: middle; }
 
 .storeCell { display: flex; flex-direction: column; gap: 2px; }
-.storeName  { font-weight: 600; color: #F0F2F8; }
-.storeCode  { font-size: 11px; color: #545E75; font-family: monospace; }
+.storeName  { font-weight: 600; color: var(--text-primary); }
+.storeCode  { font-size: 11px; color: var(--text-muted); font-family: monospace; }
 
 .agingBadge { font-size: 12px; font-weight: 700; }
 
@@ -69,10 +69,10 @@
   white-space: nowrap;
 }
 
-.dash      { color: #545E75; }
-.dateValue { font-size: 12px; color: #8B93A8; font-family: monospace; }
-.empty   { padding: 32px; text-align: center; color: #545E75; font-size: 13px; font-style: italic; }
-.pending { font-size: 11px; color: #545E75; font-style: italic; }
+.dash      { color: var(--text-muted); }
+.dateValue { font-size: 12px; color: var(--text-secondary); font-family: monospace; }
+.empty   { padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; font-style: italic; }
+.pending { font-size: 11px; color: var(--text-muted); font-style: italic; }
 
 /* ── Acciones: fila horizontal ── */
 .actions {

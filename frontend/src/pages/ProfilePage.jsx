@@ -33,7 +33,15 @@ export default function ProfilePage() {
   const [pwdSaving,     setPwdSaving]     = useState(false)
   const [calConnected,  setCalConnected]  = useState(false)
   const [calLoading,    setCalLoading]    = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
   const avatarRef = useRef()
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    localStorage.setItem('theme', next)
+    document.documentElement.setAttribute('data-theme', next)
+  }
 
   const isAdmin = profile?.role === 'ADMIN'
   const isLider = profile?.role === 'LIDER'
@@ -215,7 +223,23 @@ export default function ProfilePage() {
 
       {/* ── Mi perfil ── */}
       <section className={styles.card}>
-        <h2 className={styles.cardTitle}>Mi perfil</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>Mi perfil</h2>
+          <button onClick={toggleTheme} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7,
+            padding: '7px 14px',
+            background: 'var(--bg-input)',
+            border: '1.5px solid var(--border)',
+            borderRadius: 99,
+            fontSize: 12, fontWeight: 700,
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            transition: 'border-color 0.18s, color 0.18s',
+            fontFamily: 'inherit',
+          }}>
+            {theme === 'dark' ? '☀️ Modo claro' : '🌙 Modo oscuro'}
+          </button>
+        </div>
 
         <div className={styles.profileRow}>
           <div className={styles.avatarWrap} onClick={() => avatarRef.current?.click()} title="Cambiar foto">

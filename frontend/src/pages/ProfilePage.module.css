@@ -7,8 +7,8 @@
 }
 
 .card {
-  background: #1C2333;
-  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 28px;
 }
@@ -23,7 +23,7 @@
 .cardTitle {
   font-size: 15px;
   font-weight: 700;
-  color: #F0F2F8;
+  color: var(--text-primary);
   margin: 0 0 20px;
   letter-spacing: -0.3px;
 }
@@ -33,8 +33,8 @@
 .badge {
   font-size: 11px;
   font-weight: 600;
-  color: #8B93A8;
-  background: #242B3D;
+  color: var(--text-secondary);
+  background: var(--bg-input);
   padding: 3px 10px;
   border-radius: 99px;
 }
@@ -91,14 +91,14 @@
 .profileName {
   font-size: 20px;
   font-weight: 800;
-  color: #F0F2F8;
+  color: var(--text-primary);
   margin: 0 0 4px;
   letter-spacing: -0.5px;
 }
 
 .profileEmail {
   font-size: 13px;
-  color: #545E75;
+  color: var(--text-muted);
   margin: 0 0 12px;
 }
 
@@ -125,8 +125,8 @@
 
 .metaChip {
   font-size: 12px;
-  color: #8B93A8;
-  background: #242B3D;
+  color: var(--text-secondary);
+  background: var(--bg-input);
   padding: 3px 10px;
   border-radius: 99px;
 }
@@ -135,13 +135,13 @@
 .fieldGroup {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .fieldLabel {
   font-size: 11px;
   font-weight: 700;
-  color: #545E75;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.8px;
   display: block;
@@ -157,43 +157,43 @@
 
 .fieldValue {
   font-size: 14px;
-  color: #F0F2F8;
+  color: var(--text-primary);
 }
 
-.emptyItalic { font-style: italic; color: #545E75; }
+.emptyItalic { font-style: italic; color: var(--text-muted); }
 
 .input {
   flex: 1;
   min-width: 160px;
   padding: 10px 14px;
-  background: #242B3D;
-  border: 1.5px solid rgba(255,255,255,0.07);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
   border-radius: 8px;
   font-size: 13px;
-  color: #F0F2F8;
+  color: var(--text-primary);
   outline: none;
   transition: border-color 0.18s;
   font-family: inherit;
 }
 
-.input:focus { border-color: #FF441F; }
-.input option { background: #1C2333; }
+.input:focus { border-color: var(--rappi-orange); }
+.input option { background: var(--bg-card); }
 
 .inputSm {
   width: 90px;
   padding: 10px 12px;
-  background: #242B3D;
-  border: 1.5px solid rgba(255,255,255,0.07);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
   border-radius: 8px;
   font-size: 13px;
-  color: #F0F2F8;
+  color: var(--text-primary);
   outline: none;
   font-family: inherit;
   transition: border-color 0.18s;
 }
 
-.inputSm:focus { border-color: #FF441F; }
-.inputSm option { background: #1C2333; }
+.inputSm:focus { border-color: var(--rappi-orange); }
+.inputSm option { background: var(--bg-card); }
 
 /* ── Stats del equipo ── */
 .statsGrid {
@@ -205,13 +205,13 @@
 @media (max-width: 700px) { .statsGrid { grid-template-columns: repeat(2, 1fr); } }
 
 .statBox {
-  background: #161B27;
+  background: var(--bg-secondary);
   border-radius: 10px;
   padding: 16px 14px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid var(--border-subtle);
 }
 
 .statValue {
@@ -223,7 +223,7 @@
 
 .statLabel {
   font-size: 11px;
-  color: #545E75;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -236,20 +236,20 @@
 
 .emptyMsg {
   font-size: 13px;
-  color: #545E75;
+  color: var(--text-muted);
   padding: 20px 0;
   font-style: italic;
 }
 
 .farmerCard {
   border-radius: 10px;
-  background: #161B27;
-  border: 1px solid rgba(255,255,255,0.05);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
   overflow: hidden;
   transition: border-color 0.15s;
 }
 
-.farmerCard:hover { border-color: rgba(255,255,255,0.1); }
+.farmerCard:hover { border-color: var(--border); }
 
 .farmerRow {
   display: flex;
@@ -263,13 +263,13 @@
 .farmerAvatar {
   width: 34px; height: 34px;
   border-radius: 50%;
-  background: #242B3D;
+  background: var(--bg-input);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  color: #8B93A8;
+  color: var(--text-secondary);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -287,7 +287,7 @@
 .farmerName {
   font-size: 13px;
   font-weight: 600;
-  color: #F0F2F8;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -295,7 +295,7 @@
 
 .farmerSub {
   font-size: 11px;
-  color: #545E75;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -316,21 +316,21 @@
 .countryBadge {
   font-size: 11px;
   font-weight: 700;
-  color: #8B93A8;
-  background: #242B3D;
+  color: var(--text-secondary);
+  background: var(--bg-input);
   padding: 2px 7px;
   border-radius: 4px;
 }
 
 .expandIcon {
   font-size: 9px;
-  color: #545E75;
+  color: var(--text-muted);
 }
 
 /* Detalle expandido */
 .farmerDetail {
   padding: 0 14px 14px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .farmerStats {
@@ -347,7 +347,7 @@
   flex-direction: column;
   gap: 3px;
   align-items: center;
-  background: #1C2333;
+  background: var(--bg-card);
   border-radius: 8px;
   padding: 10px 8px;
 }
@@ -361,7 +361,7 @@
 
 .miniLabel {
   font-size: 10px;
-  color: #545E75;
+  color: var(--text-muted);
   font-weight: 600;
   text-align: center;
   line-height: 1.2;
@@ -396,8 +396,8 @@
 .btnGhost {
   padding: 10px 16px;
   background: none;
-  color: #8B93A8;
-  border: 1.5px solid rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -407,12 +407,12 @@
   white-space: nowrap;
 }
 
-.btnGhost:hover { border-color: rgba(255,255,255,0.2); color: #F0F2F8; }
+.btnGhost:hover { border-color: var(--text-secondary); color: var(--text-primary); }
 
 .btnChip {
   padding: 4px 10px;
-  background: #242B3D;
-  color: #8B93A8;
+  background: var(--bg-input);
+  color: var(--text-secondary);
   border: none;
   border-radius: 99px;
   font-size: 11px;
@@ -486,15 +486,15 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #545E75;
+  color: var(--text-muted);
   font-size: 13px;
   padding: 48px;
 }
 
 .spinner {
   width: 20px; height: 20px;
-  border: 2px solid rgba(255,255,255,0.07);
-  border-top-color: #FF441F;
+  border: 2px solid var(--border);
+  border-top-color: var(--rappi-orange);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -503,39 +503,39 @@
 
 /* ── Rendimiento ── */
 .perfStats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-.perfStat  { flex: 1; min-width: 100px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
-.perfVal   { font-size: 1.8rem; font-weight: 800; color: #F0F2F8; }
-.perfLabel { font-size: 0.72rem; color: #9CA3AF; }
-.perfMeta  { font-size: 0.65rem; color: #6B7280; }
+.perfStat  { flex: 1; min-width: 100px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
+.perfVal   { font-size: 1.8rem; font-weight: 800; color: var(--text-primary); }
+.perfLabel { font-size: 0.72rem; color: var(--text-secondary); }
+.perfMeta  { font-size: 0.65rem; color: var(--text-muted); }
 
 .barChart  { display: flex; gap: 8px; align-items: flex-end; height: 120px; padding-top: 8px; }
 .barCol    { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
-.barWrap   { flex: 1; width: 100%; display: flex; align-items: flex-end; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+.barWrap   { flex: 1; width: 100%; display: flex; align-items: flex-end; background: var(--bg-secondary); border-radius: 4px; overflow: hidden; }
 .bar       { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.4s ease; min-height: 2px; }
-.barVal    { font-size: 0.72rem; font-weight: 700; color: #F0F2F8; }
-.barLabel  { font-size: 0.65rem; color: #6B7280; }
+.barVal    { font-size: 0.72rem; font-weight: 700; color: var(--text-primary); }
+.barLabel  { font-size: 0.65rem; color: var(--text-muted); }
 
 /* ── Contraseña ── */
 .pwdForm   { display: flex; flex-direction: column; gap: 10px; max-width: 400px; }
-.input     { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #F0F2F8; font-size: 0.85rem; padding: 10px 14px; outline: none; }
-.input:focus { border-color: rgba(255,68,31,0.4); }
-.btnPrimary   { padding: 9px 20px; border-radius: 8px; background: #FF441F; color: #fff; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: opacity 0.15s; }
+.input     { background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 0.85rem; padding: 10px 14px; outline: none; }
+.input:focus { border-color: var(--border-focus); }
+.btnPrimary   { padding: 9px 20px; border-radius: 8px; background: var(--rappi-orange); color: #fff; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: opacity 0.15s; }
 .btnPrimary:hover { opacity: 0.85; }
 .btnPrimary:disabled { opacity: 0.4; cursor: not-allowed; }
-.btnSecondary { padding: 9px 20px; border-radius: 8px; background: rgba(255,255,255,0.07); color: #D1D5DB; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
-.btnSecondary:hover { background: rgba(255,255,255,0.12); }
+.btnSecondary { padding: 9px 20px; border-radius: 8px; background: var(--bg-input); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; border: 1px solid var(--border); cursor: pointer; }
+.btnSecondary:hover { background: var(--bg-card-hover); }
 
 /* ── Notas ── */
 .noteInput    { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-.noteTextarea { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #F0F2F8; font-size: 0.85rem; padding: 10px 14px; outline: none; resize: vertical; font-family: inherit; }
-.noteTextarea:focus { border-color: rgba(255,68,31,0.4); }
+.noteTextarea { background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 0.85rem; padding: 10px 14px; outline: none; resize: vertical; font-family: inherit; }
+.noteTextarea:focus { border-color: var(--border-focus); }
 .noteList     { display: flex; flex-direction: column; gap: 8px; }
-.noNotes      { color: #6B7280; font-size: 0.82rem; padding: 8px 0; }
-.noteItem     { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
-.noteContent  { font-size: 0.85rem; color: #D1D5DB; margin: 0; white-space: pre-wrap; line-height: 1.5; }
+.noNotes      { color: var(--text-muted); font-size: 0.82rem; padding: 8px 0; }
+.noteItem     { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.noteContent  { font-size: 0.85rem; color: var(--text-primary); margin: 0; white-space: pre-wrap; line-height: 1.5; }
 .noteMeta     { display: flex; align-items: center; gap: 10px; }
-.noteDate     { font-size: 0.7rem; color: #6B7280; flex: 1; }
-.noteBtnEdit  { background: none; border: none; cursor: pointer; font-size: 0.78rem; color: #9CA3AF; padding: 2px 6px; border-radius: 4px; }
-.noteBtnEdit:hover { background: rgba(255,255,255,0.08); }
-.noteBtnDel   { background: none; border: none; cursor: pointer; font-size: 0.82rem; color: #EF4444; padding: 2px 6px; border-radius: 4px; }
-.noteBtnDel:hover { background: rgba(239,68,68,0.1); }
+.noteDate     { font-size: 0.7rem; color: var(--text-muted); flex: 1; }
+.noteBtnEdit  { background: none; border: none; cursor: pointer; font-size: 0.78rem; color: var(--text-secondary); padding: 2px 6px; border-radius: 4px; }
+.noteBtnEdit:hover { background: var(--bg-input); }
+.noteBtnDel   { background: none; border: none; cursor: pointer; font-size: 0.82rem; color: var(--red); padding: 2px 6px; border-radius: 4px; }
+.noteBtnDel:hover { background: var(--red-bg); }

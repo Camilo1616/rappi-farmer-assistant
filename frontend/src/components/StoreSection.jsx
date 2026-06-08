@@ -100,11 +100,11 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                     <span style={{ fontWeight: 700, color: '#ff441f', fontSize: 12 }}>{s.brandId || '—'}</span>
                   </td>
                   <td>
-                    <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{s.storeCode || '—'}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{s.storeCode || '—'}</span>
                   </td>
                   <td>
                     {s.phoneNumber
-                      ? <span style={{ fontSize: 12, color: '#0f172a' }}>{s.phoneNumber}</span>
+                      ? <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{s.phoneNumber}</span>
                       : <span style={{ fontSize: 11, color: '#ef4444' }}>Sin tel.</span>}
                   </td>
 
