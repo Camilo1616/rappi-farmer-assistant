@@ -56,6 +56,14 @@ public class WhatsappService {
         whatsappDriver.cerrar();
     }
 
+    public boolean tieneQr() {
+        return whatsappDriver.obtenerQr() != null;
+    }
+
+    public String obtenerQr() {
+        return whatsappDriver.obtenerQr();
+    }
+
     /** Envía un único mensaje de prueba sin guardarlo en el log. */
     public String enviarPrueba(String telefono, String mensaje) {
         return whatsappDriver.enviarMensaje(telefono, mensaje);

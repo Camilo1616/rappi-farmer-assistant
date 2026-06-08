@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getDashboard } from '../services/dashboardService'
 import {
-  getWhatsappStatus, openChrome, closeChrome,
+  getWhatsappStatus, getWhatsappQr, openChrome, closeChrome,
   sendTest, getMsgTemplates, sendMasivo
 } from '../services/whatsappService'
 import styles from './WhatsappPage.module.css'
@@ -142,33 +142,45 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
 }
 
 
-/* ── Conexión Chrome ── */
-function StepConnection({ status, onOpen, onClose, onRefresh, loading }) {
+/* ── Conexión WhatsApp (Baileys) ── */
+function StepConnection({ status, qr, onRefresh, loading }) {
   return (
     <div className={styles.stepCard}>
       <div className={styles.stepHeader}>
         <span className={styles.stepNum}>1</span>
         <div>
-          <div className={styles.stepTitle}>Conexión WhatsApp Web</div>
-          <div className={styles.stepSub}>Abre Chrome y escanea el QR si es necesario</div>
+          <div className={styles.stepTitle}>Conexión WhatsApp</div>
+          <div className={styles.stepSub}>
+            {status.connected ? 'Sesión activa' : qr ? 'Escanea el QR con WhatsApp' : 'Esperando servicio...'}
+          </div>
         </div>
-        <div className={`${styles.statusDot} ${status.connected ? styles.dotGreen : status.open ? styles.dotYellow : styles.dotRed}`} />
+        <div className={`${styles.statusDot} ${status.connected ? styles.dotGreen : qr ? styles.dotYellow : styles.dotRed}`} />
       </div>
+
       <div className={styles.statusRow}>
-        <div className={styles.statusItem}>{status.open ? '🟢' : '🔴'} Chrome {status.open ? 'abierto' : 'cerrado'}</div>
         <div className={styles.statusItem}>{status.connected ? '✅' : '⏳'} WA {status.connected ? 'conectado' : 'desconectado'}</div>
         <div className={styles.statusItem}>💬 <strong>{status.sentToday ?? 0}</strong> enviados hoy</div>
       </div>
+
+      {/* QR para escanear */}
+      {!status.connected && qr && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 0' }}>
+          <p style={{ fontSize: 13, color: '#475569', margin: 0 }}>Abre WhatsApp → Dispositivos vinculados → Vincular dispositivo</p>
+          <img src={qr} alt="QR WhatsApp" style={{ width: 220, height: 220, borderRadius: 12, border: '2px solid #e2e8f0' }} />
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>El QR expira en 60 segundos</p>
+        </div>
+      )}
+
+      {!status.connected && !qr && (
+        <div style={{ padding: '12px 0', fontSize: 13, color: '#94a3b8', textAlign: 'center' }}>
+          Iniciando servicio de WhatsApp...
+        </div>
+      )}
+
       <div className={styles.btnRow}>
-        {!status.open
-          ? <button className={styles.btnPrimary} onClick={onOpen} disabled={loading}>
-              {loading ? <><span className={styles.spinner} /> Abriendo...</> : '🚀 Abrir Chrome'}
-            </button>
-          : <>
-              <button className={styles.btnDanger}    onClick={onClose}   disabled={loading}>🔴 Cerrar Chrome</button>
-              <button className={styles.btnSecondary} onClick={onRefresh} disabled={loading}>🔄 Verificar</button>
-            </>
-        }
+        <button className={styles.btnSecondary} onClick={onRefresh} disabled={loading}>
+          {loading ? <><span className={styles.spinner} /> Verificando...</> : '🔄 Verificar estado'}
+        </button>
       </div>
     </div>
   )
@@ -246,6 +258,7 @@ function SendProgress({ progress, onClose }) {
 /* ── Página ── */
 export default function WhatsappPage() {
   const [status,      setStatus]      = useState({ open:false, connected:false, sentToday:0, remaining:MAX_DIARIO })
+  const [qr,          setQr]          = useState(null)
   const [dashStores,  setDashStores]  = useState({})
   const [selected,    setSelected]    = useState(new Set())
   const [templates,   setTemplates]   = useState([])
@@ -258,13 +271,26 @@ export default function WhatsappPage() {
   const [testSending, setTestSending] = useState(false)
   const [testResult,  setTestResult]  = useState(null)
 
-  const loadStatus = () => getWhatsappStatus().then(r => setStatus(r.data)).catch(() => {})
-  const loadDash   = () => getDashboard().then(r => setDashStores(r.data)).catch(() => {})
+  const loadStatus = async () => {
+    try {
+      const r = await getWhatsappStatus()
+      setStatus(r.data)
+      // Si no está conectado, pedir el QR
+      if (!r.data.connected) {
+        const qrRes = await getWhatsappQr().catch(() => null)
+        setQr(qrRes?.data?.qr || null)
+      } else {
+        setQr(null)
+      }
+    } catch {}
+  }
+  const loadDash = () => getDashboard().then(r => setDashStores(r.data)).catch(() => {})
 
   useEffect(() => {
     loadStatus(); loadDash()
     getMsgTemplates().then(r => setTemplates(r.data)).catch(() => {})
-    const iv = setInterval(loadStatus, 10000)
+    // Polling más frecuente cuando no está conectado (para mostrar QR actualizado)
+    const iv = setInterval(loadStatus, 5000)
     return () => clearInterval(iv)
   }, [])
 
@@ -289,15 +315,10 @@ export default function WhatsappPage() {
     return next
   })
 
-  const handleOpenChrome = async () => {
+  const handleRefresh = async () => {
     setChromLoad(true)
-    try { await openChrome() } catch {}
-    await loadStatus(); setChromLoad(false)
-  }
-  const handleCloseChrome = async () => {
-    setChromLoad(true)
-    try { await closeChrome() } catch {}
-    await loadStatus(); setChromLoad(false)
+    await loadStatus()
+    setChromLoad(false)
   }
 
   const handleSend = () => {
@@ -333,8 +354,7 @@ export default function WhatsappPage() {
       <div className={styles.layout}>
         <div className={styles.leftCol}>
 
-          <StepConnection status={status} onOpen={handleOpenChrome}
-            onClose={handleCloseChrome} onRefresh={loadStatus} loading={chromLoad} />
+          <StepConnection status={status} qr={qr} onRefresh={handleRefresh} loading={chromLoad} />
 
           {/* ── Secciones de tiendas ── */}
           <div className={styles.stepCard}>

@@ -50,15 +50,23 @@ public class WhatsappController {
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
-        boolean open = whatsappService.chromeAbierto();
-        boolean connected = open && whatsappService.estaConectado();
-        long sentToday = whatsappService.enviadosHoy();
+        boolean connected = whatsappService.estaConectado();
+        boolean hasQr     = whatsappService.tieneQr();
+        long sentToday    = whatsappService.enviadosHoy();
         return ResponseEntity.ok(Map.of(
-                "open", open,
+                "open",      connected || hasQr,
                 "connected", connected,
+                "hasQr",     hasQr,
                 "sentToday", sentToday,
                 "remaining", Integer.MAX_VALUE
         ));
+    }
+
+    @GetMapping("/qr")
+    public ResponseEntity<?> getQr() {
+        String qr = whatsappService.obtenerQr();
+        if (qr == null) return ResponseEntity.ok(Map.of("qr", (Object) null, "connected", whatsappService.estaConectado()));
+        return ResponseEntity.ok(Map.of("qr", qr, "connected", false));
     }
 
     @GetMapping("/wait-connection")
