@@ -33,18 +33,20 @@ public class EmailVerificationService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(resendApiKey);
+            headers.set("api-key", resendApiKey);
 
+            Map<String, Object> sender = Map.of("name", "Rappi Farmer Assistant", "email", "adebda001@smtp-brevo.com");
+            Map<String, Object> recipient = Map.of("email", email);
             Map<String, Object> body = Map.of(
-                "from", "Rappi Farmer <onboarding@resend.dev>",
-                "to", new String[]{email},
+                "sender", sender,
+                "to", new Object[]{recipient},
                 "subject", "Código de verificación — Rappi Farmer Assistant",
-                "text", "Hola!\n\nTu código de verificación es:\n\n  " + code +
+                "textContent", "Hola!\n\nTu código de verificación es:\n\n  " + code +
                         "\n\nVálido por 10 minutos.\n\nSi no solicitaste este código, ignora este mensaje.\n\n— Rappi Farmer Assistant"
             );
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            restTemplate.postForEntity("https://api.resend.com/emails", request, String.class);
+            restTemplate.postForEntity("https://api.brevo.com/v3/smtp/email", request, String.class);
             log.info("Código de verificación enviado a {} vía Resend", email);
         } catch (Exception e) {
             log.error("Error enviando código a {}: {}", email, e.getMessage());
