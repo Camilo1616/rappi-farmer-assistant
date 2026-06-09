@@ -14,6 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -64,8 +70,8 @@ public class WhatsappMessageRepositoryAdapter implements WhatsappMessageReposito
     @Override
     @Transactional(readOnly = true)
     public List<Map<String, Object>> findStoresSentToday(Long userId) {
-        LocalDateTime start = LocalDate.now(java.time.ZoneId.of("America/Bogota")).atStartOfDay();
-        return jpaRepository.findStoresSentToday(start, start.plusDays(1), userId)
+        LocalDateTime[] bounds = todayBoundsUtc();
+        return jpaRepository.findStoresSentToday(bounds[0], bounds[1], userId)
                 .stream()
                 .map(s -> Map.<String, Object>of(
                         "id",          s.getId(),
@@ -74,5 +80,68 @@ public class WhatsappMessageRepositoryAdapter implements WhatsappMessageReposito
                         "phoneNumber", s.getPhoneNumber() != null ? s.getPhoneNumber() : ""
                 ))
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> findHistory(Long userId, int days) {
+        ZoneId bogota = ZoneId.of("America/Bogota");
+        LocalDateTime since = ZonedDateTime.now(bogota).minusDays(days)
+                .withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+        List<com.rappi.farmer.infrastructure.persistence.entity.WhatsappMessageEntity> messages =
+                jpaRepository.findHistorySince(since, userId);
+
+        // Agrupar por fecha (en timezone Bogota)
+        DateTimeFormatter dayFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        Map<String, Map<String, Object>> byDay = new LinkedHashMap<>();
+        for (var m : messages) {
+            String day = m.getSentAt().atZone(ZoneOffset.UTC)
+                    .withZoneSameInstant(bogota)
+                    .format(dayFmt);
+            byDay.computeIfAbsent(day, d -> {
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("date", d);
+                entry.put("enviados", 0);
+                entry.put("errores", 0);
+                entry.put("noValidos", 0);
+                entry.put("stores", new ArrayList<Map<String, Object>>());
+                return entry;
+            });
+            Map<String, Object> entry = byDay.get(day);
+            String status = m.getStatus() != null ? m.getStatus() : "ERROR";
+            if ("ENVIADO".equals(status))           entry.merge("enviados", 1, (a, b) -> (int) a + (int) b);
+            else if ("NUMERO_INVALIDO".equals(status)) entry.merge("noValidos", 1, (a, b) -> (int) a + (int) b);
+            else                                        entry.merge("errores", 1, (a, b) -> (int) a + (int) b);
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> stores = (List<Map<String, Object>>) entry.get("stores");
+            Map<String, Object> storeInfo = new LinkedHashMap<>();
+            storeInfo.put("storeName",   m.getStore().getStoreName() != null ? m.getStore().getStoreName() : "");
+            storeInfo.put("storeCode",   m.getStore().getStoreCode() != null ? m.getStore().getStoreCode() : "");
+            storeInfo.put("phoneNumber", m.getStore().getPhoneNumber() != null ? m.getStore().getPhoneNumber() : "");
+            storeInfo.put("status",      status);
+            storeInfo.put("sentAt",      m.getSentAt().atZone(ZoneOffset.UTC)
+                    .withZoneSameInstant(bogota)
+                    .format(DateTimeFormatter.ofPattern("HH:mm")));
+            stores.add(storeInfo);
+        }
+        // Calcular total por día
+        byDay.values().forEach(e -> {
+            @SuppressWarnings("unchecked")
+            List<?> s = (List<?>) e.get("stores");
+            e.put("total", s.size());
+        });
+        return new ArrayList<>(byDay.values());
+    }
+
+    /** Límites de "hoy" en Bogota convertidos a UTC para comparar con sentAt UTC */
+    private LocalDateTime[] todayBoundsUtc() {
+        ZoneId bogota = ZoneId.of("America/Bogota");
+        LocalDate todayBogota = LocalDate.now(bogota);
+        LocalDateTime startUtc = todayBogota.atStartOfDay(bogota)
+                .withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+        LocalDateTime endUtc   = todayBogota.plusDays(1).atStartOfDay(bogota)
+                .withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+        return new LocalDateTime[]{ startUtc, endUtc };
     }
 }

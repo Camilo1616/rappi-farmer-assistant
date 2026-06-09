@@ -1,10 +1,121 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getDashboard } from '../services/dashboardService'
 import {
   getWhatsappStatus, getWhatsappQr, openChrome, closeChrome,
-  sendTest, getMsgTemplates, sendMasivo
+  sendTest, getMsgTemplates, sendMasivo, getWaHistory
 } from '../services/whatsappService'
 import styles from './WhatsappPage.module.css'
+
+/* ── Historial de envíos ── */
+function WaHistory() {
+  const [history, setHistory]   = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [open,    setOpen]      = useState(false)
+  const [tooltip, setTooltip]   = useState(null)   // { sessionIdx, x, y }
+  const tooltipRef = useRef(null)
+
+  useEffect(() => {
+    getWaHistory(30)
+      .then(r => setHistory(r.data ?? []))
+      .catch(() => setHistory([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const STATUS_COLOR = { ENVIADO: '#22C55E', NUMERO_INVALIDO: '#F59E0B', ERROR: '#EF4444' }
+  const STATUS_LABEL = { ENVIADO: 'Enviado', NUMERO_INVALIDO: 'N° inválido', ERROR: 'Error' }
+
+  const formatDate = (dateStr) => {
+    const [y, m, d] = dateStr.split('-')
+    const dt = new Date(+y, +m - 1, +d)
+    return dt.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })
+  }
+
+  if (loading) return null
+  if (history.length === 0) return (
+    <div style={{ color: '#6B7280', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>
+      Sin historial de envíos
+    </div>
+  )
+
+  return (
+    <div className={styles.historySection}>
+      <button className={styles.historyToggle} onClick={() => setOpen(o => !o)}>
+        <span>📋 Historial de envíos</span>
+        <span className={styles.historyBadge}>{history.length} días</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#6B7280' }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className={styles.historyTable}>
+          {history.map((session, idx) => (
+            <div
+              key={session.date}
+              className={styles.historyRow}
+              onMouseEnter={e => setTooltip({ idx, rect: e.currentTarget.getBoundingClientRect() })}
+              onMouseLeave={() => setTooltip(null)}
+            >
+              <div className={styles.historyDate}>{formatDate(session.date)}</div>
+              <div className={styles.historyStats}>
+                <span className={styles.histStat} style={{ color: '#22C55E' }}>
+                  ✓ {session.enviados} enviados
+                </span>
+                {session.noValidos > 0 && (
+                  <span className={styles.histStat} style={{ color: '#F59E0B' }}>
+                    ⚠ {session.noValidos} inválidos
+                  </span>
+                )}
+                {session.errores > 0 && (
+                  <span className={styles.histStat} style={{ color: '#EF4444' }}>
+                    ✗ {session.errores} errores
+                  </span>
+                )}
+                <span className={styles.histStat} style={{ color: '#6B7280' }}>
+                  {session.total} total
+                </span>
+              </div>
+
+              {/* Tooltip con tiendas */}
+              {tooltip?.idx === idx && (
+                <div
+                  ref={tooltipRef}
+                  className={styles.historyTooltip}
+                  style={{
+                    top: (tooltip.rect.bottom + window.scrollY + 6),
+                    left: Math.min(tooltip.rect.left, window.innerWidth - 320),
+                  }}
+                >
+                  <div className={styles.tooltipHeader}>
+                    Tiendas — {formatDate(session.date)}
+                  </div>
+                  <div className={styles.tooltipList}>
+                    {session.stores.map((s, i) => (
+                      <div key={i} className={styles.tooltipRow}>
+                        <span
+                          className={styles.tooltipDot}
+                          style={{ background: STATUS_COLOR[s.status] || '#6B7280' }}
+                        />
+                        <div className={styles.tooltipStoreInfo}>
+                          <span className={styles.tooltipStoreName}>{s.storeName}</span>
+                          <span className={styles.tooltipStoreMeta}>{s.storeCode} · {s.sentAt}</span>
+                        </div>
+                        <span
+                          className={styles.tooltipStatus}
+                          style={{ color: STATUS_COLOR[s.status] || '#6B7280' }}
+                        >
+                          {STATUS_LABEL[s.status] || s.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const SECTIONS = [
   { key: 'onboardingCritical', label: 'Onboarding Crítico', icon: '🚨', color: '#EF4444' },
@@ -442,6 +553,8 @@ export default function WhatsappPage() {
           )}
         </div>
       </div>
+
+      <WaHistory />
 
     </div>
   )

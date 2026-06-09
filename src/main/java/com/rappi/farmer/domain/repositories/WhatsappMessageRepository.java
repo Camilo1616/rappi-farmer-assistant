@@ -8,4 +8,5 @@ public interface WhatsappMessageRepository {
     long countSentToday();
     void deleteByStoreId(Long storeId);
     List<Map<String, Object>> findStoresSentToday(Long userId);
+    List<Map<String, Object>> findHistory(Long userId, int days);
 }

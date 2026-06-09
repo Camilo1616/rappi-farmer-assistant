@@ -352,3 +352,150 @@
   animation: spin 0.6s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Historial de envíos ── */
+.historySection {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: visible;
+  background: var(--bg-secondary);
+}
+
+.historyToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: left;
+}
+.historyToggle:hover { background: var(--bg-card); border-radius: 12px; }
+
+.historyBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(59,130,246,0.12);
+  color: #3B82F6;
+}
+
+.historyTable {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.historyRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: default;
+  transition: background 0.15s;
+}
+.historyRow:hover { background: var(--bg-card); }
+.historyRow:last-child { border-bottom: none; }
+
+.historyDate {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 140px;
+  text-transform: capitalize;
+}
+
+.historyStats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.histStat {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Tooltip */
+.historyTooltip {
+  position: fixed;
+  z-index: 3000;
+  background: var(--bg-secondary, #1E2235);
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-radius: 12px;
+  width: 310px;
+  max-height: 340px;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+  pointer-events: none;
+}
+
+.tooltipHeader {
+  padding: 10px 14px 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary, #9CA3AF);
+  border-bottom: 1px solid var(--border);
+  text-transform: capitalize;
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary, #1E2235);
+}
+
+.tooltipList {
+  display: flex;
+  flex-direction: column;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.tooltipRow:last-child { border-bottom: none; }
+
+.tooltipDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tooltipStoreInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.tooltipStoreName {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary, #F0F2F8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltipStoreMeta {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted, #6B7280);
+}
+
+.tooltipStatus {
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+

@@ -84,6 +84,13 @@ public class WhatsappService {
     }
 
     /**
+     * Historial de envíos agrupados por día.
+     */
+    public java.util.List<java.util.Map<String, Object>> historial(Long userId, int days) {
+        return whatsappMessageRepository.findHistory(userId, days);
+    }
+
+    /**
      * Envía mensajes masivos a las tiendas indicadas.
      * Corre en el hilo que lo llama — el caller debe usar un hilo separado (no el hilo HTTP).
      *

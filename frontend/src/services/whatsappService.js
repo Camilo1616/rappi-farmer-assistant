@@ -8,6 +8,7 @@ export const waitConnection     = (timeout = 60) => api.get(`/whatsapp/wait-conn
 export const sendTest           = (phone, message) => api.post('/whatsapp/test', { phone, message })
 export const getMsgTemplates    = () => api.get('/whatsapp/templates')
 export const getWaSentToday    = () => api.get('/whatsapp/sent-today')
+export const getWaHistory      = (days = 30) => api.get(`/whatsapp/history?days=${days}`)
 
 // SSE — devuelve un EventSource que el caller debe cerrar
 export const sendMasivo = (storeIds, template, onProgress, onDone, onError) => {

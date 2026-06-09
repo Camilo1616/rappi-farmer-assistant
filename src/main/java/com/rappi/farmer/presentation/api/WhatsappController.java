@@ -122,11 +122,18 @@ public class WhatsappController {
         return ResponseEntity.ok(messageTemplateService.getAll());
     }
 
-    /** Tiendas con WA enviado hoy — para el panel de follow-up en Gestiones. */
+    /** Tiendas intentadas hoy — para el panel de follow-up en Gestiones. */
     @GetMapping("/sent-today")
     public ResponseEntity<?> getStoresSentToday() {
         Long userId = sessionContext.getCurrentUserId();
         return ResponseEntity.ok(whatsappService.storesConWaHoy(userId));
+    }
+
+    /** Historial de envíos agrupados por día (últimos 30 días). */
+    @GetMapping("/history")
+    public ResponseEntity<?> getHistory(@RequestParam(defaultValue = "30") int days) {
+        Long userId = sessionContext.getCurrentUserId();
+        return ResponseEntity.ok(whatsappService.historial(userId, days));
     }
 
     public record TestRequest(@NotBlank String phone, @NotBlank String message) {}
