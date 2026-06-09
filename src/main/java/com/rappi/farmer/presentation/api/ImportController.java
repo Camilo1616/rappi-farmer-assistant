@@ -81,9 +81,8 @@ public class ImportController {
 
         boolean hasStores = storeRepository.countActiveByUserId(userId) > 0;
 
-        // Solo se exige el cargue diario a partir de las 12:00 del mediodía
-        boolean pastNoon = java.time.LocalTime.now().isAfter(java.time.LocalTime.NOON);
-        boolean required = !hasStores || (pastNoon && !importedToday);
+        // Se exige cargue diario desde medianoche (00:00) de cada día
+        boolean required = !hasStores || !importedToday;
 
         return ResponseEntity.ok(Map.of(
                 "importedToday", importedToday,
