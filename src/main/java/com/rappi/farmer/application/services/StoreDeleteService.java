@@ -27,6 +27,18 @@ public class StoreDeleteService {
     private final EntityManager entityManager;
 
     /**
+     * Desactiva una tienda (active=false) sin borrar sus gestiones ni métricas.
+     * Usar en el cleanup del import para preservar historial de reportes.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void deactivateStore(Long storeId) {
+        storeRepository.findById(storeId).ifPresent(s -> {
+            s.setActive(false);
+            storeRepository.save(s);
+        });
+    }
+
+    /**
      * Borra una tienda y todos sus hijos en una transacción propia (REQUIRES_NEW).
      * Al ser un bean separado, Spring aplica correctamente el proxy AOP
      * y la transacción no contamina el contexto del llamador.

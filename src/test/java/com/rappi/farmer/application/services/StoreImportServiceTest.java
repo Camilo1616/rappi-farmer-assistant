@@ -5,6 +5,7 @@ import com.rappi.farmer.application.dtos.StoreExcelRowDto;
 import com.rappi.farmer.domain.entities.Store;
 import com.rappi.farmer.domain.repositories.StoreRepository;
 import com.rappi.farmer.infrastructure.excel.ExcelReaderService;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,6 +29,9 @@ class StoreImportServiceTest {
 
     @Mock
     private StoreRepository storeRepository;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private StoreImportService storeImportService;

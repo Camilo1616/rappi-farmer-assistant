@@ -46,6 +46,10 @@ public class ImportController {
             return ResponseEntity.badRequest().body(Map.of("message", "Solo se aceptan archivos .xlsx o .xls"));
         }
 
+        if (UserRole.ADMIN == sessionContext.getCurrentUserRole()) {
+            return ResponseEntity.status(403).body(Map.of("message", "El Administrador no puede importar carteras"));
+        }
+
         File tempFile = null;
         try {
             tempFile = Files.createTempFile("import_", "_" + filename).toFile();
@@ -78,7 +82,7 @@ public class ImportController {
 
         boolean importedToday = userRepository.findById(userId)
                 .map(u -> u.getLastImportDate() != null
-                        && u.getLastImportDate().equals(java.time.LocalDate.now()))
+                        && u.getLastImportDate().equals(java.time.LocalDate.now(java.time.ZoneId.of("America/Bogota"))))
                 .orElse(false);
 
         boolean hasStores = storeRepository.countActiveByUserId(userId) > 0;

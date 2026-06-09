@@ -48,7 +48,7 @@ public class StoreImportService {
     @Transactional
     public ImportResultDto importFromExcel(File file) throws IOException {
         List<StoreExcelRowDto> rows = excelReaderService.read(file);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Bogota"));
         farmerEmailCache.clear();
 
 
@@ -114,18 +114,21 @@ public class StoreImportService {
             }
         }
 
-        // Eliminar tiendas de los farmers tocados que NO aparecieron en este Excel
+        // Desactivar tiendas de los farmers tocados que NO aparecieron en este Excel.
+        // Se usa deactivateStore (active=false) en lugar de deleteStore para preservar
+        // el historial de gestiones y métricas en reportes.
         for (Long farmerId : farmerIdsTouched) {
             List<Store> storesEnBD = storeRepository.findByUserId(farmerId);
             for (Store s : storesEnBD) {
                 if (s.getStoreCode() != null && codesInExcel.contains(s.getStoreCode())) continue;
+                if (Boolean.FALSE.equals(s.getActive())) continue; // ya inactiva
                 try {
-                    storeDeleteService.deleteStore(s.getId());
+                    storeDeleteService.deactivateStore(s.getId());
                     result.setRemoved(result.getRemoved() + 1);
                     result.getRemovedList().add(new ImportResultDto.StoreResultRow(
                             s.getStoreCode(), s.getStoreName(), null, s.getChannel()));
                 } catch (Exception e) {
-                    log.warn("No se pudo eliminar tienda {} ({}): {}", s.getStoreCode(), s.getId(), e.getMessage());
+                    log.warn("No se pudo desactivar tienda {} ({}): {}", s.getStoreCode(), s.getId(), e.getMessage());
                 }
             }
         }
