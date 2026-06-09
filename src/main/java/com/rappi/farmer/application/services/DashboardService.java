@@ -385,6 +385,12 @@ public class DashboardService {
 
         scored.sort((a, b) -> Integer.compare(b.score(), a.score()));
 
+        log.info("Scored list — total:{} | top5: {}",
+                scored.size(),
+                scored.stream().limit(5)
+                        .map(sc -> sc.store().getStoreName() + "=" + sc.score() + "(" + sc.segmento() + ")")
+                        .collect(java.util.stream.Collectors.joining(", ")));
+
         for (Scored sc : scored) {
             if (result.size() >= 40) break;
             if (seen.add(sc.store().getId())) {
