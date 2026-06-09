@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useRealtime } from '../hooks/useRealtime'
 import { logout } from '../services/authService'
@@ -16,7 +17,30 @@ import ProfilePage from './ProfilePage'
 import ManagementPage from './ManagementPage'
 import WhatsappPage from './WhatsappPage'
 import ReportsPage from './ReportsPage'
+import ConfirmModal from '../components/ConfirmModal'
 import styles from './DashboardPage.module.css'
+
+const NAV_TO_PATH = {
+  dashboard: '',
+  stores: 'stores',
+  bases: 'bases',
+  excel: 'excel',
+  management: 'gestiones',
+  whatsapp: 'whatsapp',
+  reports: 'reportes',
+  profile: 'perfil',
+}
+const PATH_TO_NAV = Object.fromEntries(
+  Object.entries(NAV_TO_PATH).map(([k, v]) => [v, k])
+)
+
+const SIDEBAR_SEGMENT_FILTERS = [
+  { key: 'Todos',       label: 'Todos',       color: '#8B93A8' },
+  { key: 'Onboarding',  label: 'Onboarding',  color: '#3B82F6' },
+  { key: 'Churn',       label: 'Churn',       color: '#EF4444' },
+  { key: 'AVA',         label: 'AVA Bajando',  color: '#F59E0B' },
+  { key: 'Saludable',   label: 'Saludable',   color: '#22C55E' },
+]
 
 const NAV_ITEMS = [
   { icon: '◼', label: 'Dashboard',    key: 'dashboard' },
@@ -103,12 +127,28 @@ function RefreshBanner({ lastImportDate, onRefresh }) {
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [activeNav, setActiveNav]     = useState('excel')
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const activeNav = useMemo(() => {
+    const segment = location.pathname.replace(/^\/dashboard\/?/, '')
+    return PATH_TO_NAV[segment] ?? 'dashboard'
+  }, [location.pathname])
+
+  const goTo = (key) => {
+    const path = NAV_TO_PATH[key]
+    navigate('/dashboard' + (path ? '/' + path : ''))
+  }
+
   const [importedToday, setImportedToday] = useState(null) // null = cargando
   const [hasStores, setHasStores]     = useState(true) // optimista mientras carga
   const [profileOpen, setProfileOpen] = useState(false)
   const [notifOpen, setNotifOpen]   = useState(false)
   const [followUpOpen, setFollowUpOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarFiltersOpen, setSidebarFiltersOpen] = useState(false)
+  const [sidebarSegment, setSidebarSegment] = useState('Todos')
+  const [confirmAction, setConfirmAction] = useState(null)
 
   // Dashboard data
   const [dash, setDash]             = useState(null)
@@ -137,10 +177,10 @@ export default function DashboardPage() {
         const required = data.required === true
         setHasStores(stores)
         setImportedToday(!required)
-        if (!required) setActiveNav('dashboard')
-        else setActiveNav('excel')
+        if (!required) navigate('/dashboard', { replace: true })
+        else navigate('/dashboard/excel', { replace: true })
       })
-      .catch(() => { setHasStores(true); setImportedToday(true); setActiveNav('dashboard') })
+      .catch(() => { setHasStores(true); setImportedToday(true); navigate('/dashboard', { replace: true }) })
   }, [])
 
   useEffect(() => {
@@ -191,17 +231,24 @@ export default function DashboardPage() {
     try { await markAllNotifRead(); setUnread(0); loadUnread() } catch {}
   }
 
-  const handleClearStores = async () => {
-    if (!window.confirm('¿Estás seguro de que quieres borrar toda tu cartera? Esta acción no se puede deshacer.')) return
-    try {
-      await clearStores()
-      setDash(null)
-      setStores([])
-      setProfileOpen(false)
-      loadDash()
-    } catch {
-      alert('Error al borrar la cartera. Intenta de nuevo.')
-    }
+  const handleClearStores = () => {
+    setProfileOpen(false)
+    setConfirmAction({
+      title: 'Borrar cartera',
+      message: '¿Estás seguro de que quieres borrar toda tu cartera? Esta acción no se puede deshacer.',
+      danger: true,
+      confirmLabel: 'Sí, borrar todo',
+      action: async () => {
+        try {
+          await clearStores()
+          setDash(null)
+          setStores([])
+          loadDash()
+        } catch {
+          alert('Error al borrar la cartera. Intenta de nuevo.')
+        }
+      }
+    })
   }
 
   const handleBaseStatus = async (assignmentId, nextStatus) => {
@@ -218,7 +265,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (activeNav === 'stores')  loadStores()
     if (activeNav === 'bases')   loadBases()
-  }, [activeNav])
+  }, [activeNav])  // eslint-disable-line
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'Farmer'
 
@@ -232,10 +279,17 @@ export default function DashboardPage() {
     <div className={styles.layout}>
 
       {/* ── Sidebar ── */}
-      <aside className={styles.sidebar}>
+      <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
         <div className={styles.sidebarBrand}>
           <span className={styles.sidebarDot} />
-          <span className={styles.sidebarBrandName}>Rappi Farmer</span>
+          {!sidebarCollapsed && <span className={styles.sidebarBrandName}>Rappi Farmer</span>}
+          <button
+            className={styles.sidebarToggle}
+            onClick={() => setSidebarCollapsed(c => !c)}
+            title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          >
+            {sidebarCollapsed ? '›' : '‹'}
+          </button>
         </div>
 
         <nav className={styles.sidebarNav}>
@@ -248,16 +302,47 @@ export default function DashboardPage() {
               <button
                 key={item.key}
                 className={`${styles.navItem} ${activeNav === item.key ? styles.active : ''} ${blocked ? styles.navItemBlocked : ''}`}
-                onClick={() => !blocked && setActiveNav(item.key)}
-                title={blocked ? blockMsg : undefined}
+                onClick={() => !blocked && goTo(item.key)}
+                title={blocked ? blockMsg : sidebarCollapsed ? item.label : undefined}
               >
                 <span className={styles.navIcon}>{item.icon}</span>
-                {item.label}
-                {blocked && <span className={styles.navLock}>🔒</span>}
+                {!sidebarCollapsed && item.label}
+                {!sidebarCollapsed && blocked && <span className={styles.navLock}>🔒</span>}
               </button>
             )
           })}
         </nav>
+
+        {/* ── Filtros sidebar ── */}
+        {!sidebarCollapsed && (
+          <div className={styles.sidebarFilters}>
+            <button
+              className={styles.sidebarFiltersToggle}
+              onClick={() => setSidebarFiltersOpen(o => !o)}
+            >
+              <span>🔽 Filtros rápidos</span>
+              <span>{sidebarFiltersOpen ? '▲' : '▼'}</span>
+            </button>
+            {sidebarFiltersOpen && (
+              <div className={styles.sidebarFilterPanel}>
+                <div className={styles.sidebarFilterLabel}>Por segmento</div>
+                {SIDEBAR_SEGMENT_FILTERS.map(f => (
+                  <button
+                    key={f.key}
+                    className={`${styles.sidebarFilterChip} ${sidebarSegment === f.key ? styles.sidebarFilterChipActive : ''}`}
+                    style={sidebarSegment === f.key ? { borderColor: f.color, color: f.color, background: f.color + '18' } : {}}
+                    onClick={() => {
+                      setSidebarSegment(f.key)
+                      goTo('dashboard')
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className={styles.sidebarFooter} ref={profileRef}>
           {profileOpen && (
@@ -270,17 +355,26 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className={styles.profileMenuDivider} />
-              <button className={styles.profileMenuItem} onClick={() => { setActiveNav('profile'); setProfileOpen(false) }}>
+              <button className={styles.profileMenuItem} onClick={() => { goTo('profile'); setProfileOpen(false) }}>
                 <span>👤</span> Mi perfil
               </button>
-              <button className={styles.profileMenuItem} onClick={() => { setActiveNav('excel'); setProfileOpen(false) }}>
+              <button className={styles.profileMenuItem} onClick={() => { goTo('excel'); setProfileOpen(false) }}>
                 <span>📥</span> Cargar Excel
               </button>
               <div className={styles.profileMenuDivider} />
               <button className={`${styles.profileMenuItem} ${styles.profileMenuItemDanger}`} onClick={handleClearStores}>
                 <span>🗑️</span> Borrar cartera
               </button>
-              <button className={`${styles.profileMenuItem} ${styles.profileMenuItemDanger}`} onClick={logout}>
+              <button className={`${styles.profileMenuItem} ${styles.profileMenuItemDanger}`} onClick={() => {
+                setProfileOpen(false)
+                setConfirmAction({
+                  title: 'Cerrar sesión',
+                  message: '¿Deseas cerrar tu sesión actual?',
+                  danger: false,
+                  confirmLabel: 'Cerrar sesión',
+                  action: logout
+                })
+              }}>
                 <span>⏻</span> Cerrar sesión
               </button>
             </div>
@@ -365,7 +459,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <button
-              onClick={() => setActiveNav('excel')}
+              onClick={() => goTo('excel')}
               style={{
                 padding: '9px 18px', background: '#FF441F', color: '#fff',
                 border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13,
@@ -390,7 +484,7 @@ export default function DashboardPage() {
               churnCount={churnCount}
               healthyCount={healthyCount}
               onRefresh={loadDash}
-              onGoToExcel={() => setActiveNav('excel')}
+              onGoToExcel={() => goTo('excel')}
             />
           )}
 
@@ -434,7 +528,7 @@ export default function DashboardPage() {
           {activeNav === 'excel' && (
             <ExcelUpload
               onImported={() => { setImportedToday(true); setHasStores(true); loadDash() }}
-              onDashboard={() => setActiveNav('dashboard')}
+              onDashboard={() => goTo('dashboard')}
             />
           )}
 
@@ -453,6 +547,17 @@ export default function DashboardPage() {
         <FollowUpModal
           onClose={() => setFollowUpOpen(false)}
           onSaved={() => { setFollowUpOpen(false); loadDash(); loadStores() }}
+        />
+      )}
+
+      {confirmAction && (
+        <ConfirmModal
+          title={confirmAction.title}
+          message={confirmAction.message}
+          danger={confirmAction.danger}
+          confirmLabel={confirmAction.confirmLabel}
+          onConfirm={() => { confirmAction.action(); setConfirmAction(null) }}
+          onCancel={() => setConfirmAction(null)}
         />
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import Pagination from './Pagination'
 import styles from './StoreTable.module.css'
 
 const SEGMENT_STYLE = {
@@ -12,6 +13,8 @@ const SEGMENT_STYLE = {
 
 export default function StoreTable({ stores }) {
   const [q, setQ] = useState('')
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(20)
 
   const filtered = useMemo(() => {
     if (!q.trim()) return stores
@@ -23,6 +26,11 @@ export default function StoreTable({ stores }) {
       String(s.id ?? '').includes(term)
     )
   }, [stores, q])
+
+  const paginated = useMemo(
+    () => filtered.slice(page * pageSize, (page + 1) * pageSize),
+    [filtered, page, pageSize]
+  )
 
   return (
     <div>
@@ -48,6 +56,7 @@ export default function StoreTable({ stores }) {
           {q ? 'Sin resultados para "' + q + '"' : 'No hay tiendas para mostrar'}
         </div>
       ) : (
+        <>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -60,7 +69,7 @@ export default function StoreTable({ stores }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(s => {
+            {paginated.map(s => {
               const seg = s.dashboardSegment
               const segStyle = SEGMENT_STYLE[seg] ?? SEGMENT_STYLE['Sin clasificar']
               return (
@@ -91,6 +100,14 @@ export default function StoreTable({ stores }) {
             })}
           </tbody>
         </table>
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={filtered.length}
+          onPageChange={p => { setPage(p) }}
+          onPageSizeChange={s => { setPage(0); setPageSize(s) }}
+        />
+        </>
       )}
     </div>
   )

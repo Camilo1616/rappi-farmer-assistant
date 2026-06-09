@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { getTodayManagements, updateManagement, deleteManagement } from '../services/dashboardService'
+import ConfirmModal from '../components/ConfirmModal'
+import Pagination from '../components/Pagination'
 import styles from './ManagementPage.module.css'
 
 const TIPOS = ['WHATSAPP', 'LLAMADA', 'SAC', 'SEGUIMIENTO', 'ACTIVACION']
@@ -128,6 +130,9 @@ export default function ManagementPage() {
   const [filterResult, setFilterResult] = useState(ALL)
   const [editing,      setEditing]      = useState(null)
   const [deletingId,   setDeletingId]   = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [page,         setPage]         = useState(0)
+  const [pageSize,     setPageSize]     = useState(20)
 
   const load = () => {
     setLoading(true)
@@ -139,8 +144,13 @@ export default function ManagementPage() {
 
   useEffect(() => { load() }, [])
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar esta gestión? La acción no se puede deshacer.')) return
+  const handleDelete = (id) => {
+    setConfirmDelete(id)
+  }
+
+  const doDelete = async () => {
+    const id = confirmDelete
+    setConfirmDelete(null)
     setDeletingId(id)
     try {
       await deleteManagement(id)
@@ -176,6 +186,13 @@ export default function ManagementPage() {
     }
     return true
   }), [rows, filterTipo, filterResult, search])
+
+  const paginated = useMemo(
+    () => filtered.slice(page * pageSize, (page + 1) * pageSize),
+    [filtered, page, pageSize]
+  )
+
+  useEffect(() => { setPage(0) }, [filterTipo, filterResult, search])
 
   const today = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -263,7 +280,7 @@ export default function ManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(r => {
+              {paginated.map(r => {
                 const tipo   = TIPO_LABEL[r.managementType]
                 const result = RESULT_LABEL[r.resultType]
                 const isDeleting = deletingId === r.id
@@ -285,7 +302,11 @@ export default function ManagementPage() {
                         ? <span className={styles.badge} style={{ background: result.color + '18', color: result.color }}>{result.icon} {result.label}</span>
                         : r.resultType}
                     </td>
-                    <td className={styles.tdComment}>{r.comments || <span className={styles.noComment}>—</span>}</td>
+                    <td className={styles.tdComment}>
+                      {r.comments
+                        ? <span className={styles.commentCell} title={r.comments}>{r.comments}</span>
+                        : <span className={styles.noComment}>—</span>}
+                    </td>
                     <td className={styles.tdActions}>
                       {!r.brandSync && (
                         <>
@@ -302,6 +323,13 @@ export default function ManagementPage() {
               })}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
@@ -310,6 +338,17 @@ export default function ManagementPage() {
           row={editing}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); load() }}
+        />
+      )}
+
+      {confirmDelete !== null && (
+        <ConfirmModal
+          title="Eliminar gestión"
+          message="¿Eliminar esta gestión? La acción no se puede deshacer."
+          danger
+          confirmLabel="Eliminar"
+          onConfirm={doDelete}
+          onCancel={() => setConfirmDelete(null)}
         />
       )}
     </div>

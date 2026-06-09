@@ -1,0 +1,72 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0 4px;
+  flex-wrap: wrap;
+}
+
+.info {
+  font-size: 0.8rem;
+  color: var(--text-muted, #6B7280);
+  min-width: 90px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: var(--bg-card, rgba(255,255,255,0.04));
+  color: var(--text-secondary, #9CA3AF);
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:hover:not(:disabled) {
+  background: rgba(255,68,31,0.1);
+  color: var(--rappi-orange-light, #FF6B47);
+  border-color: rgba(255,68,31,0.3);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.active {
+  background: rgba(255,68,31,0.15) !important;
+  color: var(--rappi-orange-light, #FF6B47) !important;
+  border-color: rgba(255,68,31,0.4) !important;
+  font-weight: 700;
+}
+
+.ellipsis {
+  color: var(--text-muted, #6B7280);
+  font-size: 0.82rem;
+  padding: 0 4px;
+}
+
+.sizeSelect {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: var(--bg-card, rgba(255,255,255,0.04));
+  color: var(--text-secondary, #9CA3AF);
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+}

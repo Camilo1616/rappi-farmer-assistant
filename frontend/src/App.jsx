@@ -30,7 +30,7 @@ function AppRoutes() {
       <Route path="/calendar-callback" element={<CalendarCallbackPage />} />
       <Route path="/" element={<PrivateRoute><IndexRedirect /></PrivateRoute>} />
       <Route
-        path="/dashboard"
+        path="/dashboard/*"
         element={
           <PrivateRoute>
             <RoleRoute allowed={['FARMER_MASS', 'ADMIN', 'COORDINATOR']}>

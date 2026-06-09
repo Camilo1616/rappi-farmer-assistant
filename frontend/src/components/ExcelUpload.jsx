@@ -78,6 +78,7 @@ export default function ExcelUpload({ onImported, onDashboard }) {
   const [status,      setStatus]      = useState('idle')
   const [result,      setResult]      = useState(null)
   const [error,       setError]       = useState('')
+  const [errorDetails, setErrorDetails] = useState(null)
   const [downloading,  setDownloading]  = useState(false)
   const [colsOpen,     setColsOpen]     = useState(false)
   const inputRef = useRef()
@@ -96,7 +97,15 @@ export default function ExcelUpload({ onImported, onDashboard }) {
       setResult(data); setStatus('success')
       if (onImported) onImported()
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al procesar el archivo')
+      const data = err.response?.data
+      if (typeof data === 'string') {
+        setError(data || 'Error al procesar el archivo')
+        setErrorDetails(null)
+      } else {
+        setError(data?.message || data?.error || `Error ${err.response?.status ?? ''} al procesar el archivo`.trim())
+        const details = data?.details || data?.errors
+        setErrorDetails(Array.isArray(details) && details.length > 0 ? details : null)
+      }
       setStatus('error')
     }
   }
@@ -123,7 +132,7 @@ export default function ExcelUpload({ onImported, onDashboard }) {
   }
 
   const reset = () => {
-    setFile(null); setStatus('idle'); setProgress(0); setResult(null); setError('')
+    setFile(null); setStatus('idle'); setProgress(0); setResult(null); setError(''); setErrorDetails(null)
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -247,11 +256,21 @@ export default function ExcelUpload({ onImported, onDashboard }) {
       {error && (
         <div className={styles.errorBanner}>
           <span className={styles.errorEmoji}>⚠</span>
-          <div>
+          <div style={{ flex: 1 }}>
             <p className={styles.errorTitle}>No se pudo procesar el archivo</p>
             <p className={styles.errorBody}>{error}</p>
+            {errorDetails && (
+              <ul className={styles.errorDetails}>
+                {errorDetails.slice(0, 10).map((d, i) => (
+                  <li key={i}>{d}</li>
+                ))}
+                {errorDetails.length > 10 && (
+                  <li>…y {errorDetails.length - 10} errores más</li>
+                )}
+              </ul>
+            )}
           </div>
-          <button className={styles.errorClose} onClick={() => setError('')}>✕</button>
+          <button className={styles.errorClose} onClick={() => { setError(''); setErrorDetails(null) }}>✕</button>
         </div>
       )}
 

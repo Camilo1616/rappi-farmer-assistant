@@ -98,26 +98,34 @@ export default function ReportsPage() {
   const [typeFilter,   setTypeFilter]   = useState(null)
   const [resultFilter, setResultFilter] = useState(null)
   const [modalSection, setModalSection] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(todayStr())
+  const [dateFrom,     setDateFrom]     = useState(todayStr())
+  const [dateTo,       setDateTo]       = useState(todayStr())
 
-  const load = async (date) => {
+  const load = async (from, to) => {
     setLoading(true)
     try {
-      const [d, p] = await Promise.all([getDailyReport(date), getPortfolioReport()])
+      const [d, p] = await Promise.all([getDailyReport(from), getPortfolioReport()])
       setDaily(d.data)
       setPortfolio(p.data)
     } catch {}
     setLoading(false)
   }
 
-  useEffect(() => { load(selectedDate) }, [])
+  useEffect(() => { load(dateFrom, dateTo) }, [])  // eslint-disable-line
 
-  const handleDateChange = (e) => {
-    const date = e.target.value
-    setSelectedDate(date)
+  const handleDateFromChange = (e) => {
+    const from = e.target.value
+    setDateFrom(from)
     setTypeFilter(null)
     setResultFilter(null)
-    load(date)
+    if (from > dateTo) setDateTo(from)
+    load(from, dateTo)
+  }
+
+  const handleDateToChange = (e) => {
+    const to = e.target.value
+    setDateTo(to)
+    load(dateFrom, to)
   }
 
   const rows = daily?.rows ?? []
@@ -136,7 +144,7 @@ export default function ReportsPage() {
           <h1 className={styles.title}>Reportes</h1>
           <p className={styles.sub}>Resumen de actividad y estado de cartera</p>
         </div>
-        <button className={styles.btnRefresh} onClick={() => load(selectedDate)}>🔄 Actualizar</button>
+        <button className={styles.btnRefresh} onClick={() => load(dateFrom, dateTo)}>🔄 Actualizar</button>
       </div>
 
       {/* Tabs */}
@@ -153,18 +161,31 @@ export default function ReportsPage() {
       {!loading && tab === 'daily' && daily && (
         <div className={styles.section}>
 
-          {/* Filtro de fecha */}
+          {/* Filtro de rango de fechas */}
           <div className={styles.dateFilterRow}>
-            <label className={styles.dateFilterLabel}>📅 Fecha:</label>
+            <label className={styles.dateFilterLabel}>📅 Desde:</label>
             <input
               type="date"
               className={styles.dateInput}
-              value={selectedDate}
+              value={dateFrom}
               max={todayStr()}
-              onChange={handleDateChange}
+              onChange={handleDateFromChange}
             />
-            {selectedDate !== todayStr() && (
-              <button className={styles.btnToday} onClick={() => { setSelectedDate(todayStr()); setTypeFilter(null); setResultFilter(null); load(todayStr()) }}>
+            <label className={styles.dateFilterLabel}>Hasta:</label>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={dateTo}
+              min={dateFrom}
+              max={todayStr()}
+              onChange={handleDateToChange}
+            />
+            {(dateFrom !== todayStr() || dateTo !== todayStr()) && (
+              <button className={styles.btnToday} onClick={() => {
+                setDateFrom(todayStr()); setDateTo(todayStr())
+                setTypeFilter(null); setResultFilter(null)
+                load(todayStr(), todayStr())
+              }}>
                 Ir a hoy
               </button>
             )}

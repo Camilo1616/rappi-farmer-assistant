@@ -104,6 +104,113 @@
   opacity: 0.6;
 }
 
+/* Sidebar collapsed */
+.sidebarCollapsed {
+  width: 72px;
+}
+
+.sidebarCollapsed .navItem {
+  justify-content: center;
+  padding: 10px;
+}
+
+.sidebarCollapsed .navIcon {
+  width: auto;
+  margin: 0;
+}
+
+.sidebarCollapsed .sidebarBrand {
+  justify-content: center;
+  padding: 0 12px 20px;
+}
+
+.sidebarToggle {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sidebarToggle:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+/* Sidebar filter panel */
+.sidebarFilters {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.sidebarFiltersToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  padding: 6px 4px;
+  font-family: inherit;
+  gap: 8px;
+}
+
+.sidebarFiltersToggle:hover {
+  color: var(--text-secondary);
+}
+
+.sidebarFilterPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0 4px;
+}
+
+.sidebarFilterLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+  padding: 0 4px;
+}
+
+.sidebarFilterChip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebarFilterChip:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.sidebarFilterChipActive {
+  font-weight: 600;
+}
+
 .sidebarFooter {
   padding: 16px 12px 0;
   border-top: 1px solid var(--border);

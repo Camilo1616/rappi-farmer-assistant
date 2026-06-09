@@ -224,6 +224,16 @@
   font-size: 0.8rem;
   line-height: 1.4;
 }
+
+.commentCell {
+  display: block;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
 .noComment { color: var(--text-muted); }
 
 .tdHandoff { text-align: center; }
