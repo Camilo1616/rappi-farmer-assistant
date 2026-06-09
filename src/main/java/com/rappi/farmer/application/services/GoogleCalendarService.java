@@ -591,7 +591,7 @@ public class GoogleCalendarService {
     private GoogleAuthorizationCodeFlow buildFlow() throws GeneralSecurityException, IOException {
         NetHttpTransport transport = GoogleNetHttpTransport.newTrustedTransport();
         GoogleClientSecrets secrets = new GoogleClientSecrets()
-                .setInstalled(new GoogleClientSecrets.Details()
+                .setWeb(new GoogleClientSecrets.Details()
                         .setClientId(clientId)
                         .setClientSecret(clientSecret));
         return new GoogleAuthorizationCodeFlow.Builder(transport, JSON_FACTORY, secrets,

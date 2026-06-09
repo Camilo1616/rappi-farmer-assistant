@@ -52,7 +52,7 @@ public class CalendarController {
             calendarService.handleCallback(code, userId);
             status = "connected";
         } catch (Exception e) {
-            log.error("Error en callback de Google Calendar: {}", e.getMessage());
+            log.error("Error en callback de Google Calendar: {}", e.getMessage(), e);
             status = "error";
         }
         // Redirige al frontend (mismo origen que el opener) para que pueda usar localStorage
