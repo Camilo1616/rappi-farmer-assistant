@@ -177,10 +177,10 @@ export default function DashboardPage() {
         const required = data.required === true
         setHasStores(stores)
         setImportedToday(!required)
-        if (!required) navigate('/dashboard', { replace: true })
-        else navigate('/dashboard/excel', { replace: true })
+        if (required) navigate('/dashboard/excel', { replace: true })
+        // Si no es requerido, no forzar ruta — el usuario navega libremente
       })
-      .catch(() => { setHasStores(true); setImportedToday(true); navigate('/dashboard', { replace: true }) })
+      .catch(() => { setHasStores(true); setImportedToday(true) })
   }, [])
 
   useEffect(() => {
