@@ -105,6 +105,7 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const [activeNav, setActiveNav]     = useState('excel')
   const [importedToday, setImportedToday] = useState(null) // null = cargando
+  const [hasStores, setHasStores]     = useState(true) // optimista mientras carga
   const [profileOpen, setProfileOpen] = useState(false)
   const [notifOpen, setNotifOpen]   = useState(false)
   const [followUpOpen, setFollowUpOpen] = useState(false)
@@ -128,15 +129,18 @@ export default function DashboardPage() {
   const profileRef = useRef(null)
   const notifRef   = useRef(null)
 
-  // Verificar si el cargue diario es obligatorio (después de las 12 PM y no ha cargado hoy)
+  // Verificar si debe cargar base obligatoriamente
   useEffect(() => {
     getImportStatus()
       .then(({ data }) => {
+        const stores = data.hasStores !== false
         const required = data.required === true
+        setHasStores(stores)
         setImportedToday(!required)
         if (!required) setActiveNav('dashboard')
+        else setActiveNav('excel')
       })
-      .catch(() => { setImportedToday(true); setActiveNav('dashboard') })
+      .catch(() => { setHasStores(true); setImportedToday(true); setActiveNav('dashboard') })
   }, [])
 
   useEffect(() => {
@@ -237,12 +241,15 @@ export default function DashboardPage() {
         <nav className={styles.sidebarNav}>
           {NAV_ITEMS.map(item => {
             const blocked = importedToday === false && item.key !== 'excel' && item.key !== 'profile'
+            const blockMsg = !hasStores
+              ? 'Carga tu base de tiendas para empezar'
+              : 'Carga el Excel del día para habilitar este módulo'
             return (
               <button
                 key={item.key}
                 className={`${styles.navItem} ${activeNav === item.key ? styles.active : ''} ${blocked ? styles.navItemBlocked : ''}`}
                 onClick={() => !blocked && setActiveNav(item.key)}
-                title={blocked ? 'Carga el Excel del día para habilitar este módulo' : undefined}
+                title={blocked ? blockMsg : undefined}
               >
                 <span className={styles.navIcon}>{item.icon}</span>
                 {item.label}
@@ -349,10 +356,12 @@ export default function DashboardPage() {
             <span style={{ fontSize: 22 }}>⚠️</span>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 13.5, fontWeight: 800, color: '#FF441F' }}>
-                Debes cargar el Excel antes de empezar el turno
+                {!hasStores ? 'Bienvenido — carga tu base de tiendas para comenzar' : 'Debes cargar el Excel antes de empezar el turno'}
               </p>
               <p style={{ margin: '2px 0 0', fontSize: 12, color: '#8B93A8' }}>
-                Ningún módulo estará disponible hasta que cargues el reporte diario de Rappi.
+                {!hasStores
+                  ? 'Ningún módulo estará disponible hasta que cargues tu primera base de tiendas.'
+                  : 'Ningún módulo estará disponible hasta que cargues el reporte diario de Rappi.'}
               </p>
             </div>
             <button
@@ -424,7 +433,7 @@ export default function DashboardPage() {
           {/* ── Cargar Excel ── */}
           {activeNav === 'excel' && (
             <ExcelUpload
-              onImported={() => { setImportedToday(true); loadDash() }}
+              onImported={() => { setImportedToday(true); setHasStores(true); loadDash() }}
               onDashboard={() => setActiveNav('dashboard')}
             />
           )}

@@ -31,6 +31,7 @@ public class ImportController {
     private final StoreImportService storeImportService;
     private final SessionContext sessionContext;
     private final UserRepository userRepository;
+    private final com.rappi.farmer.domain.repositories.StoreRepository storeRepository;
 
     @PostMapping("/excel")
     public ResponseEntity<?> importExcel(
@@ -78,12 +79,15 @@ public class ImportController {
                         && u.getLastImportDate().equals(java.time.LocalDate.now()))
                 .orElse(false);
 
-        // Solo se exige el cargue a partir de las 12:00 del mediodía
+        boolean hasStores = storeRepository.countActiveByUserId(userId) > 0;
+
+        // Solo se exige el cargue diario a partir de las 12:00 del mediodía
         boolean pastNoon = java.time.LocalTime.now().isAfter(java.time.LocalTime.NOON);
-        boolean required = pastNoon && !importedToday;
+        boolean required = !hasStores || (pastNoon && !importedToday);
 
         return ResponseEntity.ok(Map.of(
                 "importedToday", importedToday,
+                "hasStores", hasStores,
                 "required", required
         ));
     }
