@@ -485,6 +485,7 @@ export default function DashboardPage() {
               healthyCount={healthyCount}
               onRefresh={loadDash}
               onGoToExcel={() => goTo('excel')}
+              sidebarSegment={sidebarSegment}
             />
           )}
 
@@ -568,8 +569,20 @@ const CHURN_FILTERS = ['Todos', 'Churn', 'Prevention W1', 'Prevention W2', 'Prev
 const AVA_FILTERS   = ['Todos', 'Crítico', 'Bajando']
 
 /* ── Vista principal del dashboard con tabs horizontales ── */
-function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount, churnCount, healthyCount, onRefresh, onGoToExcel }) {
+const SEGMENT_TO_TAB = {
+  'Onboarding': 'onboardingCritical',
+  'Churn':      'churnRisk',
+  'AVA':        'ava',
+  'Saludable':  'healthy',
+}
+
+function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount, churnCount, healthyCount, onRefresh, onGoToExcel, sidebarSegment }) {
   const [activeTab, setActiveTab]       = useState(SECTIONS[0].key)
+
+  useEffect(() => {
+    const tab = SEGMENT_TO_TAB[sidebarSegment]
+    if (tab) setActiveTab(tab)
+  }, [sidebarSegment])
   const [churnFilter, setChurnFilter]   = useState('Todos')
   const [avaFilter, setAvaFilter]       = useState('Todos')
   const [search, setSearch]             = useState('')
