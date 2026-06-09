@@ -503,10 +503,12 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
     : churnBase
 
   const stores = search.trim()
-    ? filtered.filter(s =>
-        s.storeName?.toLowerCase().includes(search.toLowerCase()) ||
-        s.storeCode?.toLowerCase().includes(search.toLowerCase())
-      )
+    ? filtered.filter(s => {
+        const q = search.toLowerCase()
+        return s.storeName?.toLowerCase().includes(q) ||
+               s.storeCode?.toLowerCase().includes(q) ||
+               s.brandId?.toLowerCase().includes(q)
+      })
     : filtered
 
   return (
