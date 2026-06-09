@@ -6,6 +6,125 @@
   gap: 24px;
 }
 
+/* ── Panel WhatsApp pendientes ── */
+.waPanel {
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(34,197,94,0.04);
+}
+
+.waPanelToggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.waPanelToggle:hover {
+  background: rgba(34,197,94,0.06);
+}
+
+.waPanelToggleOpen {
+  border-bottom: 1px solid rgba(34,197,94,0.15);
+}
+
+.waPanelIcon { font-size: 1.2rem; }
+
+.waPanelTitle {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #22C55E;
+}
+
+.waPanelChevron {
+  font-size: 11px;
+  color: #22C55E;
+  opacity: 0.7;
+}
+
+.waPanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.waStoreRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+
+.waStoreRow:hover {
+  background: rgba(34,197,94,0.05);
+}
+
+.waStoreRow:last-child {
+  border-bottom: none;
+}
+
+.waStoreInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.waStoreName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.waStoreCode {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: 'Courier New', monospace;
+  flex-shrink: 0;
+}
+
+.waStorePhone {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.waBtnGestion {
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(34,197,94,0.35);
+  background: rgba(34,197,94,0.1);
+  color: #22C55E;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.waBtnGestion:hover {
+  background: rgba(34,197,94,0.2);
+}
+
 /* ── Header ── */
 .header {
   display: flex;

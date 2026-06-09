@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { getTodayManagements, updateManagement, deleteManagement } from '../services/dashboardService'
+import { getWaSentToday } from '../services/whatsappService'
 import ConfirmModal from '../components/ConfirmModal'
 import Pagination from '../components/Pagination'
+import GestionFlowModal from '../components/GestionFlowModal'
 import styles from './ManagementPage.module.css'
 
 const TIPOS = ['WHATSAPP', 'LLAMADA', 'SAC', 'SEGUIMIENTO', 'ACTIVACION']
@@ -134,6 +136,11 @@ export default function ManagementPage() {
   const [page,         setPage]         = useState(0)
   const [pageSize,     setPageSize]     = useState(20)
 
+  // Panel WhatsApp pendientes
+  const [waStores,     setWaStores]     = useState([])
+  const [waOpen,       setWaOpen]       = useState(false)
+  const [waGestion,    setWaGestion]    = useState(null)  // store seleccionada para gestionar
+
   const load = () => {
     setLoading(true)
     getTodayManagements()
@@ -142,7 +149,13 @@ export default function ManagementPage() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  const loadWaStores = () => {
+    getWaSentToday()
+      .then(r => setWaStores(r.data ?? []))
+      .catch(() => setWaStores([]))
+  }
+
+  useEffect(() => { load(); loadWaStores() }, [])  // eslint-disable-line
 
   const handleDelete = (id) => {
     setConfirmDelete(id)
@@ -217,6 +230,44 @@ export default function ManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Panel WhatsApp pendientes ── */}
+      {waStores.length > 0 && (
+        <div className={styles.waPanel}>
+          <button
+            className={`${styles.waPanelToggle} ${waOpen ? styles.waPanelToggleOpen : ''}`}
+            onClick={() => setWaOpen(o => !o)}
+          >
+            <span className={styles.waPanelIcon}>💬</span>
+            <span className={styles.waPanelTitle}>
+              {waStores.length} tienda{waStores.length !== 1 ? 's' : ''} con WhatsApp enviado hoy — pendiente de gestión
+            </span>
+            <span className={styles.waPanelChevron}>{waOpen ? '▲' : '▼'}</span>
+          </button>
+
+          {waOpen && (
+            <div className={styles.waPanelBody}>
+              {waStores.map(store => (
+                <div key={store.id} className={styles.waStoreRow}>
+                  <div className={styles.waStoreInfo}>
+                    <span className={styles.waStoreName}>{store.storeName}</span>
+                    <span className={styles.waStoreCode}>{store.storeCode}</span>
+                    {store.phoneNumber && (
+                      <span className={styles.waStorePhone}>📱 {store.phoneNumber}</span>
+                    )}
+                  </div>
+                  <button
+                    className={styles.waBtnGestion}
+                    onClick={() => setWaGestion(store)}
+                  >
+                    📋 Realizar gestión
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Stats ── */}
       <div className={styles.statsGrid}>
@@ -331,6 +382,18 @@ export default function ManagementPage() {
             onPageSizeChange={setPageSize}
           />
         </div>
+      )}
+
+      {waGestion && (
+        <GestionFlowModal
+          store={waGestion}
+          onClose={() => setWaGestion(null)}
+          onSaved={() => {
+            setWaGestion(null)
+            load()
+            loadWaStores()
+          }}
+        />
       )}
 
       {editing && (

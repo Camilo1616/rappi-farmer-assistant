@@ -2,15 +2,12 @@ package com.rappi.farmer.application.services;
 
 import com.rappi.farmer.application.dtos.StoreViewDto;
 import com.rappi.farmer.application.dtos.WhatsappSendProgress;
-import com.rappi.farmer.domain.entities.Management;
-import com.rappi.farmer.domain.repositories.ManagementRepository;
 import com.rappi.farmer.domain.repositories.WhatsappMessageRepository;
 import com.rappi.farmer.infrastructure.selenium.WhatsappDriver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
@@ -26,7 +23,6 @@ public class WhatsappService {
 
     private final WhatsappDriver whatsappDriver;
     private final WhatsappMessageRepository whatsappMessageRepository;
-    private final ManagementRepository managementRepository;
 
     private final Random random = new Random();
 
@@ -81,6 +77,13 @@ public class WhatsappService {
     }
 
     /**
+     * Tiendas a las que se envió WhatsApp hoy — para el panel de follow-up en Gestiones.
+     */
+    public java.util.List<java.util.Map<String, Object>> storesConWaHoy(Long userId) {
+        return whatsappMessageRepository.findStoresSentToday(userId);
+    }
+
+    /**
      * Envía mensajes masivos a las tiendas indicadas.
      * Corre en el hilo que lo llama — el caller debe usar un hilo separado (no el hilo HTTP).
      *
@@ -114,14 +117,6 @@ public class WhatsappService {
             }
 
             whatsappMessageRepository.save(store.getId(), userId, mensaje, resultado, null);
-
-            // Registrar también como gestión para que aparezca en reportes y métricas
-            String resultType = "ENVIADO".equals(resultado) ? "EFECTIVA"
-                    : "NUMERO_INVALIDO".equals(resultado) ? "NO_RESPONDE" : "NO_CONTACTO";
-            Management mgmt = new Management(null, store.getId(), store.getStoreName(),
-                    store.getStoreCode(), userId, "WHATSAPP", resultType,
-                    "Envío masivo WA", LocalDateTime.now(), null, null, false);
-            managementRepository.save(mgmt);
 
             if ("ENVIADO".equals(resultado)) {
                 enviados++;

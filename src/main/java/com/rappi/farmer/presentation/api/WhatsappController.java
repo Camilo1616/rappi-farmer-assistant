@@ -122,6 +122,13 @@ public class WhatsappController {
         return ResponseEntity.ok(messageTemplateService.getAll());
     }
 
+    /** Tiendas con WA enviado hoy — para el panel de follow-up en Gestiones. */
+    @GetMapping("/sent-today")
+    public ResponseEntity<?> getStoresSentToday() {
+        Long userId = sessionContext.getCurrentUserId();
+        return ResponseEntity.ok(whatsappService.storesConWaHoy(userId));
+    }
+
     public record TestRequest(@NotBlank String phone, @NotBlank String message) {}
 
     public record SendRequest(@NotEmpty List<Long> storeIds, @NotBlank String template) {}

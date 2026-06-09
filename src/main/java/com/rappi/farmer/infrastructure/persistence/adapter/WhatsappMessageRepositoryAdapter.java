@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Repository
@@ -57,5 +59,20 @@ public class WhatsappMessageRepositoryAdapter implements WhatsappMessageReposito
     @Override
     public void deleteByStoreId(Long storeId) {
         jpaRepository.deleteByStoreId(storeId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> findStoresSentToday(Long userId) {
+        LocalDateTime start = LocalDate.now(java.time.ZoneId.of("America/Bogota")).atStartOfDay();
+        return jpaRepository.findStoresSentToday(start, start.plusDays(1), userId)
+                .stream()
+                .map(s -> Map.<String, Object>of(
+                        "id",          s.getId(),
+                        "storeName",   s.getStoreName() != null ? s.getStoreName() : "",
+                        "storeCode",   s.getStoreCode() != null ? s.getStoreCode() : "",
+                        "phoneNumber", s.getPhoneNumber() != null ? s.getPhoneNumber() : ""
+                ))
+                .toList();
     }
 }
