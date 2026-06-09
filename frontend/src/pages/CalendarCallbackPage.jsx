@@ -6,11 +6,10 @@ export default function CalendarCallbackPage() {
 
   useEffect(() => {
     const status = params.get('status') || 'error'
-    // Notifica a la ventana opener via localStorage (funciona aunque COOP rompa window.opener)
     localStorage.setItem('calendar_auth_result', status + '_' + Date.now())
-    // Intenta también postMessage por si el opener sigue disponible
     try { window.opener?.postMessage({ type: 'calendar_auth', status }, '*') } catch {}
-    setTimeout(() => window.close(), 800)
+    // Solo cerrar automáticamente si fue exitoso; si hay error, dejar abierto para leer el mensaje
+    if (status === 'connected') setTimeout(() => window.close(), 1500)
   }, [])
 
   const status = params.get('status')

@@ -55,8 +55,9 @@ public class CalendarController {
         } catch (Exception e) {
             log.error("Error en callback de Google Calendar: {}", e.getMessage(), e);
             status = "error";
-            errorMsg = "&msg=" + java.net.URLEncoder.encode(
-                e.getClass().getSimpleName() + ": " + e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
+            String detail = e.toString();
+            if (e.getCause() != null) detail += " | caused by: " + e.getCause().toString();
+            errorMsg = "&msg=" + java.net.URLEncoder.encode(detail, java.nio.charset.StandardCharsets.UTF_8);
         }
         response.sendRedirect(frontendUrl() + "/calendar-callback?status=" + status + errorMsg);
     }
