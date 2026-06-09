@@ -14,6 +14,7 @@ public interface ManagementRepository {
     List<Management> findAllToday();
     List<Management> findTodayByUser(Long userId);
     List<Management> findByDateAndUser(Long userId, LocalDate date);
+    List<Management> findRecentByStoreIds(List<Long> storeIds, java.time.LocalDateTime since);
     void deleteByStoreId(Long storeId);
     void deleteById(Long id);
     Optional<Management> findById(Long id);

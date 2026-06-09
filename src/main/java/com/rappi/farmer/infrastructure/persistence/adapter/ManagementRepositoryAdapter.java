@@ -107,6 +107,13 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
     }
 
     @Override
+    public List<Management> findRecentByStoreIds(List<Long> storeIds, java.time.LocalDateTime since) {
+        if (storeIds.isEmpty()) return List.of();
+        return managementJpaRepository.findRecentByStoreIds(storeIds, since)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public void deleteByStoreId(Long storeId) {
         managementJpaRepository.deleteByStoreId(storeId);
     }
