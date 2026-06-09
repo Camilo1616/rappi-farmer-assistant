@@ -59,17 +59,11 @@ public class MessageTemplateService {
 
     @Transactional
     public MessageTemplateDto save(String name, String content) {
-        if (repository.existsByName(name)) {
-            MessageTemplateEntity existing = repository.findByName(name).get();
-            existing.setContent(content);
-            existing.setUpdatedAt(LocalDateTime.now());
-            MessageTemplateEntity saved = repository.save(existing);
-            return new MessageTemplateDto(saved.getId(), saved.getName(), saved.getContent());
-        }
-        MessageTemplateEntity entity = new MessageTemplateEntity();
+        MessageTemplateEntity entity = repository.findByName(name).orElseGet(MessageTemplateEntity::new);
+        boolean isNew = entity.getId() == null;
         entity.setName(name);
         entity.setContent(content);
-        entity.setCreatedAt(LocalDateTime.now());
+        if (isNew) entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
         MessageTemplateEntity saved = repository.save(entity);
         return new MessageTemplateDto(saved.getId(), saved.getName(), saved.getContent());

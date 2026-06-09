@@ -336,12 +336,18 @@ public class DashboardService {
     }
 
     /**
-     * Arma la lista "Recomendado Hoy":
-     *  - Todas las tiendas onboarding 1-8 sin primera orden
-     *  - Todas las tiendas aliados 8-14 con AVA < 60%
-     *  - Hasta 5 churn M1 sin login en Rappi Aliados (rappiAlliesConnected = false/null)
-     *  - Hasta 10 tiendas AVA 1-15%
-     * Cada DTO lleva el campo segmento para mostrarlo en la tabla.
+     * Arma la lista "Recomendado Hoy" usando puntaje de urgencia.
+     *
+     * Onboarding 1-8 y Aliados 8-14 se mantienen como bloque fijo al inicio
+     * (columna AVA de esas tiendas pendiente de implementar).
+     *
+     * Churn y AVA se ordenan por puntaje descendente:
+     *   - Churn/Max Risk +90, Prevention W1 +75, W2 +55, W3 +35
+     *   - AVA ≤15% +60, 15-30% +35, 30-60% +15
+     *   - Sin gestión hoy: puntaje base + 25
+     *   - Ya gestionada hoy: puntaje base × 0.3 (baja al fondo)
+     *
+     * Total máximo: 40 tiendas.
      */
     private List<StoreViewDto> buildRecommended(
             List<StoreViewDto> onboarding,
@@ -353,24 +359,71 @@ public class DashboardService {
         List<StoreViewDto> result = new ArrayList<>();
         java.util.Set<Long> seen = new java.util.HashSet<>();
 
+        // Onboarding y aliados: bloque fijo, datos de AVA pendientes
         for (StoreViewDto s : onboarding) {
             if (seen.add(s.getId())) result.add(withSegmento(s, "Onboarding 1-8"));
         }
         for (StoreViewDto s : aliados) {
             if (seen.add(s.getId())) result.add(withSegmento(s, "Aliados <60%"));
         }
-        churnRisk.stream().limit(5).forEach(s -> {
-            if (seen.add(s.getId())) {
-                String label = s.getChurnLabel() != null ? s.getChurnLabel() : "Churn";
-                result.add(withSegmento(s, label));
+
+        // Churn + AVA: puntaje de urgencia
+        record Scored(StoreViewDto store, int score, String segmento) {}
+        List<Scored> scored = new ArrayList<>();
+
+        for (StoreViewDto s : churnRisk) {
+            int base = scoreChurn(s);
+            scored.add(new Scored(s, applyManagementFactor(base, s),
+                    s.getChurnLabel() != null ? s.getChurnLabel() : "Churn"));
+        }
+        for (StoreViewDto s : ava) {
+            if (seen.contains(s.getId())) continue;
+            int base = scoreAva(s);
+            String label = "AVA " + (s.getAvaLabel() != null ? s.getAvaLabel() : "");
+            scored.add(new Scored(s, applyManagementFactor(base, s), label.trim()));
+        }
+
+        scored.sort((a, b) -> Integer.compare(b.score(), a.score()));
+
+        for (Scored sc : scored) {
+            if (result.size() >= 40) break;
+            if (seen.add(sc.store().getId())) {
+                result.add(withSegmento(sc.store(), sc.segmento()));
             }
-        });
-        ava.stream()
-            .filter(s -> "Churn Ava".equalsIgnoreCase(s.getAvaLabel()))
-            .limit(10)
-            .forEach(s -> { if (seen.add(s.getId())) result.add(withSegmento(s, "AVA Crítico")); });
+        }
 
         return result;
+    }
+
+    /** Puntaje base por etiqueta de churn. */
+    private int scoreChurn(StoreViewDto s) {
+        if (s.getChurnLabel() == null) return 0;
+        return switch (s.getChurnLabel()) {
+            case "Churn"          -> 90;
+            case "Prevention W1"  -> 75;
+            case "Prevention W2"  -> 55;
+            case "Prevention W3"  -> 35;
+            default               -> 40;
+        };
+    }
+
+    /** Puntaje base por AVA MTD (avaMtd ya viene en escala 0-100 desde toViewDto). */
+    private int scoreAva(StoreViewDto s) {
+        if (s.getAvaMtd() == null) return 0;
+        double pct = s.getAvaMtd().doubleValue();
+        if (pct > 0  && pct <= 15) return 60;
+        if (pct > 15 && pct <= 30) return 35;
+        if (pct > 30 && pct <  60) return 15;
+        return 0;
+    }
+
+    /**
+     * Sin gestión hoy → base + 25 (bonus de urgencia).
+     * Ya gestionada hoy → base × 0.3 (baja al fondo pero no desaparece).
+     */
+    private int applyManagementFactor(int base, StoreViewDto s) {
+        if (s.getTodayManagementResult() == null) return base + 25;
+        return (int) (base * 0.3);
     }
 
     private StoreViewDto withSegmento(StoreViewDto original, String segmento) {

@@ -90,9 +90,9 @@ public class GoogleOAuthService {
         Thread serverThread = new Thread(() -> {
             try (ServerSocket server = new ServerSocket(CALLBACK_PORT)) {
                 server.setSoTimeout(120_000);
-                try (Socket socket = server.accept()) {
-                    BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(socket.getInputStream()));
+                try (Socket socket = server.accept();
+                     BufferedReader reader = new BufferedReader(
+                             new InputStreamReader(socket.getInputStream()))) {
                     String requestLine = reader.readLine();
                     log.debug("Callback recibido: {}", requestLine);
 
