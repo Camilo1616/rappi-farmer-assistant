@@ -14,6 +14,7 @@ import com.rappi.farmer.domain.repositories.UserRepository;
 import com.rappi.farmer.domain.repositories.WhatsappMessageRepository;
 import com.rappi.farmer.infrastructure.excel.ExcelReaderService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class StoreImportService {
     private final SessionContext sessionContext;
     private final PasswordEncoder encoder;
     private final StoreDeleteService storeDeleteService;
+    private final EntityManager entityManager;
 
     // Cache email → userId para no consultar BD por cada fila (thread-safe)
     private final java.util.Map<String, Long> farmerEmailCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -89,11 +91,15 @@ public class StoreImportService {
                 if (existing.isPresent()) {
                     updateStore(existing.get(), row, farmerId);
                     savedStore = storeRepository.save(existing.get());
+                    entityManager.flush();
+                    entityManager.clear();
                     result.setUpdated(result.getUpdated() + 1);
                     result.getUpdatedList().add(new ImportResultDto.StoreResultRow(
                             row.getStoreCode(), row.getStoreName(), farmerEmail, row.getChannel()));
                 } else {
                     savedStore = storeRepository.save(buildStore(row, farmerId));
+                    entityManager.flush();
+                    entityManager.clear();
                     result.setCreated(result.getCreated() + 1);
                     result.getCreatedList().add(new ImportResultDto.StoreResultRow(
                             row.getStoreCode(), row.getStoreName(), farmerEmail, row.getChannel()));
