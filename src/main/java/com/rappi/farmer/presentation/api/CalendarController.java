@@ -47,6 +47,7 @@ public class CalendarController {
     public void callback(@RequestParam String code, @RequestParam String state,
                          HttpServletResponse response) throws Exception {
         String status;
+        String errorMsg = "";
         try {
             Long userId = Long.parseLong(state);
             calendarService.handleCallback(code, userId);
@@ -54,9 +55,10 @@ public class CalendarController {
         } catch (Exception e) {
             log.error("Error en callback de Google Calendar: {}", e.getMessage(), e);
             status = "error";
+            errorMsg = "&msg=" + java.net.URLEncoder.encode(
+                e.getClass().getSimpleName() + ": " + e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
         }
-        // Redirige al frontend (mismo origen que el opener) para que pueda usar localStorage
-        response.sendRedirect(frontendUrl() + "/calendar-callback?status=" + status);
+        response.sendRedirect(frontendUrl() + "/calendar-callback?status=" + status + errorMsg);
     }
 
     /** Estado de conexión del calendar del usuario */
