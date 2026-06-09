@@ -46,10 +46,6 @@ public class ImportController {
             return ResponseEntity.badRequest().body(Map.of("message", "Solo se aceptan archivos .xlsx o .xls"));
         }
 
-        if (UserRole.ADMIN == sessionContext.getCurrentUserRole()) {
-            return ResponseEntity.status(403).body(Map.of("message", "El Administrador no puede importar carteras"));
-        }
-
         File tempFile = null;
         try {
             tempFile = Files.createTempFile("import_", "_" + filename).toFile();
