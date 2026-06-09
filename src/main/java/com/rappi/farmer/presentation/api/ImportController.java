@@ -74,6 +74,12 @@ public class ImportController {
         Long userId = sessionContext.getCurrentUserId();
         if (userId == null) return ResponseEntity.ok(Map.of("importedToday", false, "required", false));
 
+        // ADMIN y LIDER no están obligados a cargar Excel
+        UserRole role = sessionContext.getCurrentUserRole();
+        if (role == UserRole.ADMIN || role == UserRole.LIDER) {
+            return ResponseEntity.ok(Map.of("importedToday", true, "hasStores", true, "required", false));
+        }
+
         boolean importedToday = userRepository.findById(userId)
                 .map(u -> u.getLastImportDate() != null
                         && u.getLastImportDate().equals(java.time.LocalDate.now()))
