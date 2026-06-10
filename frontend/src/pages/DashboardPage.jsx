@@ -50,14 +50,14 @@ const IC = ({ d, d2 }) => (
 )
 
 const NAV_ITEMS = [
-  { icon: <IC d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" d2="M9 22V12h6v10" />,        label: 'Inicio',      key: 'dashboard' },
-  { icon: <IC d="M3 9h18M3 15h18M9 3v18M15 3v18" />,                                             label: 'Cartera',     key: 'stores' },
-  { icon: <IC d="M12 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" d2="M14 2v6h6" />, label: 'Bases',       key: 'bases' },
-  { icon: <IC d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" d2="M17 8l-5-5-5 5M12 3v12" />,    label: 'Importar',    key: 'excel' },
-  { icon: <IC d="M9 11l3 3L22 4" d2="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />, label: 'Gestiones',  key: 'management' },
-  { icon: <IC d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,            label: 'Mensajes',    key: 'whatsapp' },
-  { icon: <IC d="M18 20V10M12 20V4M6 20v-6" />,                                                  label: 'Reportes',    key: 'reports' },
-  { icon: <IC d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" d2="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />, label: 'Perfil',  key: 'profile' },
+  { icon: <IC d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" d2="M9 22V12h6v10" />,              color: '#FF441F', bg: 'rgba(255,68,31,0.13)',   label: 'Inicio',    key: 'dashboard'  },
+  { icon: <IC d="M3 9h18M3 15h18M9 3v18M15 3v18" />,                                                  color: '#3B82F6', bg: 'rgba(59,130,246,0.13)',  label: 'Cartera',   key: 'stores'     },
+  { icon: <IC d="M12 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" d2="M14 2v6h6" />,     color: '#8B5CF6', bg: 'rgba(139,92,246,0.13)',  label: 'Bases',     key: 'bases'      },
+  { icon: <IC d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" d2="M17 8l-5-5-5 5M12 3v12" />,         color: '#10B981', bg: 'rgba(16,185,129,0.13)',  label: 'Importar',  key: 'excel'      },
+  { icon: <IC d="M9 11l3 3L22 4" d2="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />, color: '#F59E0B', bg: 'rgba(245,158,11,0.13)',  label: 'Gestiones', key: 'management' },
+  { icon: <IC d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,                 color: '#22C55E', bg: 'rgba(34,197,94,0.13)',   label: 'Mensajes',  key: 'whatsapp'   },
+  { icon: <IC d="M18 20V10M12 20V4M6 20v-6" />,                                                       color: '#06B6D4', bg: 'rgba(6,182,212,0.13)',   label: 'Reportes',  key: 'reports'    },
+  { icon: <IC d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" d2="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />, color: '#94A3B8', bg: 'rgba(148,163,184,0.13)', label: 'Perfil',    key: 'profile'    },
 ]
 
 const SECTIONS = [
@@ -312,7 +312,7 @@ export default function DashboardPage() {
                 onClick={() => !blocked && goTo(item.key)}
                 title={blocked ? blockMsg : sidebarCollapsed ? item.label : undefined}
               >
-                <span className={styles.navIconWrap}>{item.icon}</span>
+                <span className={styles.navIconWrap} style={{ background: item.bg, borderColor: item.color + '33', color: item.color }}>{item.icon}</span>
                 {!sidebarCollapsed && <span className={styles.navLabel}>{item.label}</span>}
                 {!sidebarCollapsed && blocked && <span className={styles.navLock}>🔒</span>}
               </button>

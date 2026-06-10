@@ -97,13 +97,12 @@
 }
 
 .navItem:hover .navIconWrap {
-  background: var(--bg-card-hover);
-  border-color: var(--border);
+  filter: brightness(1.15);
 }
 
 .navItem.active .navIconWrap {
-  background: rgba(255,68,31,0.12);
-  border-color: rgba(255,68,31,0.2);
+  filter: brightness(1.2);
+  box-shadow: 0 0 0 2px currentColor;
 }
 
 .navLabel {
