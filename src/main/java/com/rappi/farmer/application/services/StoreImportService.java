@@ -196,7 +196,11 @@ public class StoreImportService {
         if (row.getLastLoginDate() != null) store.setLastLoginDate(row.getLastLoginDate());
         if (row.getGestionar() != null) store.setGestionar(row.getGestionar());
         if (row.getUploadDate() != null) store.setUploadDate(row.getUploadDate());
-        if (row.getOnboardingDate() != null) store.setOnboardingDate(row.getOnboardingDate());
+        // Solo se actualiza si la tienda aún no tiene fecha: evita resetear la edad
+        // al cargar una nueva base (el Excel nuevo trae la fecha de esa carga, no el inicio real)
+        if (store.getOnboardingDate() == null && row.getOnboardingDate() != null) {
+            store.setOnboardingDate(row.getOnboardingDate());
+        }
         if (farmerId != null) store.setFarmerId(farmerId);
 
         boolean anteriorSinHandoff = !Boolean.TRUE.equals(store.getHadHandoff());
