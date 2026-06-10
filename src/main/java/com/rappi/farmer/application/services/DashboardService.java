@@ -166,18 +166,15 @@ public class DashboardService {
     }
 
     /**
-     * Edad real de la tienda (días desde que empezó a operar).
+     * Edad real de la tienda: días desde la primera FECHA DE CARGUE en que apareció.
      * Prioridad:
-     *  1. handoff_activated_at — fecha dinámica más confiable
-     *  2. onboarding_date      — cálculo dinámico desde inicio de onboarding
-     *  3. aging del Excel      — último recurso: valor estático cuando no hay fechas
-     *
-     * El aging del Excel queda al final porque al cargar una nueva base
-     * se resetea a 1 aunque la tienda tenga meses de antigüedad.
+     *  1. upload_date     — primera fecha de cargue (fuente de verdad según negocio)
+     *  2. onboarding_date — fallback si no hay upload_date
+     *  3. aging del Excel — último recurso estático
      */
     private int calcAgingEfectivo(Store store) {
-        if (store.getHandoffActivatedAt() != null) {
-            return (int) ChronoUnit.DAYS.between(store.getHandoffActivatedAt(), LocalDate.now());
+        if (store.getUploadDate() != null) {
+            return calcAging(store.getUploadDate());
         }
         if (store.getOnboardingDate() != null) {
             return calcAging(store.getOnboardingDate());

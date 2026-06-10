@@ -195,7 +195,13 @@ public class StoreImportService {
         if (row.getAgingStage() != null) store.setAgingStage(row.getAgingStage());
         if (row.getLastLoginDate() != null) store.setLastLoginDate(row.getLastLoginDate());
         if (row.getGestionar() != null) store.setGestionar(row.getGestionar());
-        if (row.getUploadDate() != null) store.setUploadDate(row.getUploadDate());
+        // Conserva la fecha de cargue más antigua: es la fuente de verdad para la edad de la tienda.
+        // Si la BD tiene una fecha más reciente (sobreescrita en cargas previas), el Excel la corrige.
+        if (row.getUploadDate() != null) {
+            if (store.getUploadDate() == null || row.getUploadDate().isBefore(store.getUploadDate())) {
+                store.setUploadDate(row.getUploadDate());
+            }
+        }
         // Conserva siempre la fecha más antigua: si el Excel trae la fecha real de inicio
         // y la BD tiene una fecha más reciente (por sobreescrituras anteriores), se corrige.
         // Si el Excel trae una fecha posterior a la almacenada, se ignora.
