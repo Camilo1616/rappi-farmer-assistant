@@ -73,12 +73,15 @@ public class WhatsappMessageRepositoryAdapter implements WhatsappMessageReposito
         LocalDateTime[] bounds = todayBoundsUtc();
         return jpaRepository.findStoresSentToday(bounds[0], bounds[1], userId)
                 .stream()
-                .map(s -> Map.<String, Object>of(
-                        "id",          s.getId(),
-                        "storeName",   s.getStoreName() != null ? s.getStoreName() : "",
-                        "storeCode",   s.getStoreCode() != null ? s.getStoreCode() : "",
-                        "phoneNumber", s.getPhoneNumber() != null ? s.getPhoneNumber() : ""
-                ))
+                .map(s -> {
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id",          s.getId());
+                    m.put("storeName",   s.getStoreName()  != null ? s.getStoreName()  : "");
+                    m.put("storeCode",   s.getStoreCode()  != null ? s.getStoreCode()  : "");
+                    m.put("brandId",     s.getBrandId()    != null ? s.getBrandId()    : "");
+                    m.put("phoneNumber", s.getPhoneNumber()!= null ? s.getPhoneNumber(): "");
+                    return m;
+                })
                 .toList();
     }
 
