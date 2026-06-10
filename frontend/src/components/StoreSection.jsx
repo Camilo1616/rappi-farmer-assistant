@@ -65,7 +65,7 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                     <th>Días sin conectar</th>
                     <th>Último Login</th>
                   </>
-                : <th>Día</th>
+                : <th>Edad</th>
               }
               <th>Órdenes</th>
               {isAva

@@ -166,17 +166,23 @@ public class DashboardService {
     }
 
     /**
-     * Fuente de verdad para el aging:
-     *  1. handoff_activated_at — fecha en que el HO fue confirmado (Hunting/Inside) o el onboarding empezó (Self)
-     *  2. aging del Excel — valor estático de la última carga
-     *  3. onboarding_date — cálculo desde la fecha de inicio
+     * Edad real de la tienda (días desde que empezó a operar).
+     * Prioridad:
+     *  1. handoff_activated_at — fecha dinámica más confiable
+     *  2. onboarding_date      — cálculo dinámico desde inicio de onboarding
+     *  3. aging del Excel      — último recurso: valor estático cuando no hay fechas
+     *
+     * El aging del Excel queda al final porque al cargar una nueva base
+     * se resetea a 1 aunque la tienda tenga meses de antigüedad.
      */
     private int calcAgingEfectivo(Store store) {
         if (store.getHandoffActivatedAt() != null) {
             return (int) ChronoUnit.DAYS.between(store.getHandoffActivatedAt(), LocalDate.now());
         }
-        if (store.getAging() != null) return store.getAging();
-        return calcAging(store.getOnboardingDate());
+        if (store.getOnboardingDate() != null) {
+            return calcAging(store.getOnboardingDate());
+        }
+        return store.getAging() != null ? store.getAging() : 0;
     }
 
     private int calcAging(LocalDate onboardingDate) {
