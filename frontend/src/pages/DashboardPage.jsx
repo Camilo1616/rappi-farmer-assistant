@@ -42,15 +42,22 @@ const SIDEBAR_SEGMENT_FILTERS = [
   { key: 'Saludable',   label: 'Saludable',   color: '#22C55E' },
 ]
 
+const IC = ({ d, d2 }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />{d2 && <path d={d2} />}
+  </svg>
+)
+
 const NAV_ITEMS = [
-  { icon: '◼', label: 'Dashboard',    key: 'dashboard' },
-  { icon: '🏪', label: 'Tiendas',      key: 'stores' },
-  { icon: '📦', label: 'Mis bases',    key: 'bases' },
-  { icon: '📥', label: 'Cargar Excel', key: 'excel' },
-  { icon: '📋', label: 'Gestiones',    key: 'management' },
-  { icon: '💬', label: 'WhatsApp',     key: 'whatsapp' },
-  { icon: '📊', label: 'Reportes',     key: 'reports' },
-  { icon: '👤', label: 'Mi perfil',    key: 'profile' },
+  { icon: <IC d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" d2="M9 22V12h6v10" />,        label: 'Inicio',      key: 'dashboard' },
+  { icon: <IC d="M3 9h18M3 15h18M9 3v18M15 3v18" />,                                             label: 'Cartera',     key: 'stores' },
+  { icon: <IC d="M12 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" d2="M14 2v6h6" />, label: 'Bases',       key: 'bases' },
+  { icon: <IC d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" d2="M17 8l-5-5-5 5M12 3v12" />,    label: 'Importar',    key: 'excel' },
+  { icon: <IC d="M9 11l3 3L22 4" d2="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />, label: 'Gestiones',  key: 'management' },
+  { icon: <IC d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,            label: 'Mensajes',    key: 'whatsapp' },
+  { icon: <IC d="M18 20V10M12 20V4M6 20v-6" />,                                                  label: 'Reportes',    key: 'reports' },
+  { icon: <IC d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" d2="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />, label: 'Perfil',  key: 'profile' },
 ]
 
 const SECTIONS = [
@@ -305,8 +312,8 @@ export default function DashboardPage() {
                 onClick={() => !blocked && goTo(item.key)}
                 title={blocked ? blockMsg : sidebarCollapsed ? item.label : undefined}
               >
-                <span className={styles.navIcon}>{item.icon}</span>
-                {!sidebarCollapsed && item.label}
+                <span className={styles.navIconWrap}>{item.icon}</span>
+                {!sidebarCollapsed && <span className={styles.navLabel}>{item.label}</span>}
                 {!sidebarCollapsed && blocked && <span className={styles.navLock}>🔒</span>}
               </button>
             )
