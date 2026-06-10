@@ -274,7 +274,7 @@ export default function DashboardPage() {
     if (activeNav === 'bases')   loadBases()
   }, [activeNav])  // eslint-disable-line
 
-  const firstName = user?.fullName?.split(' ')[0] ?? 'Farmer'
+  const firstName = user?.nickname?.trim() || user?.fullName?.split(' ')[0] || 'Farmer'
 
   // Métricas del dashboard
   const totalStores    = dash?.totalCount ?? 0

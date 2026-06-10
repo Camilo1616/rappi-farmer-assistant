@@ -40,7 +40,7 @@ public class AuthController {
             // Sync calendar en background sin bloquear la respuesta
             CompletableFuture.runAsync(() -> calendarService.syncOnLogin(user, result.calendarSyncDays()));
             return ResponseEntity.ok(new AuthResponse(token, user.getEmail(),
-                    user.getFullName(), user.getUserRole().name(), user.getId()));
+                    user.getFullName(), user.getUserRole().name(), user.getId(), user.getNickname()));
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", e.getMessage()));
@@ -89,7 +89,7 @@ public class AuthController {
             String token = jwtService.generateToken(user.getEmail(), user.getUserRole().name());
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new AuthResponse(token, user.getEmail(),
-                            user.getFullName(), user.getUserRole().name(), user.getId()));
+                            user.getFullName(), user.getUserRole().name(), user.getId(), user.getNickname()));
         } catch (BusinessException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -140,5 +140,6 @@ public class AuthController {
             String email,
             String fullName,
             String role,
-            Long userId) {}
+            Long userId,
+            String nickname) {}
 }

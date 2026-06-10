@@ -8,6 +8,7 @@ export const login = async (email, password) => {
     email: data.email,
     fullName: data.fullName,
     role: data.role,
+    nickname: data.nickname ?? null,
   }))
   return data
 }
@@ -25,8 +26,9 @@ export const register = async (body) => {
     email: data.email,
     fullName: data.fullName,
     role: data.role,
+    nickname: data.nickname ?? null,
   }))
-  return { id: data.userId ?? data.id, email: data.email, fullName: data.fullName, role: data.role }
+  return { id: data.userId ?? data.id, email: data.email, fullName: data.fullName, role: data.role, nickname: data.nickname ?? null }
 }
 
 export const logout = () => {

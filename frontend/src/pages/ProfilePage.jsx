@@ -3,6 +3,7 @@ import { getProfile, updateNickname, uploadAvatar, getFarmers, promote, demote, 
          getPerformance, changePassword, getNotes, createNote, updateNote, deleteNote,
          getCalendarStatus, connectCalendar, disconnectCalendar, syncCalendar } from '../services/profileService'
 import { getLiderDashboard } from '../services/dashboardService'
+import { useAuth } from '../context/AuthContext'
 import styles from './ProfilePage.module.css'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace('/api', '')
@@ -13,6 +14,7 @@ const ROLE_COLOR = { ADMIN: styles.roleAdmin, LIDER: styles.roleLider, COORDINAT
 const COUNTRIES = ['CO','MX','AR','PE','BR','EC','CL','CR','UY','BO','PA','HN']
 
 export default function ProfilePage() {
+  const { user, setUser } = useAuth()
   const [profile, setProfile]         = useState(null)
   const [farmers, setFarmers]         = useState([])
   const [liderData, setLiderData]     = useState(null)
@@ -77,7 +79,14 @@ export default function ProfilePage() {
 
   const handleNickname = async () => {
     setSaving(true)
-    try { await updateNickname(nickname); setEditingNick(false); flash('Apodo actualizado'); load() }
+    try {
+      await updateNickname(nickname)
+      setEditingNick(false)
+      flash('Apodo actualizado')
+      load()
+      // Refrescar saludo en el sidebar sin necesidad de re-login
+      if (user) setUser({ ...user, nickname: nickname.trim() || null })
+    }
     catch (e) { flash(e.response?.data?.message || 'Error', 'err') }
     finally { setSaving(false) }
   }
