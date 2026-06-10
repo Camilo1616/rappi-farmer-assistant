@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getDashboard } from '../services/dashboardService'
 import {
@@ -20,15 +20,21 @@ function formatDate(dateStr) {
 }
 
 /* ── Tooltip portal — se monta en document.body, no se corta por overflow ── */
-function TooltipPortal({ session, pos }) {
+function TooltipPortal({ session, pos, onMouseEnter, onMouseLeave }) {
   const TOOLTIP_W = 320
+  const TOOLTIP_H = 340
   const left = Math.max(8, Math.min(pos.left, window.innerWidth - TOOLTIP_W - 8))
-  const top  = pos.bottom + 8
+  // Si no cabe abajo, lo muestra arriba de la fila
+  const top  = pos.bottom + 8 + TOOLTIP_H > window.innerHeight
+    ? Math.max(8, pos.top - TOOLTIP_H - 8)
+    : pos.bottom + 8
 
   return createPortal(
     <div
       className={styles.historyTooltip}
       style={{ top, left, width: TOOLTIP_W }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <div className={styles.tooltipHeader}>
         {formatDate(session.date)} · {session.total} tiendas
@@ -39,7 +45,10 @@ function TooltipPortal({ session, pos }) {
             <span className={styles.tooltipDot} style={{ background: STATUS_COLOR[s.status] || '#6B7280' }} />
             <div className={styles.tooltipStoreInfo}>
               <span className={styles.tooltipStoreName}>{s.storeName}</span>
-              <span className={styles.tooltipStoreMeta}>{s.storeCode} · {s.sentAt}</span>
+              <span className={styles.tooltipStoreMeta}>{s.brandId || s.storeCode} · {s.sentAt}</span>
+              {s.status === 'ERROR' && s.errorMessage && (
+                <span className={styles.tooltipError}>⚠ {s.errorMessage}</span>
+              )}
             </div>
             <span className={styles.tooltipStatus} style={{ color: STATUS_COLOR[s.status] || '#6B7280' }}>
               {STATUS_LABEL[s.status] || s.status}
@@ -58,6 +67,15 @@ function WaHistory() {
   const [loading,  setLoading]  = useState(true)
   const [open,     setOpen]     = useState(false)
   const [hovered,  setHovered]  = useState(null)   // { idx, pos }
+  const hideTimer = useRef(null)
+
+  const showTooltip = (idx, e) => {
+    clearTimeout(hideTimer.current)
+    const rect = e.currentTarget.getBoundingClientRect()
+    setHovered({ idx, pos: { top: rect.top, bottom: rect.bottom, left: rect.left } })
+  }
+  const scheduleHide = () => { hideTimer.current = setTimeout(() => setHovered(null), 150) }
+  const cancelHide   = () => clearTimeout(hideTimer.current)
 
   useEffect(() => {
     getWaHistory(30)
@@ -89,11 +107,8 @@ function WaHistory() {
             <div
               key={session.date}
               className={styles.historyRow}
-              onMouseEnter={e => {
-                const rect = e.currentTarget.getBoundingClientRect()
-                setHovered({ idx, pos: { top: rect.top, bottom: rect.bottom, left: rect.left } })
-              }}
-              onMouseLeave={() => setHovered(null)}
+              onMouseEnter={e => showTooltip(idx, e)}
+              onMouseLeave={scheduleHide}
             >
               <div className={styles.historyDate}>{formatDate(session.date)}</div>
               <div className={styles.historyStats}>
@@ -120,9 +135,13 @@ function WaHistory() {
         </div>
       )}
 
-      {/* Portal: se renderiza fuera del árbol para no ser cortado por overflow */}
       {hovered !== null && history[hovered.idx] && (
-        <TooltipPortal session={history[hovered.idx]} pos={hovered.pos} />
+        <TooltipPortal
+          session={history[hovered.idx]}
+          pos={hovered.pos}
+          onMouseEnter={cancelHide}
+          onMouseLeave={scheduleHide}
+        />
       )}
     </div>
   )

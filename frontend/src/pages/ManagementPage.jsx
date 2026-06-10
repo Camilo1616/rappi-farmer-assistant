@@ -251,7 +251,7 @@ export default function ManagementPage() {
                 <div key={store.id} className={styles.waStoreRow}>
                   <div className={styles.waStoreInfo}>
                     <span className={styles.waStoreName}>{store.storeName}</span>
-                    <span className={styles.waStoreCode}>{store.storeCode}</span>
+                    <span className={styles.waStoreCode}>{store.brandId}</span>
                     {store.phoneNumber && (
                       <span className={styles.waStorePhone}>📱 {store.phoneNumber}</span>
                     )}

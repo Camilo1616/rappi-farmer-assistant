@@ -425,10 +425,19 @@
   font-weight: 600;
 }
 
-/* Tooltip */
+.historyHint {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.historyRow:hover .historyHint { opacity: 1; }
+
+/* Tooltip — renderizado via portal en document.body, posición fixed viewport-relativa */
 .historyTooltip {
   position: fixed;
-  z-index: 3000;
+  z-index: 9999;
   background: var(--bg-secondary, #1E2235);
   border: 1px solid var(--border, rgba(255,255,255,0.08));
   border-radius: 12px;
@@ -436,7 +445,6 @@
   max-height: 340px;
   overflow-y: auto;
   box-shadow: 0 16px 48px rgba(0,0,0,0.45);
-  pointer-events: none;
 }
 
 .tooltipHeader {
@@ -497,5 +505,14 @@
   font-size: 0.7rem;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+.tooltipError {
+  display: block;
+  font-size: 0.68rem;
+  color: #EF4444;
+  margin-top: 2px;
+  white-space: normal;
+  line-height: 1.3;
 }
 

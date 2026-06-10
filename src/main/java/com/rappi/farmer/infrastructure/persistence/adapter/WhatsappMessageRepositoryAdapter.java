@@ -116,11 +116,13 @@ public class WhatsappMessageRepositoryAdapter implements WhatsappMessageReposito
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> stores = (List<Map<String, Object>>) entry.get("stores");
             Map<String, Object> storeInfo = new LinkedHashMap<>();
-            storeInfo.put("storeName",   m.getStore().getStoreName() != null ? m.getStore().getStoreName() : "");
-            storeInfo.put("storeCode",   m.getStore().getStoreCode() != null ? m.getStore().getStoreCode() : "");
-            storeInfo.put("phoneNumber", m.getStore().getPhoneNumber() != null ? m.getStore().getPhoneNumber() : "");
-            storeInfo.put("status",      status);
-            storeInfo.put("sentAt",      m.getSentAt().atZone(ZoneOffset.UTC)
+            storeInfo.put("storeName",    m.getStore().getStoreName() != null ? m.getStore().getStoreName() : "");
+            storeInfo.put("storeCode",    m.getStore().getStoreCode() != null ? m.getStore().getStoreCode() : "");
+            storeInfo.put("brandId",      m.getStore().getBrandId() != null ? m.getStore().getBrandId() : "");
+            storeInfo.put("phoneNumber",  m.getStore().getPhoneNumber() != null ? m.getStore().getPhoneNumber() : "");
+            storeInfo.put("status",       status);
+            storeInfo.put("errorMessage", m.getErrorMessage() != null ? m.getErrorMessage() : "");
+            storeInfo.put("sentAt",       m.getSentAt().atZone(ZoneOffset.UTC)
                     .withZoneSameInstant(bogota)
                     .format(DateTimeFormatter.ofPattern("HH:mm")));
             stores.add(storeInfo);
