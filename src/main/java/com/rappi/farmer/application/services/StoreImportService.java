@@ -196,10 +196,13 @@ public class StoreImportService {
         if (row.getLastLoginDate() != null) store.setLastLoginDate(row.getLastLoginDate());
         if (row.getGestionar() != null) store.setGestionar(row.getGestionar());
         if (row.getUploadDate() != null) store.setUploadDate(row.getUploadDate());
-        // Solo se actualiza si la tienda aún no tiene fecha: evita resetear la edad
-        // al cargar una nueva base (el Excel nuevo trae la fecha de esa carga, no el inicio real)
-        if (store.getOnboardingDate() == null && row.getOnboardingDate() != null) {
-            store.setOnboardingDate(row.getOnboardingDate());
+        // Conserva siempre la fecha más antigua: si el Excel trae la fecha real de inicio
+        // y la BD tiene una fecha más reciente (por sobreescrituras anteriores), se corrige.
+        // Si el Excel trae una fecha posterior a la almacenada, se ignora.
+        if (row.getOnboardingDate() != null) {
+            if (store.getOnboardingDate() == null || row.getOnboardingDate().isBefore(store.getOnboardingDate())) {
+                store.setOnboardingDate(row.getOnboardingDate());
+            }
         }
         if (farmerId != null) store.setFarmerId(farmerId);
 
