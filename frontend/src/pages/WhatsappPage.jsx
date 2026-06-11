@@ -343,10 +343,10 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
     try {
       const sample = selectedStores[0]
       const storeName = sample?.storeName || 'Restaurante'
-      const ownerName = sample?.ownerName || sample?.contactName || 'Propietario'
-      const agingDays = sample?.agingDays ?? sample?.onboardingDay ?? 7
+      const ownerName = 'Propietario'
+      const agingDays = sample?.aging ?? 7
       const situation = sample
-        ? `Tienda en día ${agingDays} de onboarding`
+        ? `Día ${agingDays} de onboarding, estado: ${sample.currentStatus || 'seguimiento'}, etapa: ${sample.agingStage || ''}`
         : 'seguimiento general'
       const r = await generateWhatsappMessage(
         storeName,
