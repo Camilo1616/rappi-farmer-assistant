@@ -139,4 +139,45 @@ public class WhatsappController {
     public record TestRequest(@NotBlank String phone, @NotBlank String message) {}
 
     public record SendRequest(@NotEmpty List<Long> storeIds, @NotBlank String template) {}
+
+    public record StoreMessage(Long storeId, String message) {}
+
+    public record SendPersonalizedRequest(@NotEmpty List<StoreMessage> storeMessages) {}
+
+    @PostMapping("/send-personalized")
+    public SseEmitter sendPersonalized(@Valid @RequestBody SendPersonalizedRequest request) {
+        Long userId = sessionContext.getCurrentUserId();
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
+
+        Map<Long, String> messageMap = request.storeMessages().stream()
+                .collect(java.util.stream.Collectors.toMap(StoreMessage::storeId, StoreMessage::message));
+
+        List<StoreViewDto> stores = request.storeMessages().stream()
+                .map(sm -> storeRepository.findById(sm.storeId()).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .map(store -> new StoreViewDto(
+                        store.getId(), store.getStoreCode(), store.getBrandId(), store.getStoreName(),
+                        store.getPhoneNumber(), 0, null,
+                        store.getConnectionPercentage(), store.getCurrentStatus(),
+                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(), null, null, null, null, store.getFarmerEmail(),
+                        null, null, null, null, null, store.getChannel()))
+                .toList();
+
+        executor.submit(() -> {
+            try {
+                whatsappService.enviarMasivoPersonalizado(stores, messageMap, userId, progress -> {
+                    try {
+                        emitter.send(SseEmitter.event().name("progress").data(progress));
+                        if (progress.isFinalizado()) emitter.complete();
+                    } catch (Exception e) {
+                        emitter.completeWithError(e);
+                    }
+                });
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        });
+
+        return emitter;
+    }
 }

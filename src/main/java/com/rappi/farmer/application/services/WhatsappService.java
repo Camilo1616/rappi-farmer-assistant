@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.function.Consumer;
 
@@ -159,6 +160,49 @@ public class WhatsappService {
                 total, total, enviados, errores, "", "COMPLETADO", true));
 
         log.info("Envío masivo completado — enviados:{} errores:{}", enviados, errores);
+    }
+
+    public void enviarMasivoPersonalizado(List<StoreViewDto> stores, Map<Long, String> messageMap,
+                                          Long userId, Consumer<WhatsappSendProgress> progressCallback) {
+        int total = Math.min(stores.size(), MAX_DIARIO);
+        int enviados = 0;
+        int errores = 0;
+
+        for (int i = 0; i < total; i++) {
+            StoreViewDto store = stores.get(i);
+            String mensaje = messageMap.getOrDefault(store.getId(), "");
+
+            progressCallback.accept(new WhatsappSendProgress(
+                    total, i, enviados, errores, store.getStoreName(), "ENVIANDO", false));
+
+            String resultado = whatsappDriver.enviarMensaje(store.getPhoneNumber(), mensaje);
+
+            if ("ERROR_CHROME_CERRADO".equals(resultado)) {
+                progressCallback.accept(new WhatsappSendProgress(
+                        total, i + 1, enviados, errores, store.getStoreName(), "ERROR_CHROME_CERRADO", true));
+                return;
+            }
+
+            whatsappMessageRepository.save(store.getId(), userId, mensaje, resultado, null);
+
+            if ("ENVIADO".equals(resultado)) enviados++;
+            else if (!"NUMERO_INVALIDO".equals(resultado)) errores++;
+
+            progressCallback.accept(new WhatsappSendProgress(
+                    total, i + 1, enviados, errores, store.getStoreName(), resultado, false));
+
+            if (i < total - 1) {
+                int delay = DELAY_MIN_MS + random.nextInt(DELAY_MAX_MS - DELAY_MIN_MS);
+                progressCallback.accept(new WhatsappSendProgress(
+                        total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delay / 1000));
+                try { Thread.sleep(delay); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt(); break;
+                }
+            }
+        }
+
+        progressCallback.accept(new WhatsappSendProgress(
+                total, total, enviados, errores, "", "COMPLETADO", true));
     }
 
 }

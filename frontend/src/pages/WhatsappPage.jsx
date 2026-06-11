@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { getDashboard } from '../services/dashboardService'
 import {
   getWhatsappStatus, getWhatsappQr,
-  sendTest, getMsgTemplates, sendMasivo, getWaHistory
+  sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory
 } from '../services/whatsappService'
 import { generateWhatsappMessage } from '../services/aiService'
 import styles from './WhatsappPage.module.css'
@@ -330,32 +330,47 @@ function StepConnection({ status, qr, onRefresh, loading }) {
 
 
 /* ── Mensaje ── */
-function StepMessage({ templates, template, onTemplate, message, onChange, selectedStores = [] }) {
+function StepMessage({ templates, template, onTemplate, message, onChange, selectedStores = [], onAiMessages }) {
   const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError]   = useState(null)
+  const [aiError, setAiError]     = useState(null)
+  const [aiDone, setAiDone]       = useState(false)
 
   const preview = (message || '').replace(/\{store_name\}/g, 'Restaurante Ejemplo')
-                                .replace(/\{owner_name\}/g, 'Carlos')
+
+  const buildSituation = (s) => {
+    const parts = []
+    if (s.aging != null)              parts.push(`Día ${s.aging} de onboarding`)
+    if (s.agingStage)                 parts.push(`etapa: ${s.agingStage}`)
+    if (s.currentStatus)              parts.push(`estado: ${s.currentStatus}`)
+    if (s.connectionPercentage != null) parts.push(`conexión Rappi Aliados: ${s.connectionPercentage}%`)
+    if (s.lastLoginDate)              parts.push(`último acceso: ${s.lastLoginDate}`)
+    if (s.hadHandoff != null)         parts.push(s.hadHandoff ? 'hizo handoff' : 'sin handoff')
+    if (s.channel)                    parts.push(`canal: ${s.channel}`)
+    return parts.join(', ') || 'seguimiento general'
+  }
 
   const handleAiGenerate = async () => {
+    if (!selectedStores.length) {
+      setAiError('Selecciona al menos una tienda primero')
+      return
+    }
     setAiLoading(true)
     setAiError(null)
+    setAiDone(false)
+    const results = []
     try {
-      const sample = selectedStores[0]
-      const storeName = sample?.storeName || 'Restaurante'
-      const ownerName = 'Propietario'
-      const agingDays = sample?.aging ?? 7
-      const situation = sample
-        ? `Día ${agingDays} de onboarding, estado: ${sample.currentStatus || 'seguimiento'}, etapa: ${sample.agingStage || ''}`
-        : 'seguimiento general'
-      const r = await generateWhatsappMessage(
-        storeName,
-        ownerName,
-        agingDays,
-        situation,
-        message || templates[0]?.content || 'Hola {store_name}, te escribimos del equipo Rappi.'
-      )
-      onChange(r.data.message)
+      for (const store of selectedStores) {
+        const r = await generateWhatsappMessage(
+          store.storeName || 'Restaurante',
+          'Propietario',
+          store.aging ?? 7,
+          buildSituation(store),
+          message || templates[0]?.content || 'Hola {store_name}, te escribimos del equipo Rappi.'
+        )
+        results.push({ storeId: store.id, storeName: store.storeName, message: r.data.message })
+      }
+      setAiDone(true)
+      onAiMessages(results)
     } catch (e) {
       setAiError(e.response?.data?.error || 'Error al generar con IA')
     } finally {
@@ -375,12 +390,13 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
           className={styles.aiBtnSmall}
           onClick={handleAiGenerate}
           disabled={aiLoading}
-          title="Generar variante con IA"
+          title={selectedStores.length ? `Generar IA para ${selectedStores.length} tiendas` : 'Selecciona tiendas primero'}
         >
-          {aiLoading ? '...' : '✨ IA'}
+          {aiLoading ? `Generando ${selectedStores.length > 1 ? `(0/${selectedStores.length})` : ''}...` : '✨ IA personalizada'}
         </button>
       </div>
       {aiError && <div className={styles.aiError}>{aiError}</div>}
+      {aiDone && <div className={styles.aiSuccess}>Mensajes generados — revisa el panel de abajo antes de enviar</div>}
       {templates.length > 0 && (
         <div className={styles.templateGrid}>
           {templates.map(t => (
@@ -392,7 +408,7 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
       )}
       <div className={styles.messageWrap}>
         <textarea className={styles.textarea} rows={6} value={message}
-          onChange={e => onChange(e.target.value)} placeholder="Escribe tu mensaje..." />
+          onChange={e => onChange(e.target.value)} placeholder="Escribe tu mensaje base..." />
         <div className={styles.previewBox}>
           <div className={styles.previewLabel}>Vista previa</div>
           <div className={styles.previewBubble}>{preview || '...'}</div>
@@ -452,6 +468,7 @@ export default function WhatsappPage() {
   const [testPhone,   setTestPhone]   = useState('')
   const [testSending, setTestSending] = useState(false)
   const [testResult,  setTestResult]  = useState(null)
+  const [aiMessages,  setAiMessages]  = useState([])   // [{storeId, storeName, message}]
 
   const loadStatus = async () => {
     try {
@@ -514,6 +531,18 @@ export default function WhatsappPage() {
     )
   }
 
+  const handleSendAi = () => {
+    if (!aiMessages.length || !status.connected) return
+    setSending(true)
+    setProgress({ total: aiMessages.length, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 })
+    sendPersonalized(
+      aiMessages.map(m => ({ storeId: m.storeId, message: m.message })),
+      data => setProgress(data),
+      data => { setProgress(data); setSending(false); loadStatus() },
+      ()   => setSending(false)
+    )
+  }
+
   const handleTest = async () => {
     if (!testPhone.trim() || !message.trim()) return
     setTestSending(true); setTestResult(null)
@@ -561,7 +590,35 @@ export default function WhatsappPage() {
           <StepMessage templates={templates} template={selTemplate}
             onTemplate={t => { setSelTemplate(t.id); setMessage(t.content) }}
             message={message} onChange={setMessage}
-            selectedStores={Object.values(dashStores).flat().filter(s => selected.has(s.id))} />
+            selectedStores={Object.values(dashStores).flat().filter(s => selected.has(s.id))}
+            onAiMessages={msgs => { setAiMessages(msgs) }} />
+
+          {/* ── Panel revisión mensajes IA ── */}
+          {aiMessages.length > 0 && (
+            <div className={styles.stepCard}>
+              <div className={styles.stepHeader}>
+                <span className={styles.stepNum}>✨</span>
+                <div>
+                  <div className={styles.stepTitle}>Mensajes personalizados por IA</div>
+                  <div className={styles.stepSub}>{aiMessages.length} mensajes listos — edita si necesitas ajustar</div>
+                </div>
+                <button className={styles.btnXsDanger} onClick={() => setAiMessages([])}>Limpiar</button>
+              </div>
+              <div className={styles.aiMsgList}>
+                {aiMessages.map((m, i) => (
+                  <div key={m.storeId} className={styles.aiMsgRow}>
+                    <div className={styles.aiMsgStore}>{m.storeName}</div>
+                    <textarea
+                      className={styles.aiMsgTextarea}
+                      rows={3}
+                      value={m.message}
+                      onChange={e => setAiMessages(prev => prev.map((x, j) => j === i ? { ...x, message: e.target.value } : x))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Prueba ── */}
           <div className={styles.stepCard}>
@@ -611,12 +668,20 @@ export default function WhatsappPage() {
               <strong>{selected.size > 0 ? `~${Math.round(selected.size * 17.5 / 60)} min` : '—'}</strong>
             </div>
             {!status.connected && <div className={styles.warnBox}>⚠️ Conecta WhatsApp Web primero</div>}
-            {!message.trim()   && <div className={styles.warnBox}>Escribe el mensaje a enviar</div>}
-            <button className={styles.btnSend} onClick={handleSend} disabled={!canSend}>
-              {sending
-                ? <><span className={styles.spinner} /> Enviando...</>
-                : `📤 Enviar a ${selected.size} tienda${selected.size !== 1 ? 's' : ''}`}
-            </button>
+            {!message.trim() && !aiMessages.length && <div className={styles.warnBox}>Escribe el mensaje a enviar</div>}
+            {aiMessages.length > 0 ? (
+              <button className={styles.btnSendAi} onClick={handleSendAi} disabled={!status.connected || sending}>
+                {sending
+                  ? <><span className={styles.spinner} /> Enviando...</>
+                  : `✨ Enviar ${aiMessages.length} mensajes IA`}
+              </button>
+            ) : (
+              <button className={styles.btnSend} onClick={handleSend} disabled={!canSend}>
+                {sending
+                  ? <><span className={styles.spinner} /> Enviando...</>
+                  : `📤 Enviar a ${selected.size} tienda${selected.size !== 1 ? 's' : ''}`}
+              </button>
+            )}
           </div>
 
           {progress && (
