@@ -14,7 +14,7 @@ import java.util.Map;
 public class AiService {
 
     private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=";
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -82,19 +82,23 @@ public class AiService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        ResponseEntity<Map> response = restTemplate.exchange(
-            GEMINI_URL + apiKey,
-            HttpMethod.POST,
-            new HttpEntity<>(body, headers),
-            Map.class
-        );
-
         try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                GEMINI_URL + apiKey,
+                HttpMethod.POST,
+                new HttpEntity<>(body, headers),
+                Map.class
+            );
+
             var candidates = (List<?>) response.getBody().get("candidates");
             var content    = (Map<?, ?>) ((Map<?, ?>) candidates.get(0)).get("content");
             var parts      = (List<?>) content.get("parts");
             return (String) ((Map<?, ?>) parts.get(0)).get("text");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("Error Gemini API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("Error Gemini " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
         } catch (Exception e) {
+            log.error("Error inesperado llamando Gemini: {}", e.getMessage());
             throw new RuntimeException("Respuesta inesperada de Gemini: " + e.getMessage());
         }
     }
