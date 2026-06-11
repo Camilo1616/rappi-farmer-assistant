@@ -5,6 +5,7 @@ import {
   getWhatsappStatus, getWhatsappQr,
   sendTest, getMsgTemplates, sendMasivo, getWaHistory
 } from '../services/whatsappService'
+import { generateWhatsappMessage } from '../services/aiService'
 import styles from './WhatsappPage.module.css'
 
 const STATUS_COLOR = { ENVIADO: '#22C55E', NUMERO_INVALIDO: '#F59E0B', ERROR: '#EF4444' }
@@ -330,7 +331,31 @@ function StepConnection({ status, qr, onRefresh, loading }) {
 
 /* ── Mensaje ── */
 function StepMessage({ templates, template, onTemplate, message, onChange }) {
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError]   = useState(null)
+
   const preview = message.replace(/\{store_name\}/g, 'Restaurante Ejemplo')
+                         .replace(/\{owner_name\}/g, 'Carlos')
+
+  const handleAiGenerate = async () => {
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const r = await generateWhatsappMessage(
+        'Restaurante Ejemplo',
+        'Carlos',
+        7,
+        'sin ventas registradas en los primeros 7 días',
+        message || templates[0]?.content || 'Hola {store_name}, te escribimos del equipo Rappi.'
+      )
+      onChange(r.data.message)
+    } catch (e) {
+      setAiError(e.response?.data?.error || 'Error al generar con IA')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   return (
     <div className={styles.stepCard}>
       <div className={styles.stepHeader}>
@@ -339,7 +364,16 @@ function StepMessage({ templates, template, onTemplate, message, onChange }) {
           <div className={styles.stepTitle}>Mensaje</div>
           <div className={styles.stepSub}>Usa <code>{'{store_name}'}</code> como variable</div>
         </div>
+        <button
+          className={styles.aiBtnSmall}
+          onClick={handleAiGenerate}
+          disabled={aiLoading}
+          title="Generar variante con IA"
+        >
+          {aiLoading ? '...' : '✨ IA'}
+        </button>
       </div>
+      {aiError && <div className={styles.aiError}>{aiError}</div>}
       {templates.length > 0 && (
         <div className={styles.templateGrid}>
           {templates.map(t => (

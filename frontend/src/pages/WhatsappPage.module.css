@@ -300,6 +300,21 @@
   background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
   border-radius: 8px; padding: 8px 12px; font-size: 0.76rem; color: #F59E0B;
 }
+.aiBtnSmall {
+  margin-left: auto;
+  padding: 4px 10px; border-radius: 20px;
+  background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15));
+  border: 1px solid rgba(139,92,246,0.4); color: #A78BFA;
+  font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.aiBtnSmall:hover:not(:disabled) { border-color: #A78BFA; opacity: 0.85; }
+.aiBtnSmall:disabled { opacity: 0.5; cursor: not-allowed; }
+.aiError {
+  font-size: 0.75rem; color: #EF4444;
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;
+}
 .btnSend {
   width: 100%; padding: 12px; border-radius: 10px; border: none;
   background: linear-gradient(135deg, #22C55E, #16A34A);
