@@ -334,8 +334,8 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]   = useState(null)
 
-  const preview = message.replace(/\{store_name\}/g, 'Restaurante Ejemplo')
-                         .replace(/\{owner_name\}/g, 'Carlos')
+  const preview = (message || '').replace(/\{store_name\}/g, 'Restaurante Ejemplo')
+                                .replace(/\{owner_name\}/g, 'Carlos')
 
   const handleAiGenerate = async () => {
     setAiLoading(true)
