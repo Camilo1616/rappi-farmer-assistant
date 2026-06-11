@@ -13,16 +13,18 @@ import java.util.Map;
 @Service
 public class AiService {
 
-    private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+    private static final String GROQ_URL =
+        "https://api.groq.com/openai/v1/chat/completions";
+
+    private static final String MODEL = "llama-3.3-70b-versatile";
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public AiService(@Value("${gemini.api.key:}") String apiKey) {
+    public AiService(@Value("${groq.api.key:}") String apiKey) {
         this.apiKey = apiKey;
         if (apiKey == null || apiKey.isBlank()) {
-            log.warn("GEMINI_API_KEY no configurada — funciones de IA desactivadas");
+            log.warn("GROQ_API_KEY no configurada — funciones de IA desactivadas");
         }
     }
 
@@ -45,7 +47,7 @@ public class AiService {
                 Tono amigable y profesional. Máximo 300 caracteres.
                 """, storeName, ownerName, agingDays, situation, baseTemplate);
 
-        return callGemini(prompt);
+        return callGroq(prompt);
     }
 
     /**
@@ -65,41 +67,43 @@ public class AiService {
                 Sé conciso (máx 200 palabras), usa bullets y emojis moderadamente.
                 """, efectivas, noContacto, whatsappEnviados, tiendas, topPrioridades);
 
-        return callGemini(prompt);
+        return callGroq(prompt);
     }
 
-    private String callGemini(String prompt) {
+    private String callGroq(String prompt) {
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("IA no disponible: configura GEMINI_API_KEY");
+            throw new IllegalStateException("IA no disponible: configura GROQ_API_KEY");
         }
 
         Map<String, Object> body = Map.of(
-            "contents", List.of(
-                Map.of("parts", List.of(Map.of("text", prompt)))
-            )
+            "model", MODEL,
+            "messages", List.of(
+                Map.of("role", "user", "content", prompt)
+            ),
+            "max_tokens", 500
         );
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
 
         try {
             ResponseEntity<Map> response = restTemplate.exchange(
-                GEMINI_URL + apiKey,
+                GROQ_URL,
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
                 Map.class
             );
 
-            var candidates = (List<?>) response.getBody().get("candidates");
-            var content    = (Map<?, ?>) ((Map<?, ?>) candidates.get(0)).get("content");
-            var parts      = (List<?>) content.get("parts");
-            return (String) ((Map<?, ?>) parts.get(0)).get("text");
+            var choices = (List<?>) response.getBody().get("choices");
+            var message = (Map<?, ?>) ((Map<?, ?>) choices.get(0)).get("message");
+            return (String) message.get("content");
         } catch (org.springframework.web.client.HttpClientErrorException e) {
-            log.error("Error Gemini API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("Error Gemini " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+            log.error("Error Groq API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("Error IA " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.error("Error inesperado llamando Gemini: {}", e.getMessage());
-            throw new RuntimeException("Respuesta inesperada de Gemini: " + e.getMessage());
+            log.error("Error inesperado llamando Groq: {}", e.getMessage());
+            throw new RuntimeException("Error IA: " + e.getMessage());
         }
     }
 
