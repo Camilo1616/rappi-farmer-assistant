@@ -561,7 +561,7 @@ export default function WhatsappPage() {
           <StepMessage templates={templates} template={selTemplate}
             onTemplate={t => { setSelTemplate(t.id); setMessage(t.content) }}
             message={message} onChange={setMessage}
-            selectedStores={dashStores.filter(s => selected.has(s.id))} />
+            selectedStores={Object.values(dashStores).flat().filter(s => selected.has(s.id))} />
 
           {/* ── Prueba ── */}
           <div className={styles.stepCard}>
