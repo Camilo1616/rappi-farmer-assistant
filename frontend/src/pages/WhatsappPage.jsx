@@ -330,7 +330,7 @@ function StepConnection({ status, qr, onRefresh, loading }) {
 
 
 /* ── Mensaje ── */
-function StepMessage({ templates, template, onTemplate, message, onChange }) {
+function StepMessage({ templates, template, onTemplate, message, onChange, selectedStores = [] }) {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]   = useState(null)
 
@@ -341,11 +341,18 @@ function StepMessage({ templates, template, onTemplate, message, onChange }) {
     setAiLoading(true)
     setAiError(null)
     try {
+      const sample = selectedStores[0]
+      const storeName = sample?.storeName || 'Restaurante'
+      const ownerName = sample?.ownerName || sample?.contactName || 'Propietario'
+      const agingDays = sample?.agingDays ?? sample?.onboardingDay ?? 7
+      const situation = sample
+        ? `Tienda en día ${agingDays} de onboarding`
+        : 'seguimiento general'
       const r = await generateWhatsappMessage(
-        'Restaurante Ejemplo',
-        'Carlos',
-        7,
-        'sin ventas registradas en los primeros 7 días',
+        storeName,
+        ownerName,
+        agingDays,
+        situation,
         message || templates[0]?.content || 'Hola {store_name}, te escribimos del equipo Rappi.'
       )
       onChange(r.data.message)
@@ -553,7 +560,8 @@ export default function WhatsappPage() {
 
           <StepMessage templates={templates} template={selTemplate}
             onTemplate={t => { setSelTemplate(t.id); setMessage(t.content) }}
-            message={message} onChange={setMessage} />
+            message={message} onChange={setMessage}
+            selectedStores={sectionSel} />
 
           {/* ── Prueba ── */}
           <div className={styles.stepCard}>
