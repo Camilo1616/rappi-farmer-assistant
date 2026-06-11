@@ -14,7 +14,7 @@ import java.util.Map;
 public class AiService {
 
     private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=";
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
