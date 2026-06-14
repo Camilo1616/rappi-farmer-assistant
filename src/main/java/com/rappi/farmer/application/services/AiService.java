@@ -13,10 +13,8 @@ import java.util.Map;
 @Service
 public class AiService {
 
-    private static final String GROQ_URL =
-        "https://api.groq.com/openai/v1/chat/completions";
-
-    private static final String MODEL = "llama-3.3-70b-versatile";
+    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    private static final String MODEL    = "llama-3.3-70b-versatile";
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -28,59 +26,197 @@ public class AiService {
         }
     }
 
+    // ── Mensaje de WhatsApp ───────────────────────────────────────────────────
+
     /**
-     * Genera un mensaje personalizado de WhatsApp para una tienda.
+     * Genera un mensaje de WhatsApp personalizado según el contexto real de la tienda.
+     *
+     * @param storeName   Nombre del restaurante
+     * @param agingDays   Días desde el inicio del onboarding
+     * @param agingStage  Etapa del ciclo (NEW, M1, M2, M2+…)
+     * @param segment     Sección del dashboard (ONBOARDING, ALIADOS, CHURN, AVA, SELF)
+     * @param churnLabel  Etiqueta de churn si aplica (Churn, Prevention W1/W2/W3)
+     * @param avaLabel    Etiqueta AVA si aplica (Crítico, Bajando)
+     * @param avaPct      Porcentaje AVA actual (0-100), null si no aplica
+     * @param currentStatus Texto del campo "Estado Churn AVA" del Excel
+     * @param baseTemplate  Plantilla base del farmer (puede estar vacía)
      */
-    public String generateWhatsappMessage(String storeName, String ownerName,
-                                          int agingDays, String situation,
-                                          String baseTemplate) {
-        String prompt = String.format("""
-                Eres asistente de Account Manager de Rappi Colombia.
-                Personaliza este mensaje de WhatsApp para la tienda:
-                - Restaurante: %s
-                - Dueño: %s
-                - Días desde onboarding: %d
-                - Situación: %s
-                - Plantilla base: %s
+    public String generateWhatsappMessage(String storeName, int agingDays, String agingStage,
+                                          String segment, String churnLabel, String avaLabel,
+                                          Double avaPct, String currentStatus, String baseTemplate) {
 
-                Responde SOLO con el mensaje listo para enviar.
-                Tono amigable y profesional. Máximo 300 caracteres.
-                """, storeName, ownerName, agingDays, situation, baseTemplate);
+        String systemPrompt = buildSystemPrompt();
+        String userPrompt   = buildUserPrompt(storeName, agingDays, agingStage, segment,
+                churnLabel, avaLabel, avaPct, currentStatus, baseTemplate);
 
-        return callGroq(prompt);
+        return callGroq(systemPrompt, userPrompt, 0.75, 600);
     }
 
-    /**
-     * Genera un resumen diario de gestión para el farmer.
-     */
+    private String buildSystemPrompt() {
+        return """
+                Eres el asistente de mensajería de un Account Manager (AM) de Rappi Colombia.
+                Tu única función es redactar mensajes de WhatsApp para restaurantes aliados.
+
+                REGLAS ABSOLUTAS:
+                - Escribe en español colombiano informal pero respetuoso. Usa "hola", no "buen día".
+                - Habla de TÚ al restaurante (nunca "usted", nunca "vos").
+                - Máximo 500 caracteres — WhatsApp no es email.
+                - NUNCA menciones que eres IA ni que el mensaje fue generado automáticamente.
+                - NUNCA uses frases vacías como "espero que estés bien" o "un cordial saludo".
+                - El mensaje debe tener UN solo llamado a la acción claro y concreto.
+                - Usa máximo 1-2 emojis relevantes, no pongas emojis decorativos.
+                - Firma siempre con: "– Equipo Rappi 🍕" al final.
+                - Responde ÚNICAMENTE con el mensaje listo para enviar. Sin explicaciones ni comillas.
+                """;
+    }
+
+    private String buildUserPrompt(String storeName, int agingDays, String agingStage,
+                                   String segment, String churnLabel, String avaLabel,
+                                   Double avaPct, String currentStatus, String baseTemplate) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Restaurante: ").append(storeName).append("\n");
+        sb.append("Días en Rappi: ").append(agingDays).append("\n");
+        if (agingStage != null && !agingStage.isBlank()) {
+            sb.append("Etapa: ").append(agingStage).append("\n");
+        }
+        if (avaPct != null) {
+            sb.append("Conexión AVA actual: ").append(String.format("%.0f", avaPct)).append("%\n");
+        }
+        if (currentStatus != null && !currentStatus.isBlank()) {
+            sb.append("Estado en sistema: ").append(currentStatus).append("\n");
+        }
+
+        sb.append("\nOBJETIVO DEL MENSAJE: ");
+        sb.append(buildObjective(segment, churnLabel, avaLabel, agingDays, avaPct));
+
+        if (baseTemplate != null && !baseTemplate.isBlank()) {
+            sb.append("\n\nTono de referencia (adapta libremente): ").append(baseTemplate);
+        }
+
+        sb.append("\n\nEscribe el mensaje para ").append(storeName).append(":");
+        return sb.toString();
+    }
+
+    private String buildObjective(String segment, String churnLabel, String avaLabel,
+                                  int agingDays, Double avaPct) {
+        // Churn perdido → recuperación urgente
+        if ("Churn".equals(churnLabel)) {
+            return """
+                    Recuperación urgente. El restaurante ha dejado de vender o conectarse.
+                    Genera urgencia sin ser agresivo. Menciona que ves inactividad y ofrece ayuda concreta.
+                    Pregunta si hay algún problema técnico o de operación. El tono es de alarma amigable.
+                    """;
+        }
+        // Prevention W1 → primera alerta
+        if ("Prevention W1".equals(churnLabel)) {
+            return """
+                    Prevención temprana de abandono (semana 1 de alerta).
+                    El restaurante muestra señales de reducción de actividad.
+                    Mensaje de check-in: pregunta cómo va la operación y si necesitan apoyo.
+                    Tono: preocupación genuina, no alarmante.
+                    """;
+        }
+        // Prevention W2/W3 → alerta escalada
+        if ("Prevention W2".equals(churnLabel) || "Prevention W3".equals(churnLabel)) {
+            return """
+                    Prevención de abandono (semana 2-3 de alerta, situación crítica).
+                    El restaurante lleva varias semanas con baja actividad.
+                    Mensaje directo: ofrece llamada o visita esta semana, menciona que el equipo está pendiente.
+                    Tono: directo, resolutivo, sin rodeos.
+                    """;
+        }
+        // AVA crítico (< 30%)
+        if ("Crítico".equals(avaLabel) || (avaPct != null && avaPct < 30)) {
+            return String.format("""
+                    AVA (conexión con Rappi Aliados) está en %.0f%% — muy por debajo del 60%% requerido.
+                    Explica de forma simple que mientras más conectado esté el restaurante, más pedidos recibe.
+                    Pide que revisen la app de Rappi Aliados y confirmen si hay algún problema.
+                    Tono: educativo y de soporte técnico.
+                    """, avaPct != null ? avaPct : 0.0);
+        }
+        // AVA bajando (30-60%)
+        if ("Bajando".equals(avaLabel) || (avaPct != null && avaPct < 60)) {
+            return String.format("""
+                    AVA en %.0f%%, bajando del objetivo del 60%%.
+                    Mensaje de seguimiento: recuerda que la conexión afecta directamente las ventas.
+                    Pregunta si tienen la app activa y si necesitan ayuda con algún ajuste.
+                    Tono: motivador y de seguimiento.
+                    """, avaPct != null ? avaPct : 0.0);
+        }
+        // Onboarding días 1-3 → bienvenida y activación
+        if (agingDays <= 3) {
+            return """
+                    Bienvenida en los primeros días. El restaurante acaba de unirse.
+                    Mensaje cálido que confirma que ya están listos en Rappi y les dice el siguiente paso:
+                    activar la app de Rappi Aliados y comenzar a recibir pedidos.
+                    Tono: emocionante, motivador, de inicio.
+                    """;
+        }
+        // Onboarding días 4-8 → seguimiento de activación
+        if (agingDays <= 8) {
+            return String.format("""
+                    Seguimiento de onboarding (día %d). El restaurante lleva una semana en Rappi.
+                    Mensaje para asegurarse que ya está activo y recibiendo pedidos.
+                    Si aún no han recibido pedidos, ofrece revisar el menú y la visibilidad.
+                    Tono: de acompañamiento, como un aliado que los está monitoreando.
+                    """, agingDays);
+        }
+        // Aliados 8-14 → AVA check
+        if (agingDays <= 14) {
+            return """
+                    Semana 2 en Rappi. Es el momento clave para revisar la conexión con Rappi Aliados.
+                    Mensaje preguntando cómo va la operación y recordando la importancia de mantenerse conectado.
+                    Menciona que el equipo está monitoreando y que pueden ayudar con cualquier ajuste.
+                    Tono: de seguimiento profesional.
+                    """;
+        }
+        // Default: seguimiento general
+        return """
+                Seguimiento general de una tienda activa.
+                Mensaje breve de check-in para saber cómo va la operación y si necesitan algo.
+                Tono: cercano, de Account Manager que está pendiente de su cartera.
+                """;
+    }
+
+    // ── Resumen diario ────────────────────────────────────────────────────────
+
     public String generateDailySummary(int efectivas, int noContacto, int whatsappEnviados,
                                        int tiendas, String topPrioridades) {
-        String prompt = String.format("""
-                Genera un resumen del día de gestión de un Account Manager de Rappi:
+        String systemPrompt = """
+                Eres el asistente de análisis de un Account Manager de Rappi Colombia.
+                Generas resúmenes de rendimiento diario concisos y accionables.
+                Usa bullets, emojis moderados y sé directo. Máximo 200 palabras.
+                """;
+
+        String userPrompt = String.format("""
+                Resumen del día de gestión:
                 - Gestiones efectivas: %d (meta: 15)
                 - No contactos: %d (meta: 25-40)
                 - WhatsApp enviados: %d (máx: 40)
                 - Total tiendas activas: %d
                 - Top prioridades pendientes: %s
 
-                Incluye: desempeño vs metas, observaciones clave, recomendaciones para mañana.
-                Sé conciso (máx 200 palabras), usa bullets y emojis moderadamente.
+                Incluye: desempeño vs metas, observaciones clave y 2 recomendaciones concretas para mañana.
                 """, efectivas, noContacto, whatsappEnviados, tiendas, topPrioridades);
 
-        return callGroq(prompt);
+        return callGroq(systemPrompt, userPrompt, 0.6, 400);
     }
 
-    private String callGroq(String prompt) {
+    // ── HTTP a Groq ───────────────────────────────────────────────────────────
+
+    private String callGroq(String systemPrompt, String userPrompt, double temperature, int maxTokens) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("IA no disponible: configura GROQ_API_KEY");
         }
 
         Map<String, Object> body = Map.of(
-            "model", MODEL,
-            "messages", List.of(
-                Map.of("role", "user", "content", prompt)
-            ),
-            "max_tokens", 500
+                "model",       MODEL,
+                "temperature", temperature,
+                "max_tokens",  maxTokens,
+                "messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user",   "content", userPrompt)
+                )
         );
 
         HttpHeaders headers = new HttpHeaders();
@@ -89,18 +225,18 @@ public class AiService {
 
         try {
             ResponseEntity<Map> response = restTemplate.exchange(
-                GROQ_URL,
-                HttpMethod.POST,
-                new HttpEntity<>(body, headers),
-                Map.class
-            );
+                    GROQ_URL, HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    Map.class);
 
             var choices = (List<?>) response.getBody().get("choices");
             var message = (Map<?, ?>) ((Map<?, ?>) choices.get(0)).get("message");
-            return (String) message.get("content");
+            String content = ((String) message.get("content")).trim();
+            log.debug("IA generó {} chars", content.length());
+            return content;
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             log.error("Error Groq API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("Error IA " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+            throw new RuntimeException("Error IA " + e.getStatusCode());
         } catch (Exception e) {
             log.error("Error inesperado llamando Groq: {}", e.getMessage());
             throw new RuntimeException("Error IA: " + e.getMessage());

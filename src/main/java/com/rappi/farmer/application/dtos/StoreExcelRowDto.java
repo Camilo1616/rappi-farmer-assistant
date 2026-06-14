@@ -28,4 +28,5 @@ public class StoreExcelRowDto {
     private String agingStage;
     private String gestionar;
     private LocalDate uploadDate;
+    private LocalDate credentialsDate;
 }

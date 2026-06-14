@@ -14,14 +14,32 @@ const API_KEY   = process.env.API_KEY || ''
 
 if (!existsSync(AUTH_DIR)) mkdirSync(AUTH_DIR, { recursive: true })
 
-// Estado global
-let qrBase64  = null
-let connected = false
-let client    = null
+// ── Sesiones múltiples (una por farmer) ──────────────────────────────────────
+// sessionId: string como "u42" (prefijo + userId del backend)
+// Cada sesión tiene su propio cliente Baileys, QR y estado de conexión.
 
-function createClient() {
-  client = new Client({
-    authStrategy: new LocalAuth({ dataPath: AUTH_DIR }),
+const sessions = new Map()  // sessionId -> { client, qrBase64, connected, initializing }
+
+function getSession(sessionId) {
+  if (!sessions.has(sessionId)) {
+    sessions.set(sessionId, { client: null, qrBase64: null, connected: false, initializing: false })
+    initSession(sessionId)
+  }
+  return sessions.get(sessionId)
+}
+
+function initSession(sessionId) {
+  const s = sessions.get(sessionId)
+  if (s.initializing || (s.client && s.connected)) return
+  s.initializing = true
+
+  const sessionDir = join(AUTH_DIR, sessionId)
+  if (!existsSync(sessionDir)) mkdirSync(sessionDir, { recursive: true })
+
+  console.log(`[WA:${sessionId}] Iniciando sesión...`)
+
+  const client = new Client({
+    authStrategy: new LocalAuth({ clientId: sessionId, dataPath: AUTH_DIR }),
     puppeteer: {
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
       headless: true,
@@ -39,38 +57,48 @@ function createClient() {
   })
 
   client.on('qr', async (qr) => {
-    console.log('[WA] QR generado')
-    qrBase64  = await QRCode.toDataURL(qr)
-    connected = false
+    console.log(`[WA:${sessionId}] QR generado`)
+    s.qrBase64  = await QRCode.toDataURL(qr)
+    s.connected = false
   })
 
   client.on('ready', () => {
-    console.log('[WA] Conectado y listo')
-    connected = true
-    qrBase64  = null
+    console.log(`[WA:${sessionId}] Conectado y listo`)
+    s.connected    = true
+    s.qrBase64     = null
+    s.initializing = false
   })
 
   client.on('authenticated', () => {
-    console.log('[WA] Autenticado')
+    console.log(`[WA:${sessionId}] Autenticado`)
   })
 
   client.on('auth_failure', (msg) => {
-    console.error('[WA] Fallo de autenticación:', msg)
-    connected = false
+    console.error(`[WA:${sessionId}] Fallo de autenticación:`, msg)
+    s.connected    = false
+    s.initializing = false
   })
 
   client.on('disconnected', (reason) => {
-    console.log('[WA] Desconectado:', reason)
-    connected = false
-    qrBase64  = null
+    console.log(`[WA:${sessionId}] Desconectado:`, reason)
+    s.connected    = false
+    s.qrBase64     = null
+    s.initializing = false
     // Reintentar en 10 segundos
     setTimeout(() => {
-      console.log('[WA] Reiniciando cliente...')
-      client.initialize().catch(e => console.error('[WA] Error al reiniciar:', e.message))
+      console.log(`[WA:${sessionId}] Reiniciando cliente...`)
+      if (sessions.has(sessionId)) {
+        client.initialize().catch(e => console.error(`[WA:${sessionId}] Error al reiniciar:`, e.message))
+      }
     }, 10000)
   })
 
-  client.initialize().catch(e => console.error('[WA] Error al inicializar:', e.message))
+  client.initialize().catch(e => {
+    console.error(`[WA:${sessionId}] Error al inicializar:`, e.message)
+    s.initializing = false
+  })
+
+  s.client = client
 }
 
 // ── Express ───────────────────────────────────────────────────────────────────
@@ -78,6 +106,7 @@ function createClient() {
 const app = express()
 app.use(express.json())
 
+// Middleware de autenticación por API key
 app.use((req, res, next) => {
   if (!API_KEY) return next()
   const key = req.headers['x-api-key'] || req.query.apiKey
@@ -85,38 +114,71 @@ app.use((req, res, next) => {
   next()
 })
 
+// Extrae el sessionId del query string o usa "default"
+function resolveSession(req) {
+  return (req.query.session || req.body?.session || 'default').replace(/[^a-zA-Z0-9_-]/g, '_')
+}
+
 app.get('/health', (req, res) => res.json({ ok: true }))
 
-app.get('/status', (req, res) => {
-  res.json({ connected, hasQr: !!qrBase64, qr: qrBase64 })
+// Lista todas las sesiones activas (para debugging del backend)
+app.get('/sessions', (req, res) => {
+  const list = [...sessions.entries()].map(([id, s]) => ({
+    id,
+    connected:    s.connected,
+    hasQr:        !!s.qrBase64,
+    initializing: s.initializing,
+  }))
+  res.json(list)
 })
 
+// Estado de la sesión del farmer
+app.get('/status', (req, res) => {
+  const sessionId = resolveSession(req)
+  const s = getSession(sessionId)
+  res.json({ connected: s.connected, hasQr: !!s.qrBase64, qr: s.qrBase64, sessionId })
+})
+
+// Enviar mensaje en nombre del farmer
 app.post('/send', async (req, res) => {
   const { phone, message } = req.body
+  const sessionId = resolveSession(req)
+
   if (!phone || !message) return res.status(400).json({ error: 'phone y message son requeridos' })
-  if (!connected || !client) return res.status(503).json({ error: 'WhatsApp no conectado' })
+
+  const s = sessions.get(sessionId)
+  if (!s || !s.connected || !s.client) {
+    return res.status(503).json({ error: 'WhatsApp no conectado para esta sesión', sessionId })
+  }
 
   try {
     const digits = phone.replace(/\D/g, '')
     const chatId = `${digits}@c.us`
-    await client.sendMessage(chatId, message)
-    console.log('[WA] Enviado a', phone)
+    await s.client.sendMessage(chatId, message)
+    console.log(`[WA:${sessionId}] Enviado a`, phone)
     res.json({ result: 'ENVIADO', phone })
   } catch (err) {
-    console.error('[WA] Error enviando a', phone, '—', err.message)
+    console.error(`[WA:${sessionId}] Error enviando a`, phone, '—', err.message)
     const isInvalid = err.message?.includes('invalid') || err.message?.includes('not registered')
     res.json({ result: isInvalid ? 'NUMERO_INVALIDO' : 'ERROR', error: err.message })
   }
 })
 
+// Forzar reconexión para una sesión específica
 app.post('/reconnect', (req, res) => {
-  connected = false
-  qrBase64  = null
-  client?.initialize().catch(() => {})
-  res.json({ message: 'Reconectando...' })
+  const sessionId = resolveSession(req)
+  if (sessions.has(sessionId)) {
+    const s = sessions.get(sessionId)
+    s.connected    = false
+    s.qrBase64     = null
+    s.initializing = false
+    s.client?.initialize().catch(() => {})
+  } else {
+    getSession(sessionId)  // crea e inicializa
+  }
+  res.json({ message: `Reconectando sesión ${sessionId}...`, sessionId })
 })
 
 app.listen(PORT, () => {
-  console.log(`[WA] Servicio escuchando en puerto ${PORT}`)
-  createClient()
+  console.log(`[WA] Servicio multi-sesión escuchando en puerto ${PORT}`)
 })

@@ -15,6 +15,12 @@ public interface WhatsappMessageJpaRepository extends JpaRepository<WhatsappMess
            "WHERE m.status = 'ENVIADO' AND m.sentAt >= :start AND m.sentAt < :end")
     long countSentToday(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    @Query("SELECT COUNT(m) FROM WhatsappMessageEntity m " +
+           "WHERE m.status = 'ENVIADO' AND m.sentAt >= :start AND m.sentAt < :end " +
+           "AND (:userId IS NULL OR m.user.id = :userId)")
+    long countSentTodayByUser(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end,
+                               @Param("userId") Long userId);
+
     /* Tiendas intentadas hoy (cualquier status) — para panel follow-up */
     @Query("SELECT DISTINCT m.store FROM WhatsappMessageEntity m " +
            "WHERE m.sentAt >= :start AND m.sentAt < :end " +

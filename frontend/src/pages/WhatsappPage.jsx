@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { getDashboard } from '../services/dashboardService'
 import {
   getWhatsappStatus, getWhatsappQr,
-  sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory
+  sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
 import { generateWhatsappMessage } from '../services/aiService'
 import styles from './WhatsappPage.module.css'
@@ -149,10 +149,11 @@ function WaHistory() {
 }
 
 const SECTIONS = [
-  { key: 'onboardingCritical', label: 'Onboarding Crítico', icon: '🚨', color: '#EF4444' },
-  { key: 'aliados',            label: 'Aliados AVA 8-14',   icon: '🔗', color: '#F97316' },
-  { key: 'selfOnboarding',     label: 'Self-Onboarding',    icon: '🛒', color: '#8B5CF6' },
-  { key: 'churnRisk',          label: 'Riesgo Churn',       icon: '⚠️', color: '#EF4444',
+  { key: 'recommended',        label: 'Recomendado',        icon: '⭐', color: '#FF441F' },
+  { key: 'onboardingCritical', label: 'Onboarding',         icon: '🚨', color: '#EF4444' },
+  { key: 'aliados',            label: 'Aliados 8–14',       icon: '🔗', color: '#F97316' },
+  { key: 'selfOnboarding',     label: 'Self',               icon: '🛒', color: '#8B5CF6' },
+  { key: 'churnRisk',          label: 'Churn',              icon: '⚠️', color: '#EF4444',
     subTabs: [
       { label: 'Todos',          filter: null },
       { label: 'Churn',          filter: s => s.churnLabel === 'Churn' },
@@ -172,53 +173,114 @@ const SECTIONS = [
 
 const MAX_DIARIO = Infinity
 
+/* ── Badge de aging con color según urgencia ── */
+function AgingBadge({ aging }) {
+  if (aging == null) return null
+  const color = aging <= 3 ? '#EF4444' : aging <= 8 ? '#F97316' : aging <= 14 ? '#F59E0B' : '#6B7280'
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+      background: color + '20', color, border: `1px solid ${color}40`, whiteSpace: 'nowrap',
+    }}>
+      D{aging}
+    </span>
+  )
+}
 
-/* ── Selector de tiendas con tabs ── */
-function StoreSelector({ sections, dashStores, selected, remaining, onToggle, onSelectAll, onClear }) {
+/* ── Badge de AVA o churn ── */
+function StatusBadge({ store }) {
+  if (store.churnLabel) {
+    const color = store.churnLabel === 'Churn' ? '#EF4444' : '#F59E0B'
+    return (
+      <span style={{
+        fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+        background: color + '20', color, border: `1px solid ${color}40`, whiteSpace: 'nowrap',
+      }}>
+        {store.churnLabel}
+      </span>
+    )
+  }
+  if (store.connectionPercentage != null) {
+    const pct   = Number(store.connectionPercentage)
+    const color = pct < 30 ? '#EF4444' : pct < 60 ? '#F59E0B' : '#22C55E'
+    return (
+      <span style={{
+        fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+        background: color + '20', color, border: `1px solid ${color}40`, whiteSpace: 'nowrap',
+      }}>
+        AVA {pct.toFixed(0)}%
+      </span>
+    )
+  }
+  return null
+}
+
+/* ── Selector de tiendas mejorado ── */
+function StoreSelector({ sections, dashStores, selected, remaining, onToggle, onSelectAll, onClear, sentTodayIds }) {
   const available = sections.filter(s => (dashStores[s.key]?.length ?? 0) > 0)
   const [activeKey,    setActiveKey]    = useState(() => available[0]?.key ?? null)
   const [activeSubIdx, setActiveSubIdx] = useState(0)
   const [search,       setSearch]       = useState('')
+  const [hideNoPhone,  setHideNoPhone]  = useState(true)
+  const [hideSentToday, setHideSentToday] = useState(false)
 
   const sec       = sections.find(s => s.key === activeKey)
   const allStores = sec ? (dashStores[activeKey] ?? []) : []
 
-  const subTabs  = sec?.subTabs ?? null
-  const subTab   = subTabs?.[activeSubIdx]
-  const stores   = subTab?.filter ? allStores.filter(subTab.filter) : allStores
+  const subTabs = sec?.subTabs ?? null
+  const subTab  = subTabs?.[activeSubIdx]
+  const bySubTab = subTab?.filter ? allStores.filter(subTab.filter) : allStores
 
-  const withPhone  = stores.filter(s => s.phoneNumber)
-  const filtered   = stores.filter(s =>
-    !search || s.storeName?.toLowerCase().includes(search.toLowerCase()) || s.storeCode?.toLowerCase().includes(search.toLowerCase())
-  )
-  const sectionSel = stores.filter(s => selected.has(s.id))
+  const filtered = bySubTab.filter(s => {
+    if (hideNoPhone && !s.phoneNumber) return false
+    if (hideSentToday && sentTodayIds.has(s.id)) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return s.storeName?.toLowerCase().includes(q) || s.storeCode?.toLowerCase().includes(q)
+    }
+    return true
+  })
+
+  const sectionSel = filtered.filter(s => selected.has(s.id))
   const canAddMore = selected.size < remaining
+
+  // Cuántas de esta sección (vista completa) ya tienen WA hoy
+  const sentCount   = bySubTab.filter(s => sentTodayIds.has(s.id)).length
+  const noPhoneCount = bySubTab.filter(s => !s.phoneNumber).length
 
   const handleTabChange = (key) => { setActiveKey(key); setActiveSubIdx(0); setSearch('') }
   const handleSubChange = (idx)  => { setActiveSubIdx(idx); setSearch('') }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
       {/* Tabs principales */}
       <div className={styles.tabRow}>
         {available.map(s => {
-          const count = (dashStores[s.key] ?? []).filter(st => selected.has(st.id)).length
+          const selInSection = (dashStores[s.key] ?? []).filter(st => selected.has(st.id)).length
           return (
             <button key={s.key}
               className={`${styles.tabBtn} ${activeKey === s.key ? styles.tabBtnActive : ''}`}
               style={activeKey === s.key ? { borderColor: s.color, color: s.color } : {}}
               onClick={() => handleTabChange(s.key)}>
-              {s.label}
-              <span className={styles.tabCount} style={activeKey === s.key ? { background: `${s.color}22`, color: s.color } : {}}>
+              <span>{s.icon}</span>
+              <span>{s.label}</span>
+              <span className={styles.tabCount}
+                style={activeKey === s.key ? { background: `${s.color}22`, color: s.color } : {}}>
                 {dashStores[s.key]?.length ?? 0}
               </span>
-              {count > 0 && <span className={styles.tabSel}>✓{count}</span>}
+              {selInSection > 0 && (
+                <span style={{
+                  fontSize: 10, fontWeight: 800, padding: '1px 5px', borderRadius: 99,
+                  background: '#22C55E22', color: '#22C55E', border: '1px solid #22C55E40',
+                }}>✓{selInSection}</span>
+              )}
             </button>
           )
         })}
       </div>
 
-      {/* Sub-tabs (solo si la sección activa los tiene) */}
+      {/* Sub-tabs */}
       {subTabs && (
         <div className={styles.subTabRow}>
           {subTabs.map((st, idx) => {
@@ -235,49 +297,107 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
         </div>
       )}
 
-      {/* Toolbar */}
+      {/* Stats de la sección */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 11, color: '#6B7280' }}>
+        <span>{bySubTab.length} tiendas</span>
+        {noPhoneCount > 0 && <span>· {noPhoneCount} sin teléfono</span>}
+        {sentCount > 0    && <span style={{ color: '#22C55E' }}>· {sentCount} ya enviados hoy</span>}
+        {sectionSel.length > 0 && <span style={{ color: '#3B82F6', fontWeight: 700 }}>· {sectionSel.length} seleccionadas aquí</span>}
+      </div>
+
+      {/* Toolbar: buscar + filtros rápidos + acciones */}
       {sec && (
-        <div className={styles.sectionToolbar}>
-          <div className={styles.searchWrap}>
-            <span>🔍</span>
-            <input className={styles.searchInput} placeholder="Buscar tienda..." value={search}
-              onChange={e => setSearch(e.target.value)} />
-            {search && <button className={styles.clearBtn} onClick={() => setSearch('')}>✕</button>}
-          </div>
-          <button className={styles.btnXs}
-            onClick={() => onSelectAll(filtered.filter(s => s.phoneNumber && !selected.has(s.id)))}
-            disabled={!canAddMore && sectionSel.length === 0}>
-            Sel. todas
-          </button>
-          {sectionSel.length > 0 && (
-            <button className={styles.btnXsDanger} onClick={() => onClear(stores.map(s => s.id))}>
-              Limpiar
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className={styles.sectionToolbar}>
+            <div className={styles.searchWrap}>
+              <span>🔍</span>
+              <input className={styles.searchInput} placeholder="Buscar tienda o código..."
+                value={search} onChange={e => setSearch(e.target.value)} />
+              {search && <button className={styles.clearBtn} onClick={() => setSearch('')}>✕</button>}
+            </div>
+            <button className={styles.btnXs}
+              onClick={() => onSelectAll(filtered.filter(s => s.phoneNumber && !selected.has(s.id) && !sentTodayIds.has(s.id)))}
+              disabled={!canAddMore}>
+              Sel. visibles
             </button>
-          )}
+            {sectionSel.length > 0 && (
+              <button className={styles.btnXsDanger}
+                onClick={() => onClear(filtered.map(s => s.id))}>
+                Quitar {sectionSel.length}
+              </button>
+            )}
+          </div>
+
+          {/* Filtros rápidos */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setHideNoPhone(v => !v)}
+              style={{
+                fontSize: 11, padding: '3px 10px', borderRadius: 99, cursor: 'pointer', fontWeight: 600,
+                background: hideNoPhone ? 'rgba(59,130,246,0.15)' : 'transparent',
+                color: hideNoPhone ? '#3B82F6' : '#6B7280',
+                border: `1px solid ${hideNoPhone ? '#3B82F640' : '#374151'}`,
+              }}>
+              📞 Solo con teléfono
+            </button>
+            {sentCount > 0 && (
+              <button
+                onClick={() => setHideSentToday(v => !v)}
+                style={{
+                  fontSize: 11, padding: '3px 10px', borderRadius: 99, cursor: 'pointer', fontWeight: 600,
+                  background: hideSentToday ? 'rgba(34,197,94,0.15)' : 'transparent',
+                  color: hideSentToday ? '#22C55E' : '#6B7280',
+                  border: `1px solid ${hideSentToday ? '#22C55E40' : '#374151'}`,
+                }}>
+                ✓ Ocultar enviados hoy
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Lista */}
+      {/* Lista de tiendas */}
       <div className={styles.storeList}>
         {filtered.map(store => {
-          const isSelected = selected.has(store.id)
-          const hasPhone   = !!store.phoneNumber
-          const disabled   = !hasPhone || (!isSelected && !canAddMore)
+          const isSelected   = selected.has(store.id)
+          const hasPhone     = !!store.phoneNumber
+          const sentToday    = sentTodayIds.has(store.id)
+          const disabled     = !hasPhone || (!isSelected && !canAddMore)
           return (
             <div key={store.id}
               className={`${styles.storeRow} ${isSelected ? styles.storeRowSel : ''} ${disabled ? styles.storeRowDis : ''}`}
               onClick={() => !disabled && onToggle(store.id)}>
               <input type="checkbox" className={styles.checkbox} checked={isSelected} readOnly disabled={disabled} />
-              <div className={styles.storeInfo}>
-                <span className={styles.storeName}>{store.storeName}</span>
-                <span className={styles.storeMeta}>{store.storeCode} · {store.phoneNumber || '—'}</span>
+              <div className={styles.storeInfo} style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span className={styles.storeName}>{store.storeName}</span>
+                  {sentToday && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                      background: '#22C55E20', color: '#22C55E', border: '1px solid #22C55E40',
+                    }}>✓ WA enviado hoy</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2, flexWrap: 'wrap' }}>
+                  <span className={styles.storeMeta}>
+                    {store.storeCode}
+                    {hasPhone ? ` · ${store.phoneNumber}` : ''}
+                  </span>
+                  <AgingBadge aging={store.aging} />
+                  <StatusBadge store={store} />
+                </div>
               </div>
-              {!hasPhone && <span className={styles.noPhone}>Sin teléfono</span>}
-              {isSelected && <span className={styles.selBadge}>✓</span>}
+              {!hasPhone && <span className={styles.noPhone}>Sin tel.</span>}
             </div>
           )
         })}
-        {filtered.length === 0 && <div className={styles.hint}>Sin tiendas en esta sección</div>}
+        {filtered.length === 0 && (
+          <div className={styles.hint}>
+            {bySubTab.length === 0
+              ? 'Sin tiendas en esta sección'
+              : 'Ninguna tienda coincide con los filtros activos'}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -331,9 +451,10 @@ function StepConnection({ status, qr, onRefresh, loading }) {
 
 /* ── Mensaje ── */
 function StepMessage({ templates, template, onTemplate, message, onChange, selectedStores = [], onAiMessages }) {
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError]     = useState(null)
-  const [aiDone, setAiDone]       = useState(false)
+  const [aiLoading,  setAiLoading]  = useState(false)
+  const [aiProgress, setAiProgress] = useState(0)   // cuántas tiendas ya procesó
+  const [aiError,    setAiError]    = useState(null)
+  const [aiDone,     setAiDone]     = useState(false)
 
   const preview = (message || '').replace(/\{store_name\}/g, 'Restaurante Ejemplo')
 
@@ -355,6 +476,7 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
       return
     }
     setAiLoading(true)
+    setAiProgress(0)
     setAiError(null)
     setAiDone(false)
     const results = []
@@ -362,12 +484,17 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
       for (const store of selectedStores) {
         const r = await generateWhatsappMessage(
           store.storeName || 'Restaurante',
-          'Propietario',
-          store.aging ?? 7,
-          buildSituation(store),
-          message || templates[0]?.content || 'Hola {store_name}, te escribimos del equipo Rappi.'
+          store.aging    ?? 0,
+          store.agingStage   || null,
+          store.dashboardSegment || null,
+          store.churnLabel   || null,
+          store.avaLabel     || null,
+          store.connectionPercentage != null ? Number(store.connectionPercentage) : null,
+          store.currentStatus || null,
+          message || ''
         )
         results.push({ storeId: store.id, storeName: store.storeName, message: r.data.message })
+        setAiProgress(results.length)
       }
       setAiDone(true)
       onAiMessages(results)
@@ -389,10 +516,14 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
         <button
           className={styles.aiBtnSmall}
           onClick={handleAiGenerate}
-          disabled={aiLoading}
+          disabled={aiLoading || !selectedStores.length}
           title={selectedStores.length ? `Generar IA para ${selectedStores.length} tiendas` : 'Selecciona tiendas primero'}
         >
-          {aiLoading ? `Generando ${selectedStores.length > 1 ? `(0/${selectedStores.length})` : ''}...` : '✨ IA personalizada'}
+          {aiLoading
+            ? `✨ Generando ${aiProgress}/${selectedStores.length}...`
+            : selectedStores.length > 0
+              ? `✨ IA para ${selectedStores.length} tienda${selectedStores.length > 1 ? 's' : ''}`
+              : '✨ IA personalizada'}
         </button>
       </div>
       {aiError && <div className={styles.aiError}>{aiError}</div>}
@@ -469,12 +600,12 @@ export default function WhatsappPage() {
   const [testSending, setTestSending] = useState(false)
   const [testResult,  setTestResult]  = useState(null)
   const [aiMessages,  setAiMessages]  = useState([])   // [{storeId, storeName, message}]
+  const [sentTodayIds, setSentTodayIds] = useState(new Set())
 
   const loadStatus = async () => {
     try {
       const r = await getWhatsappStatus()
       setStatus(r.data)
-      // Si no está conectado, pedir el QR
       if (!r.data.connected) {
         const qrRes = await getWhatsappQr().catch(() => null)
         setQr(qrRes?.data?.qr || null)
@@ -484,11 +615,13 @@ export default function WhatsappPage() {
     } catch {}
   }
   const loadDash = () => getDashboard().then(r => setDashStores(r.data)).catch(() => {})
+  const loadSentToday = () => getWaSentToday()
+    .then(r => setSentTodayIds(new Set((r.data ?? []).map(s => s.id))))
+    .catch(() => {})
 
   useEffect(() => {
-    loadStatus(); loadDash()
+    loadStatus(); loadDash(); loadSentToday()
     getMsgTemplates().then(r => setTemplates(r.data)).catch(() => {})
-    // Polling más frecuente cuando no está conectado (para mostrar QR actualizado)
     const iv = setInterval(loadStatus, 5000)
     return () => clearInterval(iv)
   }, [])
@@ -526,7 +659,7 @@ export default function WhatsappPage() {
     setProgress({ total: selected.size, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 })
     sendMasivo(Array.from(selected), message,
       data => setProgress(data),
-      data => { setProgress(data); setSending(false); loadStatus() },
+      data => { setProgress(data); setSending(false); loadStatus(); loadSentToday() },
       ()   => setSending(false)
     )
   }
@@ -538,7 +671,7 @@ export default function WhatsappPage() {
     sendPersonalized(
       aiMessages.map(m => ({ storeId: m.storeId, message: m.message })),
       data => setProgress(data),
-      data => { setProgress(data); setSending(false); loadStatus() },
+      data => { setProgress(data); setSending(false); loadStatus(); loadSentToday() },
       ()   => setSending(false)
     )
   }
@@ -573,8 +706,20 @@ export default function WhatsappPage() {
               <span className={styles.stepNum}>2</span>
               <div>
                 <div className={styles.stepTitle}>Seleccionar tiendas</div>
-                <div className={styles.stepSub}>{selected.size} seleccionadas</div>
+                <div className={styles.stepSub}>
+                  {selected.size > 0
+                    ? <span style={{ color: '#3B82F6', fontWeight: 700 }}>{selected.size} seleccionadas · ~{Math.round(selected.size * 17.5 / 60)} min de envío</span>
+                    : 'Elige las tiendas a las que deseas escribir'}
+                </div>
               </div>
+              {selected.size > 0 && (
+                <button
+                  className={styles.btnXsDanger}
+                  style={{ marginLeft: 'auto' }}
+                  onClick={() => setSelected(new Set())}>
+                  Limpiar todo
+                </button>
+              )}
             </div>
             <StoreSelector
               sections={SECTIONS}
@@ -584,6 +729,7 @@ export default function WhatsappPage() {
               onToggle={handleToggle}
               onSelectAll={handleSelectAll}
               onClear={handleClearSection}
+              sentTodayIds={sentTodayIds}
             />
           </div>
 

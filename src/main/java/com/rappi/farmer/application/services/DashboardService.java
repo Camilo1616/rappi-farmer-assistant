@@ -89,6 +89,7 @@ public class DashboardService {
         List<StoreViewDto> ava                = new ArrayList<>();
         List<StoreViewDto> healthy            = new ArrayList<>();
         List<StoreViewDto> selfOnboarding     = new ArrayList<>();
+        List<StoreViewDto> insideSales        = new ArrayList<>();
 
         for (Store store : stores) {
             DailyMetric metric = metricsMap.get(store.getId());
@@ -96,10 +97,13 @@ public class DashboardService {
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
             boolean isSelf = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("self");
+            boolean isInsideSales = store.getChannel() != null
+                    && store.getChannel().toLowerCase().contains("inside");
+            if (isInsideSales) insideSales.add(dto);
 
             if (isSelf) {
                 selfOnboarding.add(dto);
-            } else if (aging >= 1 && aging <= 8) {
+            } else if (aging >= 1 && aging <= 8 && isOnboardingEligible(store)) {
                 onboardingCritical.add(dto);
             } else if (aging > 8 && aging <= 14) {
                 aliados.add(dto);
@@ -115,9 +119,18 @@ public class DashboardService {
         List<StoreViewDto> recommended = buildRecommended(
                 onboardingCritical, aliados, churnRisk, ava, metricsMap);
 
-        log.info("Dashboard cargado — onboarding:{}, aliados:{}, churn:{}, ava:{}, sanos:{}, self:{}, recomendado:{}",
+        insideSales.sort((a, b) -> {
+            LocalDate da = a.getCredentialsDate();
+            LocalDate db = b.getCredentialsDate();
+            if (da == null && db == null) return 0;
+            if (da == null) return 1;
+            if (db == null) return -1;
+            return db.compareTo(da); // descendente: más reciente primero
+        });
+
+        log.info("Dashboard cargado — onboarding:{}, aliados:{}, churn:{}, ava:{}, sanos:{}, self:{}, recomendado:{}, insideSales:{}",
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
-                ava.size(), healthy.size(), selfOnboarding.size(), recommended.size());
+                ava.size(), healthy.size(), selfOnboarding.size(), recommended.size(), insideSales.size());
 
         java.time.LocalDate lastImport = null;
         if (userId != null) {
@@ -129,11 +142,11 @@ public class DashboardService {
         return new DashboardDataDto(
                 cap(onboardingCritical), cap(aliados),
                 churnRisk, ava, healthy, recommended,
-                selfOnboarding,
+                selfOnboarding, insideSales, new ArrayList<>(),
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
                 ava.size(), healthy.size(), recommended.size(),
                 stores.size(),
-                selfOnboarding.size(),
+                selfOnboarding.size(), insideSales.size(), 0,
                 needsRefresh, lastImport
         );
     }
@@ -317,7 +330,8 @@ public class DashboardService {
                 metric != null ? toPercent(metric.getAvaL7d()) : null,
                 null,
                 null,
-                store.getChannel()
+                store.getChannel(),
+                store.getCredentialsDate()
         );
     }
 
@@ -444,6 +458,7 @@ public class DashboardService {
                 original.getHadHandoff(), original.getLastLoginDate(), original.getDiasSinLogin(),
                 original.getAgingStage(), original.getChurnLabel(), original.getAvaLabel(),
                 original.getFarmerEmail(), original.getAvaMtd(), original.getAvaL4w(), original.getAvaL7d(),
-                original.getDashboardSegment(), original.getLastContact(), original.getChannel());
+                original.getDashboardSegment(), original.getLastContact(), original.getChannel(),
+                original.getCredentialsDate());
     }
 }

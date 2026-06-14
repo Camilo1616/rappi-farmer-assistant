@@ -9,7 +9,6 @@ import { getDashboard, getBasesForFarmer, updateBaseStatus,
 import { getStores } from '../services/storeService'
 import api from '../services/api'
 import StoreSection from '../components/StoreSection'
-import FollowUpModal from '../components/FollowUpModal'
 import StoreTable from '../components/StoreTable'
 import MetricCard from '../components/MetricCard'
 import ExcelUpload from '../components/ExcelUpload'
@@ -68,6 +67,8 @@ const SECTIONS = [
   { key: 'ava',                title: 'AVA Bajando',          icon: '📉', color: '#F59E0B' },
   { key: 'healthy',            title: 'Saludables',           icon: '✅', color: '#22C55E' },
   { key: 'selfOnboarding',     title: 'Self-Onboarding',      icon: '🛒', color: '#8B5CF6' },
+  { key: 'insideSales',        title: 'Gestionar IS',         icon: '📋', color: '#0EA5E9' },
+  { key: 'recontactosW2',      title: 'Recontactos W2',       icon: '🔁', color: '#A855F7' },
 ]
 
 const STATUS_ORDER = ['SIN_LEER','LEIDA','EN_PROCESO','COMPLETADO']
@@ -151,7 +152,6 @@ export default function DashboardPage() {
   const [hasStores, setHasStores]     = useState(true) // optimista mientras carga
   const [profileOpen, setProfileOpen] = useState(false)
   const [notifOpen, setNotifOpen]   = useState(false)
-  const [followUpOpen, setFollowUpOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [sidebarFiltersOpen, setSidebarFiltersOpen] = useState(false)
   const [sidebarSegment, setSidebarSegment] = useState('Todos')
@@ -410,7 +410,6 @@ export default function DashboardPage() {
         <div className={styles.topbar}>
           <h1 className={styles.pageTitle}>{NAV_ITEMS.find(n=>n.key===activeNav)?.label}</h1>
           <div className={styles.topbarRight}>
-            <button className={styles.btnFollowUpTop} onClick={() => setFollowUpOpen(true)}>Follow up</button>
             <span className={styles.liveIndicator}><span className={styles.liveDot}/> En vivo</span>
             <span className={styles.date}>{getTodayLabel()}</span>
 
@@ -550,13 +549,6 @@ export default function DashboardPage() {
 
         </main>
       </div>
-
-      {followUpOpen && (
-        <FollowUpModal
-          onClose={() => setFollowUpOpen(false)}
-          onSaved={() => { setFollowUpOpen(false); loadDash(); loadStores() }}
-        />
-      )}
 
       {confirmAction && (
         <ConfirmModal

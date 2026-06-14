@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
-import { getTodayManagements, updateManagement, deleteManagement } from '../services/dashboardService'
+import { getTodayManagements, updateManagement, deleteManagement, registerManagement } from '../services/dashboardService'
 import { getWaSentToday } from '../services/whatsappService'
 import ConfirmModal from '../components/ConfirmModal'
 import Pagination from '../components/Pagination'
-import GestionFlowModal from '../components/GestionFlowModal'
 import styles from './ManagementPage.module.css'
 
 const TIPOS = ['WHATSAPP', 'LLAMADA', 'SAC', 'SEGUIMIENTO', 'ACTIVACION']
@@ -139,7 +138,7 @@ export default function ManagementPage() {
   // Panel WhatsApp pendientes
   const [waStores,     setWaStores]     = useState([])
   const [waOpen,       setWaOpen]       = useState(false)
-  const [waGestion,    setWaGestion]    = useState(null)  // store seleccionada para gestionar
+  const [waSaving,     setWaSaving]     = useState({})  // storeId -> 'EFECTIVA'|'NO_CONTACTO'
 
   const load = () => {
     setLoading(true)
@@ -156,6 +155,17 @@ export default function ManagementPage() {
   }
 
   useEffect(() => { load(); loadWaStores() }, [])  // eslint-disable-line
+
+  const registerWaGestion = async (store, resultType) => {
+    setWaSaving(s => ({ ...s, [store.id]: resultType }))
+    try {
+      await registerManagement(store.id, { managementType: 'WHATSAPP', resultType, comments: '' })
+      load()
+      loadWaStores()
+    } finally {
+      setWaSaving(s => { const n = { ...s }; delete n[store.id]; return n })
+    }
+  }
 
   const handleDelete = (id) => {
     setConfirmDelete(id)
@@ -256,12 +266,32 @@ export default function ManagementPage() {
                       <span className={styles.waStorePhone}>📱 {store.phoneNumber}</span>
                     )}
                   </div>
-                  <button
-                    className={styles.waBtnGestion}
-                    onClick={() => setWaGestion(store)}
-                  >
-                    📋 Realizar gestión
-                  </button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      disabled={!!waSaving[store.id]}
+                      onClick={() => registerWaGestion(store, 'EFECTIVA')}
+                      style={{
+                        padding: '4px 10px', borderRadius: 6, border: '1px solid #22C55E40',
+                        background: waSaving[store.id] === 'EFECTIVA' ? '#22C55E' : 'rgba(34,197,94,0.1)',
+                        color: waSaving[store.id] === 'EFECTIVA' ? '#fff' : '#22C55E',
+                        fontSize: 11, fontWeight: 700, cursor: waSaving[store.id] ? 'wait' : 'pointer',
+                      }}
+                    >
+                      {waSaving[store.id] === 'EFECTIVA' ? '...' : '✅ Efectiva'}
+                    </button>
+                    <button
+                      disabled={!!waSaving[store.id]}
+                      onClick={() => registerWaGestion(store, 'NO_CONTACTO')}
+                      style={{
+                        padding: '4px 10px', borderRadius: 6, border: '1px solid #F9731640',
+                        background: waSaving[store.id] === 'NO_CONTACTO' ? '#F97316' : 'rgba(249,115,22,0.1)',
+                        color: waSaving[store.id] === 'NO_CONTACTO' ? '#fff' : '#F97316',
+                        fontSize: 11, fontWeight: 700, cursor: waSaving[store.id] ? 'wait' : 'pointer',
+                      }}
+                    >
+                      {waSaving[store.id] === 'NO_CONTACTO' ? '...' : '📵 No contacto'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -382,18 +412,6 @@ export default function ManagementPage() {
             onPageSizeChange={setPageSize}
           />
         </div>
-      )}
-
-      {waGestion && (
-        <GestionFlowModal
-          store={waGestion}
-          onClose={() => setWaGestion(null)}
-          onSaved={() => {
-            setWaGestion(null)
-            load()
-            loadWaStores()
-          }}
-        />
       )}
 
       {editing && (

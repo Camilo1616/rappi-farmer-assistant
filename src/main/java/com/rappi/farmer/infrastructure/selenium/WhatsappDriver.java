@@ -6,15 +6,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
 /**
  * Cliente HTTP hacia el microservicio Baileys (whatsapp-service).
- * Reemplaza la implementación anterior basada en Selenium.
+ * Cada farmer tiene su propia sesión identificada por sessionId ("u<userId>").
+ * El servicio Node.js mantiene sesiones independientes en disco,
+ * por lo que cada farmer escanea su propio QR y envía desde su propio número.
  */
 @Slf4j
 @Component
@@ -32,75 +36,79 @@ public class WhatsappDriver {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    // ── Estado ────────────────────────────────────────────────────────────────
+    // ── Estado por sesión ─────────────────────────────────────────────────────
 
-    public boolean estaAbierto() {
-        return fetchStatus().connected || fetchStatus().hasQr;
+    public boolean estaAbierto(String sessionId) {
+        StatusResponse s = fetchStatus(sessionId);
+        return s.connected() || s.hasQr();
     }
 
-    public boolean estaConectado() {
-        return fetchStatus().connected;
+    public boolean estaConectado(String sessionId) {
+        return fetchStatus(sessionId).connected();
     }
 
-    public boolean verificarEstadoReal() {
-        return estaConectado();
+    public boolean verificarEstadoReal(String sessionId) {
+        return estaConectado(sessionId);
     }
 
-    /** Devuelve el QR en base64 para mostrarlo en el frontend, o null si ya está conectado. */
-    public String obtenerQr() {
-        return fetchStatus().qr;
+    /** Devuelve el QR en base64 para este farmer, o null si ya está conectado. */
+    public String obtenerQr(String sessionId) {
+        return fetchStatus(sessionId).qr();
     }
 
     // ── Ciclo de vida ─────────────────────────────────────────────────────────
 
-    /** "Abrir" = verificar que el servicio está vivo y listo para escanear QR. */
-    public void abrir() {
-        StatusResponse s = fetchStatus();
-        if (!s.connected && !s.hasQr) {
-            // Pedir reconexión si el servicio está caído
-            post("/reconnect", Map.of());
+    /** Verifica que el servicio está vivo e inicia la sesión del farmer si no existe. */
+    public void abrir(String sessionId) {
+        StatusResponse s = fetchStatus(sessionId);
+        if (!s.connected() && !s.hasQr()) {
+            post("/reconnect", Map.of("session", sessionId));
         }
-        log.info("[WA] Servicio Baileys — conectado:{} qr:{}", s.connected, s.hasQr);
+        log.info("[WA:{}] Servicio Baileys — conectado:{} qr:{}", sessionId, s.connected(), s.hasQr());
     }
 
-    public void cerrar() {
-        // No cerramos el servicio, solo informamos. El servicio sigue corriendo.
-        log.info("[WA] cerrar() — el microservicio Baileys sigue activo en segundo plano");
+    public void cerrar(String sessionId) {
+        log.info("[WA:{}] cerrar() — el microservicio Baileys sigue activo en segundo plano", sessionId);
     }
 
-    public boolean esperarConexion(int timeoutSegundos) {
+    public boolean esperarConexion(String sessionId, int timeoutSegundos) {
         long deadline = System.currentTimeMillis() + timeoutSegundos * 1000L;
         while (System.currentTimeMillis() < deadline) {
-            if (estaConectado()) return true;
-            try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+            if (estaConectado(sessionId)) return true;
+            try { Thread.sleep(2000); } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
         }
         return false;
     }
 
     // ── Envío ─────────────────────────────────────────────────────────────────
 
-    public String enviarMensaje(String telefono, String mensaje) {
-        if (!estaConectado()) return "ERROR_CHROME_CERRADO";
+    public String enviarMensaje(String telefono, String mensaje, String sessionId) {
+        if (!estaConectado(sessionId)) return "ERROR_CHROME_CERRADO";
         try {
-            var body = mapper.writeValueAsString(Map.of("phone", telefono, "message", mensaje));
+            var body = mapper.writeValueAsString(
+                    Map.of("phone", telefono, "message", mensaje, "session", sessionId));
             var req  = buildRequest("/send", body);
             var res  = http.send(req, HttpResponse.BodyHandlers.ofString());
             var json = mapper.readValue(res.body(), Map.class);
             String result = (String) json.getOrDefault("result", "ERROR");
-            log.debug("[WA] Enviado a {} → {}", telefono, result);
+            log.debug("[WA:{}] Enviado a {} → {}", sessionId, telefono, result);
             return result;
         } catch (Exception e) {
-            log.error("[WA] Error enviando a {}: {}", telefono, e.getMessage());
+            log.error("[WA:{}] Error enviando a {}: {}", sessionId, telefono, e.getMessage());
             return "ERROR";
         }
     }
 
     // ── Internos ──────────────────────────────────────────────────────────────
 
-    private StatusResponse fetchStatus() {
+    private StatusResponse fetchStatus(String sessionId) {
         try {
+            String encodedSession = URLEncoder.encode(sessionId, StandardCharsets.UTF_8);
             var req = HttpRequest.newBuilder()
-                    .uri(URI.create(serviceUrl + "/status"))
+                    .uri(URI.create(serviceUrl + "/status?session=" + encodedSession))
                     .timeout(Duration.ofSeconds(5))
                     .header("x-api-key", apiKey)
                     .GET()
@@ -112,7 +120,7 @@ public class WhatsappDriver {
             String  qr    = (String) json.get("qr");
             return new StatusResponse(conn, hasQr, qr);
         } catch (Exception e) {
-            log.warn("[WA] No se pudo contactar el servicio Baileys: {}", e.getMessage());
+            log.warn("[WA:{}] No se pudo contactar el servicio Baileys: {}", sessionId, e.getMessage());
             return new StatusResponse(false, false, null);
         }
     }

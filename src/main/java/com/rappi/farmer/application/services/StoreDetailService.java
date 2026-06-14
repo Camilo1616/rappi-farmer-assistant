@@ -212,7 +212,7 @@ public class StoreDetailService {
                 store.getConnectionPercentage(), store.getCurrentStatus(), null, todayResult, null,
                 store.getHadHandoff(), store.getLastLoginDate(), diasSinLogin, store.getAgingStage(),
                 churnLabel, avaLabel, store.getFarmerEmail(),
-                null, null, null, segment, lastContact, store.getChannel());
+                null, null, null, segment, lastContact, store.getChannel(), store.getCredentialsDate());
     }
 
     private String formatLastContact(Management m) {

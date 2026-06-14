@@ -180,7 +180,7 @@ public class StoreImportService {
                 true, row.getConnectionPercentage(), row.getCurrentStatus(),
                 row.getHadHandoff(), handoffActivatedAt, farmerId, row.getAging(),
                 row.getAgingStage(), row.getLastLoginDate(),
-                row.getGestionar(), row.getUploadDate(), null);
+                row.getGestionar(), row.getUploadDate(), null, row.getCredentialsDate());
         return s;
     }
 
@@ -210,6 +210,7 @@ public class StoreImportService {
                 store.setOnboardingDate(row.getOnboardingDate());
             }
         }
+        if (row.getCredentialsDate() != null) store.setCredentialsDate(row.getCredentialsDate());
         if (farmerId != null) store.setFarmerId(farmerId);
 
         boolean anteriorSinHandoff = !Boolean.TRUE.equals(store.getHadHandoff());

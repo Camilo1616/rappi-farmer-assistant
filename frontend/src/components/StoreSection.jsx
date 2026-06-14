@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import ManagementModal from './ManagementModal'
+import { registerManagement } from '../services/dashboardService'
 import MiniSparkline from './MiniSparkline'
 import styles from './StoreSection.module.css'
 
 const RESULT_STYLE = {
-  EFECTIVA:             { bg:'rgba(34,197,94,0.1)',   color:'#22C55E' },
-  NO_CONTACTO:          { bg:'rgba(249,115,22,0.1)',  color:'#F97316' },
-  NO_RESPONDE:          { bg:'rgba(139,147,168,0.1)', color:'#8B93A8' },
-  PROBLEMA_TECNICO:     { bg:'rgba(239,68,68,0.1)',   color:'#EF4444' },
-  REQUIERE_SEGUIMIENTO: { bg:'rgba(59,130,246,0.1)',  color:'#3B82F6' },
+  EFECTIVA:             { bg:'rgba(34,197,94,0.1)',   color:'#22C55E', label:'Efectiva' },
+  NO_CONTACTO:          { bg:'rgba(249,115,22,0.1)',  color:'#F97316', label:'No contacto' },
+  NO_RESPONDE:          { bg:'rgba(139,147,168,0.1)', color:'#8B93A8', label:'No responde' },
+  PROBLEMA_TECNICO:     { bg:'rgba(239,68,68,0.1)',   color:'#EF4444', label:'Problema técnico' },
+  REQUIERE_SEGUIMIENTO: { bg:'rgba(59,130,246,0.1)',  color:'#3B82F6', label:'Seguimiento' },
+  BRAND_SYNC:           { bg:'rgba(245,158,11,0.1)',  color:'#F59E0B', label:'Brand sync' },
+  WHATSAPP:             { bg:'rgba(34,197,94,0.08)',  color:'#22C55E', label:'WhatsApp' },
 }
 
 function fmtPct(val, low, mid, high) {
@@ -25,23 +27,60 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-export default function StoreSection({ title, color, icon, stores, onRefresh, hideHeader = false, isChurn = false, isAva = false }) {
-  const [modal, setModal] = useState(null)
+/* ── Botones de gestión rápida — sin modal, sin preguntas ── */
+function QuickGestion({ store, onDone }) {
+  const [saving, setSaving] = useState(null)  // 'EFECTIVA' | 'NO_CONTACTO' | null
 
+  const register = async (resultType) => {
+    setSaving(resultType)
+    try {
+      const managementType = resultType === 'EFECTIVA' ? 'SEGUIMIENTO' : 'SEGUIMIENTO'
+      await registerManagement(store.id, { managementType, resultType, comments: '' })
+      onDone?.()
+    } catch {
+      setSaving(null)
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      <button
+        onClick={() => register('EFECTIVA')}
+        disabled={!!saving}
+        style={{
+          padding: '4px 10px', borderRadius: 6, border: '1px solid #22C55E40',
+          background: saving === 'EFECTIVA' ? '#22C55E' : 'rgba(34,197,94,0.1)',
+          color: saving === 'EFECTIVA' ? '#fff' : '#22C55E',
+          fontSize: 11, fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
+          transition: 'all 0.15s',
+        }}
+      >
+        {saving === 'EFECTIVA' ? '...' : '✅ Efectiva'}
+      </button>
+      <button
+        onClick={() => register('NO_CONTACTO')}
+        disabled={!!saving}
+        style={{
+          padding: '4px 10px', borderRadius: 6, border: '1px solid #F9731640',
+          background: saving === 'NO_CONTACTO' ? '#F97316' : 'rgba(249,115,22,0.1)',
+          color: saving === 'NO_CONTACTO' ? '#fff' : '#F97316',
+          fontSize: 11, fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
+          transition: 'all 0.15s',
+        }}
+      >
+        {saving === 'NO_CONTACTO' ? '...' : '📵 No contacto'}
+      </button>
+    </div>
+  )
+}
+
+export default function StoreSection({ title, color, icon, stores, onRefresh, hideHeader = false, isChurn = false, isAva = false }) {
   if (!stores?.length) return (
     <div className={styles.empty}>Sin tiendas en esta sección</div>
   )
 
   return (
     <div className={styles.section}>
-      {modal && (
-        <ManagementModal
-          store={modal}
-          onClose={() => setModal(null)}
-          onSaved={() => { setModal(null); onRefresh?.() }}
-        />
-      )}
-
       {!hideHeader && (
         <div className={styles.sectionHeader}>
           <div className={styles.sectionLeft}>
@@ -61,19 +100,12 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
               <th>Store ID</th>
               <th>Teléfono</th>
               {isChurn
-                ? <>
-                    <th>Días sin conectar</th>
-                    <th>Último Login</th>
-                  </>
+                ? <><th>Días sin conectar</th><th>Último Login</th></>
                 : <th>Edad</th>
               }
               <th>Órdenes</th>
               {isAva
-                ? <>
-                    <th>AVA MTD</th>
-                    <th>AVA L4W</th>
-                    <th>AVA L7D</th>
-                  </>
+                ? <><th>AVA MTD</th><th>AVA L4W</th><th>AVA L7D</th></>
                 : <th>Conexión</th>
               }
               <th>Estado</th>
@@ -82,11 +114,12 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
           </thead>
           <tbody>
             {stores.map(s => {
-              const connVal = s.connectionPercentage != null ? parseFloat(s.connectionPercentage) : null
-              const connColor = connVal == null ? '#545E75' : connVal >= 60 ? '#22C55E' : connVal >= 30 ? '#F97316' : '#EF4444'
-              const rs = s.todayManagementResult ? RESULT_STYLE[s.todayManagementResult] : null
+              const connVal    = s.connectionPercentage != null ? parseFloat(s.connectionPercentage) : null
+              const connColor  = connVal == null ? '#545E75' : connVal >= 60 ? '#22C55E' : connVal >= 30 ? '#F97316' : '#EF4444'
+              const rs         = s.todayManagementResult ? RESULT_STYLE[s.todayManagementResult] : null
               const statusLabel = s.churnLabel || s.avaLabel || s.agingStage
               const statusColor = s.churnLabel ? '#EF4444' : s.avaLabel ? '#F97316' : '#8B93A8'
+              const yaGestionada = !!s.todayManagementResult
 
               return (
                 <tr key={s.id} className={styles.row}>
@@ -132,6 +165,7 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                       {s.ordersL4W ?? '—'}
                     </span>
                   </td>
+
                   {isAva
                     ? <>
                         <td>{fmtPct(s.avaMtd, '#EF4444', '#F97316', '#22C55E')}</td>
@@ -147,15 +181,22 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                           : <span className={styles.dash}>—</span>}
                       </td>
                   }
+
                   <td>
                     {statusLabel
                       ? <span className={styles.tag} style={{ background: statusColor+'22', color: statusColor }}>{statusLabel}</span>
                       : <span className={styles.dash}>—</span>}
                   </td>
+
+                  {/* Gestión hoy — botones rápidos o badge si ya está gestionada */}
                   <td>
-                    {rs
-                      ? <span className={styles.tag} style={{ background: rs.bg, color: rs.color }}>{s.todayManagementResult.replace(/_/g,' ')}</span>
-                      : <span className={styles.pending}>Pendiente</span>}
+                    {yaGestionada
+                      ? <span className={styles.tag}
+                          style={{ background: rs?.bg ?? 'rgba(34,197,94,0.1)', color: rs?.color ?? '#22C55E' }}>
+                          {rs?.label ?? s.todayManagementResult}
+                        </span>
+                      : <QuickGestion store={s} onDone={onRefresh} />
+                    }
                   </td>
                 </tr>
               )

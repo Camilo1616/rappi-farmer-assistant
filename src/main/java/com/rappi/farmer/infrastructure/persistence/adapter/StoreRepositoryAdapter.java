@@ -179,6 +179,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
         entity.setLastLoginDate(store.getLastLoginDate());
         entity.setGestionar(store.getGestionar());
         entity.setUploadDate(store.getUploadDate());
+        entity.setCredentialsDate(store.getCredentialsDate());
         entity.setUpdatedAt(LocalDateTime.now());
         if (store.getId() == null) entity.setCreatedAt(LocalDateTime.now());
         if (store.getFarmerId() != null) {
@@ -196,7 +197,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
                 e.getActive(), e.getConnectionPercentage(), e.getCurrentStatus(),
                 e.getHadHandoff(), e.getHandoffActivatedAt(), farmerId, e.getAging(),
                 e.getAgingStage(), e.getLastLoginDate(),
-                e.getGestionar(), e.getUploadDate(), farmerEmail
+                e.getGestionar(), e.getUploadDate(), farmerEmail, e.getCredentialsDate()
         );
         return s;
     }

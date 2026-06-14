@@ -75,7 +75,14 @@
       "PowerShell(node -e \"const bcrypt = require\\('bcrypt'\\); bcrypt.hash\\('rappi2025', 10\\).then\\(h => console.log\\(h\\)\\)\" 2>$null)",
       "PowerShell(python -c \"import bcrypt; print\\(bcrypt.hashpw\\(b'rappi2025', bcrypt.gensalt\\(10\\)\\).decode\\(\\)\\)\" 2>$null)",
       "Bash(dir \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\" -Recurse -Directory)",
-      "Bash(Select-Object -First 20)"
+      "Bash(Select-Object -First 20)",
+      "Skill(code-review)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\frontend\\\\src\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Skill(claude-api)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\src\" -Recurse -File | Where-Object {$_.Extension -in @\\(\".java\", \".js\", \".ts\", \".jsx\", \".tsx\"\\)} | Select-Object -First 30 | Select-Object FullName)"
     ]
   }
 }

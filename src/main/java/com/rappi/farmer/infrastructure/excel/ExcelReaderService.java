@@ -47,6 +47,7 @@ public class ExcelReaderService {
     private static final String COL_AVA_MTD        = "AVA_MTD";
     private static final String COL_GESTIONAR      = "GESTIONAR";
     private static final String COL_UPLOAD_DATE    = "FECHA DE CARGUE";
+    private static final String COL_CREDENTIALS    = "Fecha credenciales";
 
     // Columnas mínimas que deben estar presentes para que el archivo sea válido
     private static final List<String> REQUIRED_COLS = List.of(
@@ -102,6 +103,7 @@ public class ExcelReaderService {
                             .avaMtd(getPercentage(row, cols, COL_AVA_MTD))
                             .gestionar(getString(row, cols, COL_GESTIONAR))
                             .uploadDate(getDate(row, cols, COL_UPLOAD_DATE))
+                            .credentialsDate(getDate(row, cols, COL_CREDENTIALS))
                             .build());
 
                 } catch (Exception e) {

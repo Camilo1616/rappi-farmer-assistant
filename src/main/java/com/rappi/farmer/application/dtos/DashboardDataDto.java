@@ -17,6 +17,8 @@ public class DashboardDataDto {
     private List<StoreViewDto> healthy;
     private List<StoreViewDto> recommended;
     private List<StoreViewDto> selfOnboarding;
+    private List<StoreViewDto> insideSales;
+    private List<StoreViewDto> recontactosW2;
 
     private int onboardingCount;
     private int aliadosCount;
@@ -26,6 +28,8 @@ public class DashboardDataDto {
     private int recommendedCount;
     private int totalCount;
     private int selfOnboardingCount;
+    private int insideSalesCount;
+    private int recontactosW2Count;
 
     private boolean needsRefresh;
     private LocalDate lastImportDate;

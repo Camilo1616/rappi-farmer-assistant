@@ -26,9 +26,13 @@ public class AiController {
         try {
             String message = aiService.generateWhatsappMessage(
                     req.storeName(),
-                    req.ownerName(),
                     req.agingDays(),
-                    req.situation(),
+                    req.agingStage(),
+                    req.segment(),
+                    req.churnLabel(),
+                    req.avaLabel(),
+                    req.avaPct(),
+                    req.currentStatus(),
                     req.baseTemplate()
             );
             return ResponseEntity.ok(Map.of("message", message));
@@ -63,9 +67,13 @@ public class AiController {
 
     public record GenerateMessageRequest(
             String storeName,
-            String ownerName,
             int agingDays,
-            String situation,
+            String agingStage,
+            String segment,
+            String churnLabel,
+            String avaLabel,
+            Double avaPct,
+            String currentStatus,
             String baseTemplate) {}
 
     public record DailySummaryRequest(

@@ -30,4 +30,5 @@ public class Store {
     private String gestionar;
     private LocalDate uploadDate;
     private String farmerEmail;
+    private LocalDate credentialsDate;
 }

@@ -32,11 +32,16 @@ public class WhatsappController {
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
+    /** ID del usuario autenticado. Nunca null en endpoints protegidos por Spring Security. */
+    private Long currentUserId() {
+        return sessionContext.getCurrentUserId();
+    }
+
     @PostMapping("/open")
     public ResponseEntity<?> openChrome() {
         try {
-            whatsappService.abrirChrome();
-            return ResponseEntity.ok(Map.of("message", "Chrome abierto"));
+            whatsappService.abrirChrome(currentUserId());
+            return ResponseEntity.ok(Map.of("message", "Servicio WhatsApp iniciado para tu sesión"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("message", e.getMessage()));
         }
@@ -44,15 +49,16 @@ public class WhatsappController {
 
     @PostMapping("/close")
     public ResponseEntity<?> closeChrome() {
-        whatsappService.cerrarChrome();
+        whatsappService.cerrarChrome(currentUserId());
         return ResponseEntity.ok(Map.of("message", "Chrome cerrado"));
     }
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
-        boolean connected = whatsappService.estaConectado();
-        boolean hasQr     = whatsappService.tieneQr();
-        long sentToday    = whatsappService.enviadosHoy();
+        Long userId   = currentUserId();
+        boolean connected  = whatsappService.estaConectado(userId);
+        boolean hasQr      = whatsappService.tieneQr(userId);
+        long    sentToday  = whatsappService.enviadosHoy(userId);
         return ResponseEntity.ok(Map.of(
                 "open",      connected || hasQr,
                 "connected", connected,
@@ -64,28 +70,29 @@ public class WhatsappController {
 
     @GetMapping("/qr")
     public ResponseEntity<?> getQr() {
-        String qr = whatsappService.obtenerQr();
-        if (qr == null) return ResponseEntity.ok(Map.of("qr", (Object) null, "connected", whatsappService.estaConectado()));
+        Long userId = currentUserId();
+        String qr   = whatsappService.obtenerQr(userId);
+        if (qr == null) return ResponseEntity.ok(Map.of("qr", (Object) null,
+                "connected", whatsappService.estaConectado(userId)));
         return ResponseEntity.ok(Map.of("qr", qr, "connected", false));
     }
 
     @GetMapping("/wait-connection")
     public ResponseEntity<Map<String, Object>> waitConnection(
             @RequestParam(defaultValue = "60") int timeout) {
-        boolean connected = whatsappService.esperarConexion(timeout);
+        boolean connected = whatsappService.esperarConexion(currentUserId(), timeout);
         return ResponseEntity.ok(Map.of("connected", connected));
     }
 
     @PostMapping("/test")
     public ResponseEntity<?> sendTest(@Valid @RequestBody TestRequest request) {
-        String result = whatsappService.enviarPrueba(request.phone(), request.message());
+        String result = whatsappService.enviarPrueba(currentUserId(), request.phone(), request.message());
         return ResponseEntity.ok(Map.of("result", result));
     }
 
     @PostMapping(value = "/send", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sendMasivo(@Valid @RequestBody SendRequest request) {
-        Long userId = sessionContext.getCurrentUserId();
-
+        Long userId = currentUserId();
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
         List<StoreViewDto> stores = request.storeIds().stream()
@@ -95,8 +102,9 @@ public class WhatsappController {
                         store.getId(), store.getStoreCode(), store.getBrandId(), store.getStoreName(),
                         store.getPhoneNumber(), 0, null,
                         store.getConnectionPercentage(), store.getCurrentStatus(),
-                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(), null, null, null, null, store.getFarmerEmail(),
-                        null, null, null, null, null, store.getChannel()))
+                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(),
+                        null, null, null, null, store.getFarmerEmail(),
+                        null, null, null, null, null, store.getChannel(), null))
                 .toList();
 
         executor.submit(() -> {
@@ -117,36 +125,9 @@ public class WhatsappController {
         return emitter;
     }
 
-    @GetMapping("/templates")
-    public ResponseEntity<?> getTemplates() {
-        return ResponseEntity.ok(messageTemplateService.getAll());
-    }
-
-    /** Tiendas intentadas hoy — para el panel de follow-up en Gestiones. */
-    @GetMapping("/sent-today")
-    public ResponseEntity<?> getStoresSentToday() {
-        Long userId = sessionContext.getCurrentUserId();
-        return ResponseEntity.ok(whatsappService.storesConWaHoy(userId));
-    }
-
-    /** Historial de envíos agrupados por día (últimos 30 días). */
-    @GetMapping("/history")
-    public ResponseEntity<?> getHistory(@RequestParam(defaultValue = "30") int days) {
-        Long userId = sessionContext.getCurrentUserId();
-        return ResponseEntity.ok(whatsappService.historial(userId, days));
-    }
-
-    public record TestRequest(@NotBlank String phone, @NotBlank String message) {}
-
-    public record SendRequest(@NotEmpty List<Long> storeIds, @NotBlank String template) {}
-
-    public record StoreMessage(Long storeId, String message) {}
-
-    public record SendPersonalizedRequest(@NotEmpty List<StoreMessage> storeMessages) {}
-
-    @PostMapping("/send-personalized")
+    @PostMapping(value = "/send-personalized", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sendPersonalized(@Valid @RequestBody SendPersonalizedRequest request) {
-        Long userId = sessionContext.getCurrentUserId();
+        Long userId = currentUserId();
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
         Map<Long, String> messageMap = request.storeMessages().stream()
@@ -159,8 +140,9 @@ public class WhatsappController {
                         store.getId(), store.getStoreCode(), store.getBrandId(), store.getStoreName(),
                         store.getPhoneNumber(), 0, null,
                         store.getConnectionPercentage(), store.getCurrentStatus(),
-                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(), null, null, null, null, store.getFarmerEmail(),
-                        null, null, null, null, null, store.getChannel()))
+                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(),
+                        null, null, null, null, store.getFarmerEmail(),
+                        null, null, null, null, null, store.getChannel(), null))
                 .toList();
 
         executor.submit(() -> {
@@ -180,4 +162,24 @@ public class WhatsappController {
 
         return emitter;
     }
+
+    @GetMapping("/templates")
+    public ResponseEntity<?> getTemplates() {
+        return ResponseEntity.ok(messageTemplateService.getAll());
+    }
+
+    @GetMapping("/sent-today")
+    public ResponseEntity<?> getStoresSentToday() {
+        return ResponseEntity.ok(whatsappService.storesConWaHoy(currentUserId()));
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<?> getHistory(@RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(whatsappService.historial(currentUserId(), days));
+    }
+
+    public record TestRequest(@NotBlank String phone, @NotBlank String message) {}
+    public record SendRequest(@NotEmpty List<Long> storeIds, @NotBlank String template) {}
+    public record StoreMessage(Long storeId, String message) {}
+    public record SendPersonalizedRequest(@NotEmpty List<StoreMessage> storeMessages) {}
 }

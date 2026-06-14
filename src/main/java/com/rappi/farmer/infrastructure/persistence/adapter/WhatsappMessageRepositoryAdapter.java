@@ -63,6 +63,13 @@ public class WhatsappMessageRepositoryAdapter implements WhatsappMessageReposito
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public long countSentTodayByUser(Long userId) {
+        LocalDateTime[] bounds = todayBoundsUtc();
+        return jpaRepository.countSentTodayByUser(bounds[0], bounds[1], userId);
+    }
+
+    @Override
     public void deleteByStoreId(Long storeId) {
         jpaRepository.deleteByStoreId(storeId);
     }

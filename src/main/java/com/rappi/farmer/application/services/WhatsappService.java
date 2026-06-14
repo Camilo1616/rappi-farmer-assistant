@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class WhatsappService {
 
-    private static final int MAX_DIARIO = 40;
+    private static final int MAX_DIARIO   = 40;
     private static final int DELAY_MIN_MS = 10_000;
     private static final int DELAY_MAX_MS = 25_000;
 
@@ -27,165 +27,90 @@ public class WhatsappService {
 
     private final Random random = new Random();
 
-    /** Abre Chrome con la sesión guardada. */
-    public void abrirChrome() {
-        whatsappDriver.abrir();
+    /** Construye el sessionId del farmer a partir de su userId. */
+    public static String sessionId(Long userId) {
+        return userId != null ? "u" + userId : "default";
     }
 
-    /**
-     * Espera a que WhatsApp Web esté conectado.
-     * @return true si la sesión está activa
-     */
-    public boolean esperarConexion(int timeoutSegundos) {
-        return whatsappDriver.esperarConexion(timeoutSegundos);
+    // ── Estado ────────────────────────────────────────────────────────────────
+
+    public void abrirChrome(Long userId) {
+        whatsappDriver.abrir(sessionId(userId));
     }
 
-    public boolean estaConectado() {
-        return whatsappDriver.estaConectado();
+    public boolean esperarConexion(Long userId, int timeoutSegundos) {
+        return whatsappDriver.esperarConexion(sessionId(userId), timeoutSegundos);
     }
 
-    public boolean chromeAbierto() {
-        return whatsappDriver.estaAbierto();
+    public boolean estaConectado(Long userId) {
+        return whatsappDriver.estaConectado(sessionId(userId));
     }
 
-    /** Verifica si Chrome sigue vivo y conectado. Limpia el driver si fue cerrado. */
-    public boolean verificarEstadoReal() {
-        return whatsappDriver.verificarEstadoReal();
+    public boolean chromeAbierto(Long userId) {
+        return whatsappDriver.estaAbierto(sessionId(userId));
     }
 
-    public void cerrarChrome() {
-        whatsappDriver.cerrar();
+    public boolean verificarEstadoReal(Long userId) {
+        return whatsappDriver.verificarEstadoReal(sessionId(userId));
     }
 
-    public boolean tieneQr() {
-        return whatsappDriver.obtenerQr() != null;
+    public void cerrarChrome(Long userId) {
+        whatsappDriver.cerrar(sessionId(userId));
     }
 
-    public String obtenerQr() {
-        return whatsappDriver.obtenerQr();
+    public boolean tieneQr(Long userId) {
+        return whatsappDriver.obtenerQr(sessionId(userId)) != null;
+    }
+
+    public String obtenerQr(Long userId) {
+        return whatsappDriver.obtenerQr(sessionId(userId));
     }
 
     /** Envía un único mensaje de prueba sin guardarlo en el log. */
-    public String enviarPrueba(String telefono, String mensaje) {
-        return whatsappDriver.enviarMensaje(telefono, mensaje);
+    public String enviarPrueba(Long userId, String telefono, String mensaje) {
+        return whatsappDriver.enviarMensaje(telefono, mensaje, sessionId(userId));
     }
 
-    /**
-     * Cuántos mensajes ya fueron enviados hoy (para el límite de 40).
-     */
-    public long enviadosHoy() {
-        return whatsappMessageRepository.countSentToday();
+    public long enviadosHoy(Long userId) {
+        return whatsappMessageRepository.countSentTodayByUser(userId);
     }
 
-    /**
-     * Tiendas a las que se envió WhatsApp hoy — para el panel de follow-up en Gestiones.
-     */
     public java.util.List<java.util.Map<String, Object>> storesConWaHoy(Long userId) {
         return whatsappMessageRepository.findStoresSentToday(userId);
     }
 
-    /**
-     * Historial de envíos agrupados por día.
-     */
     public java.util.List<java.util.Map<String, Object>> historial(Long userId, int days) {
         return whatsappMessageRepository.findHistory(userId, days);
     }
 
-    /**
-     * Envía mensajes masivos a las tiendas indicadas.
-     * Corre en el hilo que lo llama — el caller debe usar un hilo separado (no el hilo HTTP).
-     *
-     * @param stores          tiendas seleccionadas
-     * @param template        plantilla con variable {store_name}
-     * @param progressCallback callback invocado tras cada mensaje (puede ser desde hilo no-FX)
-     */
+    // ── Envío masivo ──────────────────────────────────────────────────────────
+
     public void enviarMasivo(List<StoreViewDto> stores, String template, Long userId,
                               Consumer<WhatsappSendProgress> progressCallback) {
-
-        int total = Math.min(stores.size(), MAX_DIARIO);
+        String session = sessionId(userId);
+        int total  = Math.min(stores.size(), MAX_DIARIO);
         int enviados = 0;
-        int errores = 0;
+        int errores  = 0;
 
         for (int i = 0; i < total; i++) {
             StoreViewDto store = stores.get(i);
             String mensaje = template.replace("{store_name}", store.getStoreName());
 
-            // Notifica inicio
             progressCallback.accept(new WhatsappSendProgress(
                     total, i, enviados, errores, store.getStoreName(), "ENVIANDO", false));
 
-            String resultado = whatsappDriver.enviarMensaje(store.getPhoneNumber(), mensaje);
+            String resultado = whatsappDriver.enviarMensaje(store.getPhoneNumber(), mensaje, session);
 
-            // Chrome fue cerrado mientras se enviaba — abortar todo el envío
             if ("ERROR_CHROME_CERRADO".equals(resultado)) {
                 progressCallback.accept(new WhatsappSendProgress(
                         total, i + 1, enviados, errores, store.getStoreName(), "ERROR_CHROME_CERRADO", true));
-                log.warn("Envío masivo abortado — Chrome fue cerrado");
+                log.warn("[WA:{}] Envío masivo abortado — servicio desconectado", session);
                 return;
             }
 
             whatsappMessageRepository.save(store.getId(), userId, mensaje, resultado, null);
 
-            if ("ENVIADO".equals(resultado)) {
-                enviados++;
-            } else if (!"NUMERO_INVALIDO".equals(resultado)) {
-                errores++;
-            }
-
-            boolean esOmitido = false; // intentar siempre, nunca omitir
-
-            // Notifica resultado de este mensaje
-            progressCallback.accept(new WhatsappSendProgress(
-                    total, i + 1, enviados, errores, store.getStoreName(), resultado, false));
-
-            // Delay aleatorio solo cuando realmente se envió (no gastar tiempo en omitidos)
-            if (i < total - 1 && !esOmitido) {
-                int delay = DELAY_MIN_MS + random.nextInt(DELAY_MAX_MS - DELAY_MIN_MS);
-                int delaySeg = delay / 1000;
-                progressCallback.accept(new WhatsappSendProgress(
-                        total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delaySeg));
-                log.debug("Esperando {}ms antes del siguiente mensaje", delay);
-                try {
-                    Thread.sleep(delay);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.warn("Envío interrumpido en tienda {}", store.getStoreName());
-                    break;
-                }
-            }
-        }
-
-        // Notifica finalización
-        progressCallback.accept(new WhatsappSendProgress(
-                total, total, enviados, errores, "", "COMPLETADO", true));
-
-        log.info("Envío masivo completado — enviados:{} errores:{}", enviados, errores);
-    }
-
-    public void enviarMasivoPersonalizado(List<StoreViewDto> stores, Map<Long, String> messageMap,
-                                          Long userId, Consumer<WhatsappSendProgress> progressCallback) {
-        int total = Math.min(stores.size(), MAX_DIARIO);
-        int enviados = 0;
-        int errores = 0;
-
-        for (int i = 0; i < total; i++) {
-            StoreViewDto store = stores.get(i);
-            String mensaje = messageMap.getOrDefault(store.getId(), "");
-
-            progressCallback.accept(new WhatsappSendProgress(
-                    total, i, enviados, errores, store.getStoreName(), "ENVIANDO", false));
-
-            String resultado = whatsappDriver.enviarMensaje(store.getPhoneNumber(), mensaje);
-
-            if ("ERROR_CHROME_CERRADO".equals(resultado)) {
-                progressCallback.accept(new WhatsappSendProgress(
-                        total, i + 1, enviados, errores, store.getStoreName(), "ERROR_CHROME_CERRADO", true));
-                return;
-            }
-
-            whatsappMessageRepository.save(store.getId(), userId, mensaje, resultado, null);
-
-            if ("ENVIADO".equals(resultado)) enviados++;
+            if ("ENVIADO".equals(resultado))            enviados++;
             else if (!"NUMERO_INVALIDO".equals(resultado)) errores++;
 
             progressCallback.accept(new WhatsappSendProgress(
@@ -195,14 +120,64 @@ public class WhatsappService {
                 int delay = DELAY_MIN_MS + random.nextInt(DELAY_MAX_MS - DELAY_MIN_MS);
                 progressCallback.accept(new WhatsappSendProgress(
                         total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delay / 1000));
-                try { Thread.sleep(delay); } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt(); break;
+                log.debug("[WA:{}] Esperando {}ms antes del siguiente mensaje", session, delay);
+                try { Thread.sleep(delay); }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("[WA:{}] Envío interrumpido en tienda {}", session, store.getStoreName());
+                    break;
                 }
             }
         }
 
         progressCallback.accept(new WhatsappSendProgress(
                 total, total, enviados, errores, "", "COMPLETADO", true));
+
+        log.info("[WA:{}] Envío masivo completado — enviados:{} errores:{}", session, enviados, errores);
     }
 
+    public void enviarMasivoPersonalizado(List<StoreViewDto> stores, Map<Long, String> messageMap,
+                                          Long userId, Consumer<WhatsappSendProgress> progressCallback) {
+        String session = sessionId(userId);
+        int total  = Math.min(stores.size(), MAX_DIARIO);
+        int enviados = 0;
+        int errores  = 0;
+
+        for (int i = 0; i < total; i++) {
+            StoreViewDto store   = stores.get(i);
+            String       mensaje = messageMap.getOrDefault(store.getId(), "");
+
+            progressCallback.accept(new WhatsappSendProgress(
+                    total, i, enviados, errores, store.getStoreName(), "ENVIANDO", false));
+
+            String resultado = whatsappDriver.enviarMensaje(store.getPhoneNumber(), mensaje, session);
+
+            if ("ERROR_CHROME_CERRADO".equals(resultado)) {
+                progressCallback.accept(new WhatsappSendProgress(
+                        total, i + 1, enviados, errores, store.getStoreName(), "ERROR_CHROME_CERRADO", true));
+                return;
+            }
+
+            whatsappMessageRepository.save(store.getId(), userId, mensaje, resultado, null);
+
+            if ("ENVIADO".equals(resultado))            enviados++;
+            else if (!"NUMERO_INVALIDO".equals(resultado)) errores++;
+
+            progressCallback.accept(new WhatsappSendProgress(
+                    total, i + 1, enviados, errores, store.getStoreName(), resultado, false));
+
+            if (i < total - 1) {
+                int delay = DELAY_MIN_MS + random.nextInt(DELAY_MAX_MS - DELAY_MIN_MS);
+                progressCallback.accept(new WhatsappSendProgress(
+                        total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delay / 1000));
+                try { Thread.sleep(delay); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+            }
+        }
+
+        progressCallback.accept(new WhatsappSendProgress(
+                total, total, enviados, errores, "", "COMPLETADO", true));
+
+        log.info("[WA:{}] Envío personalizado completado — enviados:{} errores:{}", session, enviados, errores);
+    }
 }

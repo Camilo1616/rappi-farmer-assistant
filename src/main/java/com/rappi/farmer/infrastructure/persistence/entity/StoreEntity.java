@@ -68,6 +68,9 @@ public class StoreEntity {
     @Column(name = "upload_date")
     private LocalDate uploadDate;
 
+    @Column(name = "credentials_date")
+    private LocalDate credentialsDate;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity user;

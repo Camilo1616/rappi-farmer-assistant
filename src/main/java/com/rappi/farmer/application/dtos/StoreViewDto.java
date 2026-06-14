@@ -48,4 +48,6 @@ public class StoreViewDto {
     private String lastContact;
     /** Canal de adquisición: Hunting, Inside Sales, Self. */
     private String channel;
+    /** Fecha de credenciales de la tienda en la plataforma Rappi. */
+    private LocalDate credentialsDate;
 }
