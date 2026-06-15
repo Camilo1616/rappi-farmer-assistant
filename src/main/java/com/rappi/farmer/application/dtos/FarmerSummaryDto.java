@@ -21,4 +21,7 @@ public class FarmerSummaryDto {
     private long onboardingCount;
     private long churnCount;
     private long saludablesCount;
+    // Actividad en tiempo real
+    private String activityStatus;   // ACTIVO | INACTIVO | DESACTIVADO
+    private String lastActivityTime; // "hace 5m", "hace 2h"
 }

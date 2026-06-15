@@ -31,12 +31,15 @@ export const register = async (body) => {
   return { id: data.userId ?? data.id, email: data.email, fullName: data.fullName, role: data.role, nickname: data.nickname ?? null }
 }
 
-export const logout = () => {
+export const logout = async () => {
+  try { await api.post('/auth/logout') } catch {}
   const theme = localStorage.getItem('theme')
   localStorage.clear()
   if (theme) localStorage.setItem('theme', theme)
   window.location.href = '/login'
 }
+
+export const heartbeat = () => api.post('/auth/heartbeat').catch(() => {})
 
 export const getCurrentUser = () => {
   const raw = localStorage.getItem('user')

@@ -60,4 +60,12 @@ public class UserEntity {
 
     @Column(name = "last_import_date")
     private LocalDate lastImportDate;
+
+    /** Última vez que el farmer hizo heartbeat (activo en la app). */
+    @Column(name = "last_activity")
+    private LocalDateTime lastActivity;
+
+    /** ACTIVO | INACTIVO | DESACTIVADO */
+    @Column(name = "activity_status", length = 20)
+    private String activityStatus;
 }

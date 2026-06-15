@@ -82,7 +82,8 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\frontend\\\\src\" -Recurse)",
       "Bash(Select-Object FullName)",
       "Skill(claude-api)",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\src\" -Recurse -File | Where-Object {$_.Extension -in @\\(\".java\", \".js\", \".ts\", \".jsx\", \".tsx\"\\)} | Select-Object -First 30 | Select-Object FullName)"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\src\" -Recurse -File | Where-Object {$_.Extension -in @\\(\".java\", \".js\", \".ts\", \".jsx\", \".tsx\"\\)} | Select-Object -First 30 | Select-Object FullName)",
+      "Bash(grep -v \"//\\\\|import\")"
     ]
   }
 }

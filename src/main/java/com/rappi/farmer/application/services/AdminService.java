@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -88,6 +89,9 @@ public class AdminService {
         long churn      = stores.stream().filter(this::isChurn).count();
         long saludables = stores.stream().filter(s -> !isOnboarding(s) && !isChurn(s)).count();
 
+        String activityStatus  = f.getActivityStatus() != null ? f.getActivityStatus() : "DESACTIVADO";
+        String lastActivityTime = formatLastActivity(f.getLastActivity());
+
         return new FarmerSummaryDto(
                 f.getId(),
                 f.getFarmerCode() != null ? f.getFarmerCode() : "—",
@@ -96,7 +100,8 @@ public class AdminService {
                 f.getCountryCode() != null ? f.getCountryCode() : "—",
                 f.getAccountStatus() != null ? f.getAccountStatus() : "ACTIVE",
                 gestiones, exitosas, noContacto,
-                total, onboarding, churn, saludables);
+                total, onboarding, churn, saludables,
+                activityStatus, lastActivityTime);
     }
 
     private boolean isOnboarding(Store s) {
@@ -114,5 +119,15 @@ public class AdminService {
         if (status == null) return false;
         String st = status.trim().toUpperCase();
         return st.contains("M1") || st.contains("M2") || st.equals("CHURN");
+    }
+
+    private String formatLastActivity(LocalDateTime lastActivity) {
+        if (lastActivity == null) return null;
+        long mins = Duration.between(lastActivity, LocalDateTime.now()).toMinutes();
+        if (mins < 1)   return "ahora";
+        if (mins < 60)  return "hace " + mins + "m";
+        long hrs = mins / 60;
+        if (hrs < 24)   return "hace " + hrs + "h";
+        return "hace " + (hrs / 24) + "d";
     }
 }

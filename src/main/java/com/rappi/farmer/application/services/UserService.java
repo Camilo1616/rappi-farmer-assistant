@@ -188,6 +188,38 @@ public class UserService {
         });
     }
 
+    /** Registra latido de actividad del farmer y lo marca como ACTIVO. */
+    public void heartbeat(Long userId) {
+        userRepository.findById(userId).ifPresent(u -> {
+            u.setLastActivity(java.time.LocalDateTime.now());
+            u.setActivityStatus("ACTIVO");
+            userRepository.save(u);
+        });
+    }
+
+    /** Marca al farmer como DESACTIVADO al cerrar sesión. */
+    public void markLogout(Long userId) {
+        userRepository.findById(userId).ifPresent(u -> {
+            u.setActivityStatus("DESACTIVADO");
+            userRepository.save(u);
+        });
+    }
+
+    /** Tarea programada: marca INACTIVO a farmers sin actividad en las últimas 2 horas. */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 600_000)
+    public void markInactiveUsers() {
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusHours(2);
+        userRepository.findByRole(UserRole.FARMER_MASS.name()).stream()
+            .filter(u -> "ACTIVO".equals(u.getActivityStatus())
+                         && u.getLastActivity() != null
+                         && u.getLastActivity().isBefore(threshold))
+            .forEach(u -> {
+                u.setActivityStatus("INACTIVO");
+                userRepository.save(u);
+                log.info("Farmer {} marcado INACTIVO — última actividad: {}", u.getEmail(), u.getLastActivity());
+            });
+    }
+
     /** Genera código único por país: CO0001, PE0042, MX0100, etc. */
     public String generateFarmerCode(String countryCode) {
         String upper = (countryCode != null ? countryCode : "CO").toUpperCase();

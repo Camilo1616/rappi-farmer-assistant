@@ -169,8 +169,32 @@ function EquipoTab({ farmers, managements, sort, setSort }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{isExp ? '▼' : '▶'}</span>
                       <div>
-                        <p style={{ fontWeight: 700, color: 'var(--text-primary)', margin: 0, fontSize: 13 }}>{f.fullName}</p>
-                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '1px 0 0' }}>{f.email}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <p style={{ fontWeight: 700, color: 'var(--text-primary)', margin: 0, fontSize: 13 }}>{f.fullName}</p>
+                          {(() => {
+                            const st = f.activityStatus
+                            const cfg = st === 'ACTIVO'
+                              ? { bg: 'rgba(34,197,94,0.15)', color: '#16a34a', dot: '#22c55e', label: 'Activo' }
+                              : st === 'INACTIVO'
+                              ? { bg: 'rgba(234,179,8,0.15)', color: '#92400e', dot: '#eab308', label: 'Inactivo' }
+                              : { bg: 'rgba(107,114,128,0.15)', color: '#6b7280', dot: '#9ca3af', label: 'Desactivado' }
+                            return (
+                              <span title={f.lastActivityTime ? `Última actividad: ${f.lastActivityTime}` : 'Sin actividad'} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                background: cfg.bg, color: cfg.color, borderRadius: 20,
+                                padding: '2px 7px', fontSize: 10, fontWeight: 700,
+                              }}>
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.dot,
+                                  boxShadow: st === 'ACTIVO' ? `0 0 5px ${cfg.dot}` : 'none',
+                                  display: 'inline-block' }} />
+                                {cfg.label}
+                              </span>
+                            )
+                          })()}
+                        </div>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '1px 0 0' }}>
+                          {f.email}{f.lastActivityTime ? ` · ${f.lastActivityTime}` : ''}
+                        </p>
                       </div>
                     </div>
                   </td>

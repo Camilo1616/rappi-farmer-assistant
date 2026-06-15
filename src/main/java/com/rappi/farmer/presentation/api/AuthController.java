@@ -27,6 +27,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final GoogleCalendarService calendarService;
     private final com.rappi.farmer.application.services.EmailPinService emailPinService;
+    private final com.rappi.farmer.application.SessionContext sessionContext;
 
     @Value("${lider.invite.code:}")
     private String liderInviteCode;
@@ -125,6 +126,20 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
+    }
+
+    @PostMapping("/heartbeat")
+    public ResponseEntity<?> heartbeat() {
+        Long userId = sessionContext.getCurrentUserId();
+        if (userId != null) userService.heartbeat(userId);
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        Long userId = sessionContext.getCurrentUserId();
+        if (userId != null) userService.markLogout(userId);
+        return ResponseEntity.ok(Map.of("ok", true));
     }
 
     public record RegisterRequest(

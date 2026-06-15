@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useRealtime } from '../hooks/useRealtime'
-import { logout } from '../services/authService'
+import { logout, heartbeat } from '../services/authService'
 import { clearStores, getImportStatus } from '../services/importService'
 import { getDashboard, getBasesForFarmer, updateBaseStatus,
          getUnreadCount, getNotifications, markAllNotifRead } from '../services/dashboardService'
@@ -269,6 +269,13 @@ export default function DashboardPage() {
   useEffect(() => { loadDash(); loadUnread() }, [])
   useRealtime(() => { loadDash(); loadUnread() })
 
+  // Heartbeat cada 5 minutos mientras el farmer tiene la app abierta
+  useEffect(() => {
+    heartbeat()
+    const iv = setInterval(heartbeat, 5 * 60 * 1000)
+    return () => clearInterval(iv)
+  }, [])
+
   useEffect(() => {
     if (activeNav === 'stores')  loadStores()
     if (activeNav === 'bases')   loadBases()
@@ -433,7 +440,8 @@ export default function DashboardPage() {
                     ? <p className={styles.notifEmpty}>Sin notificaciones</p>
                     : notifs.slice(0,8).map(n => (
                       <div key={n.id} className={`${styles.notifItem} ${!n.read ? styles.notifUnread : ''}`}>
-                        <span className={styles.notifMsg}>{n.message}</span>
+                        <span className={styles.notifMsg}>{n.title}</span>
+                        {n.body && <span className={styles.notifBody}>{n.body}</span>}
                         <span className={styles.notifTime}>{new Date(n.createdAt).toLocaleString('es-CO',{hour:'2-digit',minute:'2-digit'})}</span>
                       </div>
                     ))

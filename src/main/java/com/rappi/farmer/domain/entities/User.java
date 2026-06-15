@@ -27,6 +27,8 @@ public class User {
     private String calendarRefreshToken;
     private LocalDateTime lastLoginAt;
     private LocalDate lastImportDate;
+    private LocalDateTime lastActivity;
+    private String activityStatus;
 
     public UserRole getUserRole() {
         try { return UserRole.valueOf(role); } catch (Exception e) { return UserRole.FARMER_MASS; }

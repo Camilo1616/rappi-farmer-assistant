@@ -41,6 +41,8 @@ public class UserRepositoryAdapter implements UserRepository {
         entity.setCreatedAt(createdAt);
         entity.setLastLoginAt(user.getLastLoginAt());
         entity.setLastImportDate(user.getLastImportDate());
+        entity.setLastActivity(user.getLastActivity());
+        entity.setActivityStatus(user.getActivityStatus());
 
         return toDomain(jpaRepository.save(entity));
     }
@@ -67,6 +69,6 @@ public class UserRepositoryAdapter implements UserRepository {
                 e.getFarmerCode(), e.getCountryCode(),
                 e.getAccountStatus(), e.getLiderId(),
                 e.getNickname(), e.getAvatarUrl(), e.getCalendarRefreshToken(), e.getLastLoginAt(),
-                e.getLastImportDate());
+                e.getLastImportDate(), e.getLastActivity(), e.getActivityStatus());
     }
 }
