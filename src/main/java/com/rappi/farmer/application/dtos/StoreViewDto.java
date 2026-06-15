@@ -36,6 +36,8 @@ public class StoreViewDto {
     private String avaLabel;
     /** Email del farmer asignado a esta tienda. */
     private String farmerEmail;
+    /** ID del farmer asignado a esta tienda. */
+    private Long farmerId;
     /** AVA_MTD: porcentaje de AVA del mes actual. */
     private BigDecimal avaMtd;
     /** AVA_L4W: porcentaje de AVA últimas 4 semanas (= connectionPercentage). */

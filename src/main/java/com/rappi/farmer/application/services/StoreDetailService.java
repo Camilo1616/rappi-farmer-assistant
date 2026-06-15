@@ -211,7 +211,7 @@ public class StoreDetailService {
                 store.getPhoneNumber(), aging, null,
                 store.getConnectionPercentage(), store.getCurrentStatus(), null, todayResult, null,
                 store.getHadHandoff(), store.getLastLoginDate(), diasSinLogin, store.getAgingStage(),
-                churnLabel, avaLabel, store.getFarmerEmail(),
+                churnLabel, avaLabel, store.getFarmerEmail(), store.getFarmerId(),
                 null, null, null, segment, lastContact, store.getChannel(), store.getCredentialsDate());
     }
 

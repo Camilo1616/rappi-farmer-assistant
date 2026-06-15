@@ -546,10 +546,7 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
         byFarmer[f] = { name: farmer?.fullName || `#${f}`, stores: [] }
       }
       for (const s of allStores) {
-        const fId = selectedFarmers.find(id => {
-          const f = farmers.find(x => x.id === id)
-          return f && (f.email === s.farmerEmail)
-        })
+        const fId = selectedFarmers.find(id => id === s.farmerId)
         if (fId != null) byFarmer[fId].stores.push(s)
       }
       setPreview(byFarmer)
@@ -568,8 +565,10 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
       const farmerNames = selectedFarmers.map(id => farmers.find(f => f.id === id)?.fullName || `#${id}`).join(', ')
       const finalMsg = message.replace('{farmers}', farmerNames).replace('{fecha}', fecha)
 
-      const body = { title: title.trim(), type, message: finalMsg, farmerIds: selectedFarmers, storeIds: selectedStoreIds }
+      const body = { title: title.trim(), type, message: finalMsg, farmerIds: selectedFarmers }
       if (type === 'ACTIVE') body.activeDays = activeDays
+      // solo enviar storeIds si el líder cargó el preview y ajustó la selección
+      if (preview && selectedStoreIds.length > 0) body.storeIds = selectedStoreIds
 
       await api.post('/bases', body)
       onCreated()
