@@ -500,10 +500,12 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
   const [type, setType]             = useState('ACTIVE')
   const [activeDays, setActiveDays] = useState(7)   // solo aplica para ACTIVE
   const [message, setMessage]       = useState('')
-  const [selectedFarmers, setSel]   = useState([])
-  const [preview, setPreview]       = useState(null)
-  const [loadingPrev, setLoadPrev]  = useState(false)
-  const [saving, setSaving]         = useState(false)
+  const [selectedFarmers, setSel]        = useState([])
+  const [preview, setPreview]            = useState(null)
+  const [selectedStoreIds, setSelStores] = useState([])
+  const [storeSearch, setStoreSearch]    = useState('')
+  const [loadingPrev, setLoadPrev]       = useState(false)
+  const [saving, setSaving]              = useState(false)
   const [error, setError]           = useState(null)
 
   const templates = {
@@ -527,6 +529,8 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
   const toggleFarmer = (id) => {
     setSel(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
     setPreview(null)
+    setSelStores([])
+    setStoreSearch('')
   }
 
   const loadPreview = async () => {
@@ -535,12 +539,13 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
     try {
       const params = type === 'ACTIVE' ? { activeDays } : {}
       const r = await getStoresByBaseType(type, selectedFarmers, params)
+      const allStores = r.data || []
       const byFarmer = {}
       for (const f of selectedFarmers) {
         const farmer = farmers.find(x => x.id === f)
         byFarmer[f] = { name: farmer?.fullName || `#${f}`, stores: [] }
       }
-      for (const s of (r.data || [])) {
+      for (const s of allStores) {
         const fId = selectedFarmers.find(id => {
           const f = farmers.find(x => x.id === id)
           return f && (f.email === s.farmerEmail)
@@ -548,6 +553,8 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
         if (fId != null) byFarmer[fId].stores.push(s)
       }
       setPreview(byFarmer)
+      setSelStores(allStores.map(s => s.id))
+      setStoreSearch('')
     } catch { setError('Error al cargar preview') }
     finally { setLoadPrev(false) }
   }
@@ -561,7 +568,7 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
       const farmerNames = selectedFarmers.map(id => farmers.find(f => f.id === id)?.fullName || `#${id}`).join(', ')
       const finalMsg = message.replace('{farmers}', farmerNames).replace('{fecha}', fecha)
 
-      const body = { title: title.trim(), type, message: finalMsg, farmerIds: selectedFarmers }
+      const body = { title: title.trim(), type, message: finalMsg, farmerIds: selectedFarmers, storeIds: selectedStoreIds }
       if (type === 'ACTIVE') body.activeDays = activeDays
 
       await api.post('/bases', body)
@@ -684,34 +691,86 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
             )}
           </div>
 
-          {/* Preview de tiendas por farmer */}
-          {preview && (
-            <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-              <div style={{ padding: '8px 14px', background: 'var(--bg-secondary)', fontSize: 11,
-                fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Preview de tiendas por farmer
-              </div>
-              {Object.entries(preview).map(([fId, { name, stores }]) => (
-                <div key={fId} style={{ padding: '8px 14px', borderTop: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{name}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>{stores.length} tiendas</span>
-                  {stores.length > 0 && (
-                    <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {stores.slice(0, 10).map(s => (
-                        <span key={s.id} style={{ fontSize: 10, background: 'var(--bg-input)',
-                          color: 'var(--text-secondary)', padding: '2px 7px', borderRadius: 6 }}>
-                          {s.storeName}
-                        </span>
-                      ))}
-                      {stores.length > 10 && (
-                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>+{stores.length - 10} más</span>
-                      )}
+          {/* Preview de tiendas con checkboxes y buscador */}
+          {preview && (() => {
+            const allPreviewStores = Object.values(preview).flatMap(({ stores }) => stores)
+            const q = storeSearch.toLowerCase()
+            const filtered = q
+              ? allPreviewStores.filter(s =>
+                  s.storeName?.toLowerCase().includes(q) || s.storeCode?.toLowerCase().includes(q))
+              : allPreviewStores
+            const totalSelected = selectedStoreIds.length
+            const toggleStore = (id) => setSelStores(prev =>
+              prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+            const toggleAll = () => setSelStores(
+              selectedStoreIds.length === allPreviewStores.length ? [] : allPreviewStores.map(s => s.id))
+            return (
+              <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                {/* Header */}
+                <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)',
+                  display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em', flex: 1 }}>
+                    Tiendas en la base
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {totalSelected} / {allPreviewStores.length} seleccionadas
+                  </span>
+                  <button onClick={toggleAll} style={{ fontSize: 10, fontWeight: 700,
+                    color: '#3b82f6', background: 'none', border: '1px solid rgba(59,130,246,0.4)',
+                    borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {selectedStoreIds.length === allPreviewStores.length ? 'Desmarcar todas' : 'Marcar todas'}
+                  </button>
+                </div>
+                {/* Buscador */}
+                <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)' }}>
+                  <input
+                    value={storeSearch}
+                    onChange={e => setStoreSearch(e.target.value)}
+                    placeholder="Buscar tienda por nombre o código..."
+                    style={{ ...inputStyle, padding: '6px 10px', fontSize: 12, margin: 0 }}
+                  />
+                </div>
+                {/* Lista por farmer */}
+                <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                  {Object.entries(preview).map(([fId, { name, stores }]) => {
+                    const visibleStores = q
+                      ? stores.filter(s => s.storeName?.toLowerCase().includes(q) || s.storeCode?.toLowerCase().includes(q))
+                      : stores
+                    if (visibleStores.length === 0) return null
+                    return (
+                      <div key={fId} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ padding: '6px 14px', background: 'rgba(0,0,0,0.04)',
+                          display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>{name}</span>
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                            {visibleStores.filter(s => selectedStoreIds.includes(s.id)).length}/{visibleStores.length}
+                          </span>
+                        </div>
+                        {visibleStores.map(s => (
+                          <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '5px 14px 5px 24px', cursor: 'pointer',
+                            background: selectedStoreIds.includes(s.id) ? 'rgba(255,68,31,0.07)' : 'transparent',
+                            transition: 'background 0.1s' }}>
+                            <input type="checkbox" checked={selectedStoreIds.includes(s.id)}
+                              onChange={() => toggleStore(s.id)}
+                              style={{ accentColor: '#ff441f', width: 13, height: 13, flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: 'var(--text-primary)', flex: 1 }}>{s.storeName}</span>
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{s.storeCode}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )
+                  })}
+                  {filtered.length === 0 && (
+                    <div style={{ padding: '16px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                      Sin resultados para "{storeSearch}"
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            )
+          })()}
 
           {/* Mensaje */}
           <div>
