@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getLiderDashboard, getBasesForLider, getNotifications, getUnreadCount,
-         markAllNotifRead, getBaseStores, getFarmerManagements, getStoresByBaseType } from '../services/dashboardService'
+         markAllNotifRead, getBaseStores, getTodayManagements, getStoresByBaseType } from '../services/dashboardService'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { logout } from '../services/authService'
@@ -74,10 +74,17 @@ function Spinner({ size = 32 }) {
 }
 
 /* ─── Módulo Equipo hoy ─────────────────────────────────────────────── */
-function EquipoTab({ farmers, sort, setSort }) {
-  const [expanded, setExpanded]     = useState(null)
-  const [mgts, setMgts]             = useState({})   // farmerId → ManagementViewDto[]
-  const [loadingMgts, setLoading]   = useState({})
+function EquipoTab({ farmers, managements, sort, setSort }) {
+  const [expanded, setExpanded] = useState(null)
+
+  // Agrupar gestiones por userId (campo expuesto en ManagementViewDto)
+  const mgtsByFarmer = (managements || []).reduce((acc, m) => {
+    const key = m.userId
+    if (key == null) return acc
+    if (!acc[key]) acc[key] = []
+    acc[key].push(m)
+    return acc
+  }, {})
 
   const sorted = [...(farmers || [])].sort((a, b) => {
     if (sort === 'semaforo') {
@@ -90,21 +97,7 @@ function EquipoTab({ farmers, sort, setSort }) {
     return 0
   })
 
-  const toggle = async (farmerId) => {
-    if (expanded === farmerId) { setExpanded(null); return }
-    setExpanded(farmerId)
-    if (!mgts[farmerId]) {
-      setLoading(p => ({ ...p, [farmerId]: true }))
-      try {
-        const r = await getFarmerManagements(farmerId)
-        setMgts(p => ({ ...p, [farmerId]: r.data || [] }))
-      } catch {
-        setMgts(p => ({ ...p, [farmerId]: [] }))
-      } finally {
-        setLoading(p => ({ ...p, [farmerId]: false }))
-      }
-    }
-  }
+  const toggle = (farmerId) => setExpanded(prev => prev === farmerId ? null : farmerId)
 
   if (sorted.length === 0) {
     return (
@@ -156,8 +149,7 @@ function EquipoTab({ farmers, sort, setSort }) {
           {sorted.map(f => {
             const s  = semaforo(f)
             const isExp = expanded === f.id
-            const farmerMgts = mgts[f.id] || []
-            const isLoading  = loadingMgts[f.id]
+            const farmerMgts = mgtsByFarmer[f.id] || []
 
             return (
               <>
@@ -238,20 +230,13 @@ function EquipoTab({ farmers, sort, setSort }) {
                             textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
                             Gestiones de {f.fullName} hoy
                           </p>
-                          {isLoading
-                            ? <div style={{ width: 14, height: 14, borderRadius: '50%',
-                                border: '2px solid #ff441f', borderTopColor: 'transparent',
-                                animation: 'spin 0.8s linear infinite' }} />
-                            : <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-input)',
-                                padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>
-                                {farmerMgts.length} total
-                              </span>
-                          }
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-input)',
+                            padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>
+                            {farmerMgts.length} total
+                          </span>
                         </div>
 
-                        {isLoading ? (
-                          <Spinner size={20} />
-                        ) : farmerMgts.length === 0 ? (
+                        {farmerMgts.length === 0 ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0',
                             color: 'var(--text-muted)', fontSize: 13 }}>
                             <span style={{ fontSize: 18 }}>⬜</span>
@@ -291,7 +276,7 @@ function EquipoTab({ farmers, sort, setSort }) {
                                       {m.comments || '—'}
                                     </td>
                                     <td style={{ padding: '8px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 11 }}>
-                                      {m.time || '—'}
+                                      {m.managementTime || '—'}
                                     </td>
                                   </tr>
                                 ))}
@@ -790,6 +775,7 @@ export default function LiderDashboardPage() {
   const [activeNav, setActiveNav] = useState('dashboard')
   const [data, setData]           = useState(null)
   const [bases, setBases]         = useState([])
+  const [managements, setMgts]    = useState([])
   const [loading, setLoading]     = useState(true)
   const [sort, setSort]           = useState('semaforo')
   const [expandedBase, setExpandedBase]       = useState(null)
@@ -807,13 +793,15 @@ export default function LiderDashboardPage() {
 
   const load = useCallback(async () => {
     try {
-      const [dashRes, basesRes, unreadRes] = await Promise.allSettled([
+      const [dashRes, basesRes, mgtsRes, unreadRes] = await Promise.allSettled([
         getLiderDashboard(),
         getBasesForLider(),
+        getTodayManagements(),
         getUnreadCount(),
       ])
       if (dashRes.status === 'fulfilled')  setData(dashRes.value.data)
       if (basesRes.status === 'fulfilled') setBases(basesRes.value.data || [])
+      if (mgtsRes.status === 'fulfilled')  setMgts(mgtsRes.value.data || [])
       if (unreadRes.status === 'fulfilled') setUnread(unreadRes.value.data?.count ?? 0)
     } finally { setLoading(false) }
   }, [])
@@ -1039,7 +1027,7 @@ export default function LiderDashboardPage() {
                 Equipo hoy
               </h2>
               {loading ? <Spinner /> : (
-                <EquipoTab farmers={data?.farmers || []} sort={sort} setSort={setSort} />
+                <EquipoTab farmers={data?.farmers || []} managements={managements} sort={sort} setSort={setSort} />
               )}
             </div>
           )}

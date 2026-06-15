@@ -141,6 +141,7 @@ public class ManagementService {
         Boolean hadHandoff = m.getStoreId() != null ? handoffMap.get(m.getStoreId()) : null;
         return new ManagementViewDto(
                 m.getId(),
+                m.getUserId(),
                 m.getStoreName(),
                 m.getStoreCode(),
                 m.getManagementType(),

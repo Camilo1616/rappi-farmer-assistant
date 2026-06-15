@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ManagementViewDto {
     private Long id;
+    private Long userId;
     private String storeName;
     private String storeCode;
     private String managementType;

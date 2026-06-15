@@ -50,6 +50,7 @@ public class AdminService {
                 .stream()
                 .map(m -> new ManagementViewDto(
                         m.getId(),
+                        m.getUser() != null ? m.getUser().getId() : userId,
                         m.getStore().getStoreName(),
                         m.getStore().getStoreCode(),
                         m.getManagementType(),
@@ -57,8 +58,8 @@ public class AdminService {
                         m.getComments(),
                         m.getManagementDate() != null
                                 ? m.getManagementDate().format(TIME_FMT) : "",
-                        null,
-                        null,
+                        m.getUser() != null ? m.getUser().getFullName() : null,
+                        m.getUser() != null ? m.getUser().getFarmerCode() : null,
                         m.getStore() != null ? m.getStore().getHadHandoff() : null,
                         m.isBrandSync()))
                 .collect(Collectors.toList());
