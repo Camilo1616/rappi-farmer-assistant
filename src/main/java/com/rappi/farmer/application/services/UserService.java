@@ -63,7 +63,7 @@ public class UserService {
         User user = new User(null, request.getFullName(),
                 request.getEmail().toLowerCase(),
                 request.getRole() != null ? request.getRole() : UserRole.FARMER_MASS.name(),
-                hash, code, country, "ACTIVE", request.getLiderId(), nickname, null, null, null, null);
+                hash, code, country, "ACTIVE", request.getLiderId(), nickname, null, null, null, null, null, null);
         User saved = userRepository.save(user);
         log.info("Usuario creado: {} ({})", saved.getEmail(), saved.getRole());
         return saved;
