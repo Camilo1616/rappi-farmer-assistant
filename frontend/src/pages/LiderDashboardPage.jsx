@@ -29,11 +29,11 @@ const STATUS_COLOR = {
   COMPLETADO: { bg: 'rgba(34,197,94,0.12)',   color: '#16a34a', label: 'Completado' },
 }
 const BASE_TYPE_OPTS = [
-  { value: 'ACTIVE_F7D', label: 'Activos 7 días' },
-  { value: 'AVA_8_14',   label: 'AVA 8-14' },
-  { value: 'CHURN',      label: 'Churn' },
-  { value: 'RETENCION',  label: 'Retención' },
-  { value: 'PRIORIZACION', label: 'Priorización general' },
+  { value: 'ACTIVE',    label: 'Active' },
+  { value: 'AVA_8_14', label: 'AVA 8-14' },
+  { value: 'CHURN',    label: 'Churn' },
+  { value: 'RETENCION',label: 'Retención' },
+  { value: 'PRIORIZACION', label: 'Priorización' },
 ]
 const BASE_TYPE_LABEL = {
   CHURN: 'Churn', ACTIVE_F7D: 'Activos 7d', RETENCION: 'Retención',
@@ -497,34 +497,32 @@ function BaseCard({ base, baseStoresData, baseStoresLoading, expanded, onToggle 
 /* ─── Modal Crear Base ──────────────────────────────────────────────── */
 function CrearBaseModal({ farmers, onClose, onCreated }) {
   const [title, setTitle]           = useState('')
-  const [type, setType]             = useState('ACTIVE_F7D')
+  const [type, setType]             = useState('ACTIVE')
+  const [activeDays, setActiveDays] = useState(7)   // solo aplica para ACTIVE
   const [message, setMessage]       = useState('')
   const [selectedFarmers, setSel]   = useState([])
-  const [preview, setPreview]       = useState(null)   // { farmerId: stores[] }
+  const [preview, setPreview]       = useState(null)
   const [loadingPrev, setLoadPrev]  = useState(false)
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState(null)
 
-  // Plantillas por tipo
   const templates = {
-    ACTIVE_F7D: 'Team! Les dejo la base ACTIVE del día.\n\nAliados que ingresaron recientemente — debemos lograr login y activación con órdenes.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
-    CHURN:      'Team! Les dejo la base CHURN del día.\n\nAliados que esta semana nos entran en churn — recuerden que lo ideal es buscar reconexión de por lo menos 5 minutos dentro de horario.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
-    RETENCION:  'Team! Les dejo la base PRIORIDAD RETENCIÓN del día.\n\nLa prioridad está en la columna 2 — empiecen por los \'Prioridad 1\'. Hay aliados con AVA MTD desde 6% hacia arriba. Recuerden: para que cuente en retención debe tener AVA del 10%.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
-    AVA_8_14:   'Team! Les dejo la base AVA 8-14 del día.\n\nAliados que YA LES CUENTAN PARA AVA. Miren la columna U — filtren por URGENTE!!\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
+    ACTIVE:       'Team! Les dejo la base ACTIVE del día.\n\nAliados que ingresaron recientemente — debemos lograr login y activación con órdenes.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
+    CHURN:        'Team! Les dejo la base CHURN del día.\n\nAliados que esta semana nos entran en churn — recuerden que lo ideal es buscar reconexión de por lo menos 5 minutos dentro de horario.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
+    RETENCION:    'Team! Les dejo la base PRIORIDAD RETENCIÓN del día.\n\nLa prioridad está en la columna 2 — empiecen por los \'Prioridad 1\'. Hay aliados con AVA MTD desde 6% hacia arriba. Recuerden: para que cuente en retención debe tener AVA del 10%.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
+    AVA_8_14:     'Team! Les dejo la base AVA 8-14 del día.\n\nAliados que YA LES CUENTAN PARA AVA. Miren la columna U — filtren por URGENTE!!\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
     PRIORIZACION: 'Team! Les dejo la base de PRIORIZACIÓN del día.\n\nFarmers en esta base: {farmers}\n\nEn todas tipifican las últimas 3 columnas!!\nMe confirman lectura!\nBASE PRIORIZACIÓN {fecha}',
   }
 
   const handleTypeChange = (val) => {
     setType(val)
-    if (!message || Object.values(templates).includes(message)) {
+    setPreview(null)
+    if (!message || Object.values(templates).some(t => message === t)) {
       setMessage(templates[val] || '')
     }
-    setPreview(null)
   }
 
-  useEffect(() => {
-    setMessage(templates[type] || '')
-  }, [])
+  useEffect(() => { setMessage(templates['ACTIVE']) }, [])
 
   const toggleFarmer = (id) => {
     setSel(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -533,28 +531,25 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
 
   const loadPreview = async () => {
     if (selectedFarmers.length === 0) return
-    setLoadPrev(true)
-    setPreview(null)
+    setLoadPrev(true); setPreview(null)
     try {
-      const r = await getStoresByBaseType(type, selectedFarmers)
-      // Agrupar por farmer según farmerEmail o brandId
+      const params = type === 'ACTIVE' ? { activeDays } : {}
+      const r = await getStoresByBaseType(type, selectedFarmers, params)
       const byFarmer = {}
       for (const f of selectedFarmers) {
         const farmer = farmers.find(x => x.id === f)
         byFarmer[f] = { name: farmer?.fullName || `#${f}`, stores: [] }
       }
-      // Stores vienen planas, las asignamos al farmer por farmerEmail
       for (const s of (r.data || [])) {
         const fId = selectedFarmers.find(id => {
           const f = farmers.find(x => x.id === id)
           return f && (f.email === s.farmerEmail)
         })
-        if (fId) byFarmer[fId].stores.push(s)
+        if (fId != null) byFarmer[fId].stores.push(s)
       }
       setPreview(byFarmer)
-    } catch (e) {
-      setError('Error al cargar preview')
-    } finally { setLoadPrev(false) }
+    } catch { setError('Error al cargar preview') }
+    finally { setLoadPrev(false) }
   }
 
   const handleSubmit = async () => {
@@ -564,16 +559,12 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
     try {
       const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
       const farmerNames = selectedFarmers.map(id => farmers.find(f => f.id === id)?.fullName || `#${id}`).join(', ')
-      const finalMsg = message
-        .replace('{farmers}', farmerNames)
-        .replace('{fecha}', fecha)
+      const finalMsg = message.replace('{farmers}', farmerNames).replace('{fecha}', fecha)
 
-      await api.post('/bases', {
-        title: title.trim(),
-        type,
-        message: finalMsg,
-        farmerIds: selectedFarmers,
-      })
+      const body = { title: title.trim(), type, message: finalMsg, farmerIds: selectedFarmers }
+      if (type === 'ACTIVE') body.activeDays = activeDays
+
+      await api.post('/bases', body)
       onCreated()
     } catch (e) {
       setError(e.response?.data?.message || 'Error al crear la base')
@@ -610,10 +601,10 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
           {/* Tipo */}
           <div>
             <label style={labelStyle}>Tipo de base</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               {BASE_TYPE_OPTS.map(opt => (
                 <button key={opt.value} onClick={() => handleTypeChange(opt.value)} style={{
-                  padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700,
                   border: type === opt.value ? 'none' : '1px solid var(--border)',
                   background: type === opt.value ? '#ff441f' : 'var(--bg-input)',
                   color: type === opt.value ? '#fff' : 'var(--text-secondary)',
@@ -623,6 +614,29 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
                 </button>
               ))}
             </div>
+
+            {/* Sub-selector de días — solo para ACTIVE */}
+            {type === 'ACTIVE' && (
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Tiendas sin conectar a Rappi Aliados en:
+                </span>
+                {[7, 28].map(d => (
+                  <button key={d} onClick={() => { setActiveDays(d); setPreview(null) }} style={{
+                    padding: '5px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700,
+                    border: activeDays === d ? 'none' : '1px solid var(--border)',
+                    background: activeDays === d ? '#0f172a' : 'var(--bg-input)',
+                    color: activeDays === d ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    {d} días
+                  </button>
+                ))}
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  (basado en último login)
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Título */}

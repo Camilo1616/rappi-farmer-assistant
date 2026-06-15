@@ -156,6 +156,11 @@ public class StoreRepositoryAdapter implements StoreRepository {
     }
 
     @Override
+    public List<Store> findActiveNoLoginByFarmerIds(List<Long> farmerIds, int days) {
+        return jpaRepository.findActiveNoLoginByFarmerIds(farmerIds, days).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public List<Store> findChurnM1ByFarmerIds(List<Long> farmerIds) {
         return jpaRepository.findChurnM1ByFarmerIds(farmerIds).stream().map(this::toDomain).toList();
     }

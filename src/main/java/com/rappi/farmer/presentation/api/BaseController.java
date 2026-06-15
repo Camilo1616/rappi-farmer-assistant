@@ -55,9 +55,11 @@ public class BaseController {
 
         for (Long farmerId : req.farmerIds()) {
             // Tiendas del farmer filtradas por tipo; si el líder ajustó la selección, filtrar por esos IDs
+            int days = req.activeDays() != null ? req.activeDays() : 7;
             List<com.rappi.farmer.domain.entities.Store> farmerStores = switch (req.type()) {
                 case "CHURN"      -> storeRepository.findChurnByFarmerIds(List.of(farmerId));
                 case "ACTIVE_F7D" -> storeRepository.findActiveF7dByFarmerIds(List.of(farmerId));
+                case "ACTIVE"     -> storeRepository.findActiveNoLoginByFarmerIds(List.of(farmerId), days);
                 case "RETENCION"  -> storeRepository.findRetencionByFarmerIds(List.of(farmerId));
                 case "AVA_8_14"   -> storeRepository.findAva8a14ByFarmerIds(List.of(farmerId));
                 default           -> storeRepository.findAllActiveByFarmerIds(List.of(farmerId));
@@ -415,7 +417,8 @@ public class BaseController {
             String message,
             @NotEmpty List<Long> farmerIds,
             List<Long> storeIds,
-            String churnFilter) {}
+            String churnFilter,
+            Integer activeDays) {}
 
     public record StatusRequest(String status) {}
 }

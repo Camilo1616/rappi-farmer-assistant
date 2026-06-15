@@ -76,7 +76,7 @@ public class StoreController {
             return ResponseEntity.ok(List.of());
         }
         List<StoreViewDto> stores = switch (type) {
-            case "ACTIVE"     -> storeDetailService.toViewDtos(storeRepository.findActiveByFarmerIdsAndDays(farmerIds, activeDays == 7 ? 0 : 8, activeDays));
+            case "ACTIVE"     -> storeDetailService.toViewDtos(storeRepository.findActiveNoLoginByFarmerIds(farmerIds, activeDays));
             case "CHURN"      -> storeDetailService.toViewDtos(switch (churnFilter) {
                 case "M1" -> storeRepository.findChurnM1ByFarmerIds(farmerIds);
                 default   -> storeRepository.findChurnByFarmerIds(farmerIds);

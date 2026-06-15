@@ -177,4 +177,18 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds,
         @org.springframework.data.repository.query.Param("minDays") int minDays,
         @org.springframework.data.repository.query.Param("maxDays") int maxDays);
+
+    /**
+     * ACTIVE (base líder): tiendas activas con GESTIONAR=SI que no han conectado
+     * a Rappi Aliados en los últimos :days días (last_login_date NULL o más antiguo).
+     */
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT * FROM stores s WHERE s.active = true " +
+        "AND UPPER(TRIM(s.gestionar)) = 'SI' " +
+        "AND (s.last_login_date IS NULL OR DATEDIFF(CURRENT_DATE(), s.last_login_date) >= :days) " +
+        "AND s.user_id IN :farmerIds " +
+        "ORDER BY s.last_login_date ASC", nativeQuery = true)
+    List<StoreEntity> findActiveNoLoginByFarmerIds(
+        @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds,
+        @org.springframework.data.repository.query.Param("days") int days);
 }
