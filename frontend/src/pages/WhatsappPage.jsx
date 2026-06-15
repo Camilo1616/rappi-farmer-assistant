@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getDashboard } from '../services/dashboardService'
 import {
-  getWhatsappStatus, getWhatsappQr,
+  getWhatsappStatus, getWhatsappQr, openChrome,
   sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
 import { generateWhatsappMessage } from '../services/aiService'
@@ -405,7 +405,7 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
 
 
 /* ── Conexión WhatsApp (Baileys) ── */
-function StepConnection({ status, qr, onRefresh, loading }) {
+function StepConnection({ status, qr, onRefresh, onStart, loading, starting }) {
   return (
     <div className={styles.stepCard}>
       <div className={styles.stepHeader}>
@@ -413,7 +413,7 @@ function StepConnection({ status, qr, onRefresh, loading }) {
         <div>
           <div className={styles.stepTitle}>Conexión WhatsApp</div>
           <div className={styles.stepSub}>
-            {status.connected ? 'Sesión activa' : qr ? 'Escanea el QR con WhatsApp' : 'Esperando servicio...'}
+            {status.connected ? 'Sesión activa' : qr ? 'Escanea el QR con WhatsApp' : 'Servicio no iniciado'}
           </div>
         </div>
         <div className={`${styles.statusDot} ${status.connected ? styles.dotGreen : qr ? styles.dotYellow : styles.dotRed}`} />
@@ -435,11 +435,16 @@ function StepConnection({ status, qr, onRefresh, loading }) {
 
       {!status.connected && !qr && (
         <div style={{ padding: '12px 0', fontSize: 13, color: '#94a3b8', textAlign: 'center' }}>
-          Iniciando servicio de WhatsApp...
+          Inicia el servicio para obtener el código QR
         </div>
       )}
 
       <div className={styles.btnRow}>
+        {!status.connected && !qr && (
+          <button className={styles.btnPrimary} onClick={onStart} disabled={starting}>
+            {starting ? <><span className={styles.spinner} /> Iniciando...</> : '▶ Iniciar servicio WhatsApp'}
+          </button>
+        )}
         <button className={styles.btnSecondary} onClick={onRefresh} disabled={loading}>
           {loading ? <><span className={styles.spinner} /> Verificando...</> : '🔄 Verificar estado'}
         </button>
@@ -594,6 +599,7 @@ export default function WhatsappPage() {
   const [selTemplate, setSelTemplate] = useState(null)
   const [message,     setMessage]     = useState('')
   const [chromLoad,   setChromLoad]   = useState(false)
+  const [starting,    setStarting]    = useState(false)
   const [sending,     setSending]     = useState(false)
   const [progress,    setProgress]    = useState(null)
   const [testPhone,   setTestPhone]   = useState('')
@@ -653,6 +659,17 @@ export default function WhatsappPage() {
     setChromLoad(false)
   }
 
+  const handleStart = async () => {
+    setStarting(true)
+    try {
+      await openChrome()
+      // esperar un momento para que el servicio arranque y genere el QR
+      await new Promise(r => setTimeout(r, 3000))
+      await loadStatus()
+    } catch {}
+    setStarting(false)
+  }
+
   const handleSend = () => {
     if (!selected.size || !message.trim() || !status.connected) return
     setSending(true)
@@ -698,7 +715,7 @@ export default function WhatsappPage() {
       <div className={styles.layout}>
         <div className={styles.leftCol}>
 
-          <StepConnection status={status} qr={qr} onRefresh={handleRefresh} loading={chromLoad} />
+          <StepConnection status={status} qr={qr} onRefresh={handleRefresh} onStart={handleStart} loading={chromLoad} starting={starting} />
 
           {/* ── Secciones de tiendas ── */}
           <div className={styles.stepCard}>

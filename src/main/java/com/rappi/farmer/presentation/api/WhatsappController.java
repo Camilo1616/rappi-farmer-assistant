@@ -103,7 +103,7 @@ public class WhatsappController {
                         store.getPhoneNumber(), 0, null,
                         store.getConnectionPercentage(), store.getCurrentStatus(),
                         null, null, null, store.getHadHandoff(), store.getLastLoginDate(),
-                        null, null, null, null, store.getFarmerEmail(),
+                        null, null, null, null, store.getFarmerEmail(), store.getFarmerId(),
                         null, null, null, null, null, store.getChannel(), null))
                 .toList();
 
@@ -141,7 +141,7 @@ public class WhatsappController {
                         store.getPhoneNumber(), 0, null,
                         store.getConnectionPercentage(), store.getCurrentStatus(),
                         null, null, null, store.getHadHandoff(), store.getLastLoginDate(),
-                        null, null, null, null, store.getFarmerEmail(),
+                        null, null, null, null, store.getFarmerEmail(), store.getFarmerId(),
                         null, null, null, null, null, store.getChannel(), null))
                 .toList();
 

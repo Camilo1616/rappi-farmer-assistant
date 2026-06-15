@@ -324,7 +324,7 @@ public class DashboardService {
                 store.getAgingStage(),
                 resolveChurnLabel(store),
                 resolveAvaLabel(metric),
-                store.getFarmerEmail(),
+                store.getFarmerEmail(), store.getFarmerId(),
                 metric != null ? toPercent(metric.getAvaMtd()) : null,
                 metric != null ? toPercent(metric.getConnectionPercentage()) : null,
                 metric != null ? toPercent(metric.getAvaL7d()) : null,
@@ -457,7 +457,7 @@ public class DashboardService {
                 original.getTendencia(), original.getTodayManagementResult(), segmento,
                 original.getHadHandoff(), original.getLastLoginDate(), original.getDiasSinLogin(),
                 original.getAgingStage(), original.getChurnLabel(), original.getAvaLabel(),
-                original.getFarmerEmail(), original.getAvaMtd(), original.getAvaL4w(), original.getAvaL7d(),
+                original.getFarmerEmail(), original.getFarmerId(), original.getAvaMtd(), original.getAvaL4w(), original.getAvaL7d(),
                 original.getDashboardSegment(), original.getLastContact(), original.getChannel(),
                 original.getCredentialsDate());
     }
