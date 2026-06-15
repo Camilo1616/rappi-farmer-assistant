@@ -52,7 +52,7 @@ class StoreImportServiceTest {
                 .build();
 
         User farmer = new User(FARMER_ID, "Farmer", FARMER_EMAIL, "FARMER_MASS",
-                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null);
+                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null, null, null);
         when(excelReaderService.read(file)).thenReturn(List.of(row));
         when(userRepository.findByEmail(FARMER_EMAIL)).thenReturn(Optional.of(farmer));
         when(storeRepository.findByStoreCode("CO-001")).thenReturn(Optional.empty());
@@ -93,7 +93,7 @@ class StoreImportServiceTest {
         Store existing = new Store(1L, "CO-001", null, "Nombre Viejo", "3000000000",
                 "DIGITAL", null, true, null, null, null, null, FARMER_ID, null, null, null, null, null, null, null);
         User farmer = new User(FARMER_ID, "Farmer", FARMER_EMAIL, "FARMER_MASS",
-                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null);
+                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null, null, null);
 
         when(excelReaderService.read(file)).thenReturn(List.of(row));
         when(userRepository.findByEmail(FARMER_EMAIL)).thenReturn(Optional.of(farmer));
@@ -115,7 +115,7 @@ class StoreImportServiceTest {
         StoreExcelRowDto row2 = StoreExcelRowDto.builder().storeCode("CO-002").storeName("Tienda 2").farmerEmail(FARMER_EMAIL).build();
 
         User farmer = new User(FARMER_ID, "Farmer", FARMER_EMAIL, "FARMER_MASS",
-                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null);
+                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null, null, null);
 
         when(excelReaderService.read(file)).thenReturn(List.of(row1, row2));
         when(userRepository.findByEmail(FARMER_EMAIL)).thenReturn(Optional.of(farmer));
