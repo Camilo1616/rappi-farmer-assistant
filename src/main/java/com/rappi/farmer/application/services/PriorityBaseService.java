@@ -209,8 +209,7 @@ public class PriorityBaseService {
     private List<Store> queryStoresByType(String baseType, Long farmerId, Integer activeDays, String churnFilter) {
         if ("ACTIVE".equals(baseType)) {
             int d = (activeDays != null && activeDays > 0) ? activeDays : 7;
-            int minDays = (d == 7) ? 0 : 8;
-            return storeRepository.findActiveByFarmerIdsAndDays(List.of(farmerId), minDays, d);
+            return storeRepository.findActiveNoLoginByFarmerIds(List.of(farmerId), d);
         }
         if ("CHURN".equals(baseType) && "M1".equals(churnFilter)) {
             return storeRepository.findChurnM1ByFarmerIds(List.of(farmerId));
