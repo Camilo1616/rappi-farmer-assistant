@@ -1,5 +1,6 @@
 package com.rappi.farmer.application.services;
 
+// v2 — fuerza invalidación de caché Railway
 import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.application.dtos.ImportResultDto;
 import com.rappi.farmer.application.dtos.StoreExcelRowDto;
