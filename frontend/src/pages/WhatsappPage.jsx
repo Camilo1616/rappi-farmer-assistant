@@ -753,7 +753,9 @@ export default function WhatsappPage() {
           <StepMessage templates={templates} template={selTemplate}
             onTemplate={t => { setSelTemplate(t.id); setMessage(t.content) }}
             message={message} onChange={setMessage}
-            selectedStores={Object.values(dashStores).flat().filter(s => selected.has(s.id))}
+            selectedStores={Object.values(dashStores).flat()
+              .filter(s => selected.has(s.id))
+              .filter((s, i, arr) => arr.findIndex(x => x.id === s.id) === i)}
             onAiMessages={msgs => { setAiMessages(msgs) }} />
 
           {/* ── Panel revisión mensajes IA ── */}
