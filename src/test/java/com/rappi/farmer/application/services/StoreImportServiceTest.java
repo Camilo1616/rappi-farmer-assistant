@@ -1,6 +1,6 @@
 package com.rappi.farmer.application.services;
 
-// v2 — fuerza invalidación de caché Railway
+// v3 — usa mock(User.class) para evitar dependencia del constructor
 import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.application.dtos.ImportResultDto;
 import com.rappi.farmer.application.dtos.StoreExcelRowDto;
@@ -23,7 +23,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +41,13 @@ class StoreImportServiceTest {
     private static final String FARMER_EMAIL = "farmer@rappi.com";
     private static final Long   FARMER_ID    = 1L;
 
+    private User buildFarmer() {
+        User farmer = mock(User.class);
+        when(farmer.getId()).thenReturn(FARMER_ID);
+        when(farmer.getEmail()).thenReturn(FARMER_EMAIL);
+        return farmer;
+    }
+
     @Test
     void importFromExcel_createsStoresCuandoNoExisten() throws IOException {
         File file = new File("cartera.xlsx");
@@ -52,15 +59,13 @@ class StoreImportServiceTest {
                 .farmerEmail(FARMER_EMAIL)
                 .build();
 
-        User farmer = new User(FARMER_ID, "Farmer", FARMER_EMAIL, "FARMER_MASS",
-                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null, null, null);
+        User farmer = buildFarmer();
         when(excelReaderService.read(file)).thenReturn(List.of(row));
         when(userRepository.findByEmail(FARMER_EMAIL)).thenReturn(Optional.of(farmer));
         when(storeRepository.findByStoreCode("CO-001")).thenReturn(Optional.empty());
         when(storeRepository.save(any())).thenAnswer(inv -> {
             Store s = inv.getArgument(0);
             if (s.getId() == null) {
-                // simular ID asignado por BD
                 return new Store(1L, s.getStoreCode(), s.getBrandId(), s.getStoreName(),
                         s.getPhoneNumber(), s.getChannel(), s.getOnboardingDate(), s.getActive(),
                         s.getConnectionPercentage(), s.getCurrentStatus(), s.getHadHandoff(),
@@ -93,8 +98,7 @@ class StoreImportServiceTest {
 
         Store existing = new Store(1L, "CO-001", null, "Nombre Viejo", "3000000000",
                 "DIGITAL", null, true, null, null, null, null, FARMER_ID, null, null, null, null, null, null, null);
-        User farmer = new User(FARMER_ID, "Farmer", FARMER_EMAIL, "FARMER_MASS",
-                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null, null, null);
+        User farmer = buildFarmer();
 
         when(excelReaderService.read(file)).thenReturn(List.of(row));
         when(userRepository.findByEmail(FARMER_EMAIL)).thenReturn(Optional.of(farmer));
@@ -115,8 +119,7 @@ class StoreImportServiceTest {
         StoreExcelRowDto row1 = StoreExcelRowDto.builder().storeCode("CO-001").storeName("Tienda 1").farmerEmail(FARMER_EMAIL).build();
         StoreExcelRowDto row2 = StoreExcelRowDto.builder().storeCode("CO-002").storeName("Tienda 2").farmerEmail(FARMER_EMAIL).build();
 
-        User farmer = new User(FARMER_ID, "Farmer", FARMER_EMAIL, "FARMER_MASS",
-                "pass", null, "CO", "ACTIVE", null, null, null, null, null, null, null, null);
+        User farmer = buildFarmer();
 
         when(excelReaderService.read(file)).thenReturn(List.of(row1, row2));
         when(userRepository.findByEmail(FARMER_EMAIL)).thenReturn(Optional.of(farmer));
