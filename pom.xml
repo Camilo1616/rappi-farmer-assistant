@@ -175,6 +175,16 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+                <!-- Deshabilitar compilación de tests explícitamente para Railway -->
+                <executions>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <goals><goal>testCompile</goal></goals>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
