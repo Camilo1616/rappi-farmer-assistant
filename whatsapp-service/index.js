@@ -1,7 +1,7 @@
 import express from 'express'
 import pkg from 'whatsapp-web.js'
 import QRCode from 'qrcode'
-import { existsSync, mkdirSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -16,9 +16,27 @@ if (!existsSync(AUTH_DIR)) mkdirSync(AUTH_DIR, { recursive: true })
 
 // ── Sesiones múltiples (una por farmer) ──────────────────────────────────────
 // sessionId: string como "u42" (prefijo + userId del backend)
-// Cada sesión tiene su propio cliente Baileys, QR y estado de conexión.
+// Cada sesión tiene su propio cliente whatsapp-web.js, QR y estado de conexión.
 
 const sessions = new Map()  // sessionId -> { client, qrBase64, connected, initializing }
+
+// Restaurar sesiones guardadas en disco al arrancar
+function restorePersistedSessions() {
+  if (!existsSync(AUTH_DIR)) return
+  try {
+    const entries = readdirSync(AUTH_DIR)
+    for (const entry of entries) {
+      const full = join(AUTH_DIR, entry)
+      if (statSync(full).isDirectory() && !sessions.has(entry)) {
+        console.log(`[WA] Restaurando sesión guardada: ${entry}`)
+        sessions.set(entry, { client: null, qrBase64: null, connected: false, initializing: false })
+        initSession(entry)
+      }
+    }
+  } catch (e) {
+    console.error('[WA] Error al restaurar sesiones:', e.message)
+  }
+}
 
 function getSession(sessionId) {
   if (!sessions.has(sessionId)) {
@@ -30,8 +48,9 @@ function getSession(sessionId) {
 
 function initSession(sessionId) {
   const s = sessions.get(sessionId)
-  if (s.initializing || (s.client && s.connected)) return
+  if (s.initializing || s.connected) return
   s.initializing = true
+  s.client = null  // asegura instancia fresca
 
   const sessionDir = join(AUTH_DIR, sessionId)
   if (!existsSync(sessionDir)) mkdirSync(sessionDir, { recursive: true })
@@ -84,11 +103,12 @@ function initSession(sessionId) {
     s.connected    = false
     s.qrBase64     = null
     s.initializing = false
-    // Reintentar en 10 segundos
+    s.client       = null
+    // Reiniciar con un cliente nuevo en 10 segundos
     setTimeout(() => {
-      console.log(`[WA:${sessionId}] Reiniciando cliente...`)
       if (sessions.has(sessionId)) {
-        client.initialize().catch(e => console.error(`[WA:${sessionId}] Error al reiniciar:`, e.message))
+        console.log(`[WA:${sessionId}] Reiniciando cliente tras desconexión...`)
+        initSession(sessionId)
       }
     }, 10000)
   })
@@ -181,4 +201,6 @@ app.post('/reconnect', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[WA] Servicio multi-sesión escuchando en puerto ${PORT}`)
+  // Restaurar sesiones guardadas para que reconecten sin pedir QR
+  restorePersistedSessions()
 })
