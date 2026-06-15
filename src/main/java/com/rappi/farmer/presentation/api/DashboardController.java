@@ -3,6 +3,7 @@ package com.rappi.farmer.presentation.api;
 import com.rappi.farmer.application.dtos.DashboardDataDto;
 import com.rappi.farmer.application.dtos.FarmerSummaryDto;
 import com.rappi.farmer.application.dtos.LiderDashboardDto;
+import com.rappi.farmer.application.dtos.ManagementViewDto;
 import com.rappi.farmer.application.services.AdminService;
 import com.rappi.farmer.application.services.DashboardService;
 import com.rappi.farmer.application.SessionContext;
@@ -11,6 +12,8 @@ import com.rappi.farmer.infrastructure.persistence.repository.BaseJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 import java.util.List;
 
@@ -62,5 +65,11 @@ public class DashboardController {
                 totalStores, totalOnboarding, totalChurn, totalSaludables,
                 basesPendientes, basesEnProceso, basesCompletadas
         ));
+    }
+
+    /** Gestiones del día de un farmer específico, accesible por el Líder */
+    @GetMapping("/lider/farmer/{farmerId}/managements")
+    public ResponseEntity<List<ManagementViewDto>> getFarmerManagements(@PathVariable Long farmerId) {
+        return ResponseEntity.ok(adminService.getFarmerTodayManagements(farmerId));
     }
 }
