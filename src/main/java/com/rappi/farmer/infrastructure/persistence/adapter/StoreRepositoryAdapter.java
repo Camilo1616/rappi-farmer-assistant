@@ -194,7 +194,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
     }
 
     private Store toDomain(StoreEntity e) {
-        Long farmerId = e.getUser() != null ? e.getUser().getId() : null;
+        Long farmerId = e.getUserId() != null ? e.getUserId() : (e.getUser() != null ? e.getUser().getId() : null);
         String farmerEmail = e.getUser() != null ? e.getUser().getEmail() : null;
         Store s = new Store(
                 e.getId(), e.getStoreCode(), e.getBrandId(), e.getStoreName(),

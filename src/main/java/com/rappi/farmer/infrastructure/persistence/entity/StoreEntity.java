@@ -71,6 +71,9 @@ public class StoreEntity {
     @Column(name = "credentials_date")
     private LocalDate credentialsDate;
 
+    @Column(name = "user_id", insertable = false, updatable = false)
+    private Long userId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity user;
