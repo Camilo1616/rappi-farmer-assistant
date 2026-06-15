@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public class ManagementService {
     @Transactional
     public Management register(RegisterManagementRequest request) {
         Long userId = sessionContext.getCurrentUserId();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("America/Bogota"));
 
         // Bloquear si ya existe gestión hoy para esta tienda o cualquier hermana de la misma brand
         if (managementRepository.findLatestTodayByStoreId(request.getStoreId()).isPresent()) {
@@ -92,7 +93,7 @@ public class ManagementService {
     public void deleteManagement(Long managementId) {
         Management m = managementRepository.findById(managementId)
                 .orElseThrow(() -> new com.rappi.farmer.domain.exceptions.BusinessException("Gestión no encontrada"));
-        if (!m.getManagementDate().toLocalDate().equals(LocalDate.now())) {
+        if (!m.getManagementDate().toLocalDate().equals(LocalDate.now(ZoneId.of("America/Bogota")))) {
             throw new com.rappi.farmer.domain.exceptions.BusinessException("Solo se pueden eliminar gestiones del día actual");
         }
         managementRepository.deleteById(managementId);

@@ -371,11 +371,11 @@ function BasesTab({ bases, farmers, baseStoresData, baseStoresLoading, expandedB
 }
 
 function BaseCard({ base, baseStoresData, baseStoresLoading, expanded, onToggle }) {
-  const assignments  = base.assignments || []
-  const completadas  = assignments.filter(a => a.status === 'COMPLETADO').length
-  const enProceso    = assignments.filter(a => a.status === 'EN_PROCESO').length
-  const sinLeer      = assignments.filter(a => a.status === 'SIN_LEER' || a.status === 'LEIDA').length
-  const pct = assignments.length > 0 ? Math.round((completadas / assignments.length) * 100) : 0
+  const totalFarmers = base.farmersCount ?? 0
+  const completadas  = base.completados  ?? 0
+  const enProceso    = base.enProceso    ?? 0
+  const sinLeer      = base.pendientes   ?? 0
+  const pct = totalFarmers > 0 ? Math.round((completadas / totalFarmers) * 100) : 0
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden',
@@ -400,45 +400,55 @@ function BaseCard({ base, baseStoresData, baseStoresLoading, expanded, onToggle 
                 background: pct === 100 ? '#16a34a' : '#ff441f', borderRadius: 99, transition: 'width 0.4s' }} />
             </div>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-              {pct}% · {completadas}/{assignments.length}
+              {pct}% · {completadas}/{totalFarmers}
             </span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {sinLeer > 0     && <Chip label={`${sinLeer} pendiente${sinLeer > 1 ? 's' : ''}`} scheme={STATUS_COLOR.SIN_LEER} />}
           {enProceso > 0   && <Chip label={`${enProceso} en proceso`} scheme={STATUS_COLOR.EN_PROCESO} />}
-          {completadas > 0 && <Chip label={`${completadas} listo${completadas > 1 ? 's' : ''}`} scheme={STATUS_COLOR.COMPLETADO} />}
+          {completadas > 0 && <Chip label={`${completadas} completado${completadas > 1 ? 's' : ''}`} scheme={STATUS_COLOR.COMPLETADO} />}
         </div>
       </div>
 
       {/* Detalle expandido */}
       {expanded && (
         <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-          {/* Farmers asignados */}
-          {assignments.length > 0 && (
-            <div style={{ padding: '10px 20px', display: 'flex', flexWrap: 'wrap', gap: 8,
-              borderBottom: '1px solid var(--border)' }}>
-              {assignments.map((a, i) => {
-                const sc = STATUS_COLOR[a.status] || STATUS_COLOR.SIN_LEER
-                return (
-                  <div key={a.id || i} style={{ display: 'flex', alignItems: 'center', gap: 8,
-                    background: 'var(--bg-card)', border: '1px solid var(--border)',
-                    borderRadius: 10, padding: '6px 12px' }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-input)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                      {a.farmerName?.[0]?.toUpperCase() || '?'}
-                    </div>
-                    <div>
-                      <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{a.farmerName}</p>
-                      <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>{a.storeCount ?? 0} tiendas</p>
-                    </div>
-                    <Chip label={sc.label} scheme={sc} />
-                  </div>
-                )
-              })}
+          {/* Resumen de la base */}
+          <div style={{ padding: '10px 20px', display: 'flex', flexWrap: 'wrap', gap: 8,
+            borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6,
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 10, padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
+              👥 <strong>{totalFarmers}</strong> farmer{totalFarmers !== 1 ? 's' : ''}
             </div>
-          )}
+            {sinLeer > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6,
+                background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.3)',
+                borderRadius: 10, padding: '6px 12px', fontSize: 12, color: '#475569', fontWeight: 600 }}>
+                ⏳ {sinLeer} pendiente{sinLeer !== 1 ? 's' : ''}
+              </div>
+            )}
+            {enProceso > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6,
+                background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)',
+                borderRadius: 10, padding: '6px 12px', fontSize: 12, color: '#854d0e', fontWeight: 600 }}>
+                🔄 {enProceso} en proceso
+              </div>
+            )}
+            {completadas > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6,
+                background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                borderRadius: 10, padding: '6px 12px', fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+                ✅ {completadas} completado{completadas !== 1 ? 's' : ''}
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.3)',
+              borderRadius: 10, padding: '6px 12px', fontSize: 12, color: '#5b21b6', fontWeight: 600 }}>
+              🏪 {base.tiendas ?? 0} tiendas · {base.gestionadas ?? 0} gestionadas
+            </div>
+          </div>
 
           {/* Tiendas en tiempo real */}
           <div style={{ padding: '12px 20px' }}>
@@ -570,8 +580,14 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
         byFarmer[f] = { name: farmer?.fullName || `#${f}`, stores: [] }
       }
       for (const s of allStores) {
-        const fId = selectedFarmers.find(id => id === s.farmerId)
+        // farmerId puede llegar como number o string según el JSON
+        const fId = selectedFarmers.find(id => id === s.farmerId || id === Number(s.farmerId))
         if (fId != null) byFarmer[fId].stores.push(s)
+        else {
+          // si no tiene farmerId asociado, asignarlo al primer farmer seleccionado
+          const fallback = selectedFarmers[0]
+          if (fallback != null) byFarmer[fallback].stores.push(s)
+        }
       }
       setPreview(byFarmer)
       setSelStores(allStores.map(s => s.id))

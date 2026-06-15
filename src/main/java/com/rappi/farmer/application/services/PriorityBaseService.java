@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,7 +42,7 @@ public class PriorityBaseService {
         }
 
         PriorityBase base = new PriorityBase(null, liderId, null,
-                request.getBaseType(), request.getMessage(), LocalDateTime.now());
+                request.getBaseType(), request.getMessage(), LocalDateTime.now(ZoneId.of("America/Bogota")));
         PriorityBase saved = repository.saveBase(base);
 
         int totalTiendas = 0;
@@ -129,7 +130,7 @@ public class PriorityBaseService {
                         .filter(a -> AssignmentStatus.LEIDA.name().equals(a.getStatus())
                                 || AssignmentStatus.COMPLETADA.name().equals(a.getStatus()))
                         .filter(a -> a.getReadAt() != null
-                                && a.getReadAt().isAfter(LocalDateTime.now().minusHours(24))))
+                                && a.getReadAt().isAfter(LocalDateTime.now(ZoneId.of("America/Bogota")).minusHours(24))))
                 .map(a -> {
                     long total       = repository.countStoresByBaseAndFarmer(a.getBaseId(), a.getFarmerId());
                     long gestionadas = repository.countManagedByBaseAndFarmer(a.getBaseId(), a.getFarmerId());
@@ -165,7 +166,7 @@ public class PriorityBaseService {
         if (AssignmentStatus.PENDIENTE.name().equals(a.getStatus())
                 || AssignmentStatus.LEIDA.name().equals(a.getStatus())) {
             a.setStatus(AssignmentStatus.EN_PROCESO.name());
-            if (a.getReadAt() == null) a.setReadAt(LocalDateTime.now());
+            if (a.getReadAt() == null) a.setReadAt(LocalDateTime.now(ZoneId.of("America/Bogota")));
             repository.saveAssignment(a);
         }
     }
@@ -199,7 +200,7 @@ public class PriorityBaseService {
         bs.setManagementType(managementType);
         bs.setComments(comments);
         bs.setManagedAt("GESTIONADA".equals(status) || "NO_CONTACTO".equals(status)
-                ? LocalDateTime.now() : bs.getManagedAt());
+                ? LocalDateTime.now(ZoneId.of("America/Bogota")) : bs.getManagedAt());
         repository.saveBaseStore(bs);
     }
 
@@ -222,8 +223,8 @@ public class PriorityBaseService {
                 .orElseThrow(() -> new BusinessException("Asignación no encontrada: " + assignmentId));
         a.setStatus(newStatus.name());
         if (comments != null) a.setComments(comments);
-        if (newStatus == AssignmentStatus.LEIDA && a.getReadAt() == null) a.setReadAt(LocalDateTime.now());
-        if (newStatus == AssignmentStatus.COMPLETADA) a.setCompletedAt(LocalDateTime.now());
+        if (newStatus == AssignmentStatus.LEIDA && a.getReadAt() == null) a.setReadAt(LocalDateTime.now(ZoneId.of("America/Bogota")));
+        if (newStatus == AssignmentStatus.COMPLETADA) a.setCompletedAt(LocalDateTime.now(ZoneId.of("America/Bogota")));
         repository.saveAssignment(a);
     }
 
