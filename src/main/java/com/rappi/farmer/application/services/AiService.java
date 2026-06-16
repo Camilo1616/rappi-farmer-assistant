@@ -190,7 +190,7 @@ public class AiService {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> generateRecommendation(List<Store> stores) {
-        String context = buildStoreContext(stores, 60);
+        String context = buildStoreContext(stores, 40);
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
@@ -218,11 +218,11 @@ public class AiService {
                 - MEDIA: AVA entre 30-60%, días 8-14 sin seguimiento, sin login reciente
                 - BAJA: tiendas saludables que solo necesitan check-in
 
-                Devuelve máximo 25 tiendas en "priorities", las más críticas primero.
+                Devuelve máximo 15 tiendas en "priorities", las más críticas primero.
                 Cartera actual:
                 """ + context;
 
-        String raw = callGroq(systemPrompt, userPrompt, 0.4, 2000);
+        String raw = callGroq(systemPrompt, userPrompt, 0.4, 4000);
 
         try {
             // Limpiar posible markdown code block
@@ -243,7 +243,7 @@ public class AiService {
      * Chat conversacional sobre la cartera. Mantiene historial de la sesión.
      */
     public String chat(List<Store> stores, List<AiController.ChatMessage> history, String userMessage) {
-        String context = buildStoreContext(stores, 50);
+        String context = buildStoreContext(stores, 30);
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager de Rappi Colombia.
@@ -273,7 +273,7 @@ public class AiService {
         }
         messages.add(Map.of("role", "user", "content", userMessage));
 
-        return callGroqMessages(messages, 0.7, 600);
+        return callGroqMessages(messages, 0.7, 1500);
     }
 
     /** Construye un resumen comprimido de la cartera para mandar a la IA. */
