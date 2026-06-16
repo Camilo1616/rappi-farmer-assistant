@@ -202,6 +202,29 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
     List<StoreEntity> findActive7DaysWithSuccessfulManagement(
         @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
 
+    /**
+     * ACTIVE 8-28 días: entre 8 y 28 días desde onboarding_date,
+     * HO exitoso, al menos una gestión EFECTIVA y SIN ventas.
+     */
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT s.* FROM stores s " +
+        "WHERE s.active = true " +
+        "AND s.user_id IN :farmerIds " +
+        "AND s.had_handoff = true " +
+        "AND s.onboarding_date IS NOT NULL " +
+        "AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 8 AND 28 " +
+        "AND EXISTS ( " +
+        "  SELECT 1 FROM managements m " +
+        "  WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA' " +
+        ") " +
+        "AND NOT EXISTS ( " +
+        "  SELECT 1 FROM daily_metrics dm " +
+        "  WHERE dm.store_id = s.id AND dm.orders_count > 0 " +
+        ") " +
+        "ORDER BY s.store_name ASC", nativeQuery = true)
+    List<StoreEntity> findActive8to28DaysWithSuccessfulManagement(
+        @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
     /** @deprecated Reemplazado por findActive7DaysWithSuccessfulManagement */
     @Deprecated
     @org.springframework.data.jpa.repository.Query(value =

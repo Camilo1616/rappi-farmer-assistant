@@ -30,15 +30,16 @@ const STATUS_COLOR = {
   COMPLETADO: { bg: 'rgba(34,197,94,0.12)',   color: '#16a34a', label: 'Completado' },
 }
 const BASE_TYPE_OPTS = [
-  { value: 'ACTIVE',    label: 'Active' },
+  { value: 'ACTIVE',    label: 'Active 7d' },
+  { value: 'ACTIVE_28', label: 'Active 8-28d' },
   { value: 'AVA_8_14', label: 'AVA 8-14' },
   { value: 'CHURN',    label: 'Churn' },
   { value: 'RETENCION',label: 'Retención' },
   { value: 'PRIORIZACION', label: 'Priorización' },
 ]
 const BASE_TYPE_LABEL = {
-  CHURN: 'Churn', ACTIVE_F7D: 'Activos 7d', RETENCION: 'Retención',
-  AVA_8_14: 'AVA 8-14', PRIORIZACION: 'Priorización',
+  CHURN: 'Churn', ACTIVE_F7D: 'Activos 7d', ACTIVE: 'Active 7d', ACTIVE_28: 'Active 8-28d',
+  RETENCION: 'Retención', AVA_8_14: 'AVA 8-14', PRIORIZACION: 'Priorización',
 }
 
 const IC = ({ d, d2 }) => (

@@ -33,6 +33,7 @@ public interface StoreRepository {
     @Deprecated
     List<Store> findActiveNoLoginByFarmerIds(List<Long> farmerIds, int days);
     List<Store> findActive7DaysWithSuccessfulManagement(List<Long> farmerIds);
+    List<Store> findActive8to28DaysWithSuccessfulManagement(List<Long> farmerIds);
     List<Store> findChurnM1ByFarmerIds(List<Long> farmerIds);
     List<Store> findRetencionByFarmerIds(List<Long> farmerIds);
     List<Store> findAva8a14ByFarmerIds(List<Long> farmerIds);

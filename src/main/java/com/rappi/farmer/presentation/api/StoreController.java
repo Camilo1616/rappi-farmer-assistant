@@ -77,6 +77,7 @@ public class StoreController {
         }
         List<StoreViewDto> stores = switch (type) {
             case "ACTIVE"     -> storeDetailService.toViewDtos(storeRepository.findActive7DaysWithSuccessfulManagement(farmerIds));
+            case "ACTIVE_28"  -> storeDetailService.toViewDtos(storeRepository.findActive8to28DaysWithSuccessfulManagement(farmerIds));
             case "CHURN"      -> storeDetailService.toViewDtos(switch (churnFilter) {
                 case "M1" -> storeRepository.findChurnM1ByFarmerIds(farmerIds);
                 default   -> storeRepository.findChurnByFarmerIds(farmerIds);

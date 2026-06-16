@@ -210,6 +210,9 @@ public class PriorityBaseService {
         if ("ACTIVE".equals(baseType)) {
             return storeRepository.findActive7DaysWithSuccessfulManagement(List.of(farmerId));
         }
+        if ("ACTIVE_28".equals(baseType)) {
+            return storeRepository.findActive8to28DaysWithSuccessfulManagement(List.of(farmerId));
+        }
         if ("CHURN".equals(baseType) && "M1".equals(churnFilter)) {
             return storeRepository.findChurnM1ByFarmerIds(List.of(farmerId));
         }
