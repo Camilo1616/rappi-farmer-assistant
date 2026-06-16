@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
@@ -28,9 +29,9 @@ public class AiService {
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // Caché simple para la recomendación diaria
+    // Caché de recomendación por usuario (userId → resultado)
     private record CachedRec(Map<String, Object> data, Instant expiresAt) {}
-    private final AtomicReference<CachedRec> recCache = new AtomicReference<>();
+    private final ConcurrentHashMap<Long, CachedRec> recCache = new ConcurrentHashMap<>();
 
     public AiService(@Value("${groq.api.key:}") String apiKey) {
         this.apiKey = apiKey;
@@ -198,11 +199,11 @@ public class AiService {
      * con justificación para cada una. Formato de respuesta: JSON con "message" y "priorities".
      */
     @SuppressWarnings("unchecked")
-    public Map<String, Object> generateRecommendation(List<Store> stores) {
-        // Devolver caché si está vigente
-        CachedRec cached = recCache.get();
+    public Map<String, Object> generateRecommendation(List<Store> stores, Long userId) {
+        // Caché por usuario — cada farmer tiene su propia recomendación
+        CachedRec cached = recCache.get(userId);
         if (cached != null && Instant.now().isBefore(cached.expiresAt())) {
-            log.debug("Recomendación desde caché");
+            log.debug("Recomendación desde caché para userId={}", userId);
             return cached.data();
         }
         String context = buildStoreContext(stores, 5); // máx 5 por segmento → ~25 tiendas total
@@ -266,7 +267,7 @@ public class AiService {
                 json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
             }
             Map<String, Object> result = new ObjectMapper().readValue(json, Map.class);
-            recCache.set(new CachedRec(result, Instant.now().plusSeconds(CACHE_SECONDS)));
+            recCache.put(userId, new CachedRec(result, Instant.now().plusSeconds(CACHE_SECONDS)));
             return result;
         } catch (Exception e) {
             log.warn("No se pudo parsear JSON de IA, devolviendo raw: {}", e.getMessage());
@@ -486,9 +487,9 @@ public class AiService {
             });
     }
 
-    /** Limpia la caché de recomendación (llamar al registrar una gestión). */
-    public void clearRecommendationCache() {
-        recCache.set(null);
+    /** Limpia la caché de recomendación del usuario (llamar al registrar una gestión). */
+    public void clearRecommendationCache(Long userId) {
+        if (userId != null) recCache.remove(userId);
     }
 
     /** Calcula el aging real: usa el campo stored; si es null lo deriva de onboarding_date. */

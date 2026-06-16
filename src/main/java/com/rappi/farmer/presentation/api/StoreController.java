@@ -1,5 +1,6 @@
 package com.rappi.farmer.presentation.api;
 
+import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.application.dtos.ManagementViewDto;
 import com.rappi.farmer.application.dtos.RegisterManagementRequest;
 import com.rappi.farmer.application.dtos.StoreViewDto;
@@ -27,6 +28,7 @@ public class StoreController {
     private final ManagementService managementService;
     private final StoreRepository storeRepository;
     private final com.rappi.farmer.application.services.AiService aiService;
+    private final SessionContext sessionContext;
 
     @GetMapping
     public ResponseEntity<List<StoreViewDto>> getStores(@RequestParam(required = false) String q) {
@@ -61,7 +63,7 @@ public class StoreController {
                     .comments(request.comments())
                     .build();
             Management saved = managementService.register(req);
-            aiService.clearRecommendationCache(); // la gestión cambia la cartera pendiente
+            aiService.clearRecommendationCache(sessionContext.getCurrentUserId());
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (BusinessException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

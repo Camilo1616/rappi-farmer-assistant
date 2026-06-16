@@ -97,7 +97,7 @@ public class AiController {
                 ? allStores
                 : allStores.stream().filter(s -> !managedTodayIds.contains(s.getId())).toList();
         try {
-            Map<String, Object> result = aiService.generateRecommendation(stores);
+            Map<String, Object> result = aiService.generateRecommendation(stores, userId);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Error generando recomendación IA: {}", e.getMessage());
