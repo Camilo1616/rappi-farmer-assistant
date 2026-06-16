@@ -59,7 +59,7 @@ public class BaseController {
             List<com.rappi.farmer.domain.entities.Store> farmerStores = switch (req.type()) {
                 case "CHURN"      -> storeRepository.findChurnByFarmerIds(List.of(farmerId));
                 case "ACTIVE_F7D" -> storeRepository.findActiveF7dByFarmerIds(List.of(farmerId));
-                case "ACTIVE"     -> storeRepository.findActiveNoLoginByFarmerIds(List.of(farmerId), days);
+                case "ACTIVE"     -> storeRepository.findActive7DaysWithSuccessfulManagement(List.of(farmerId));
                 case "RETENCION"  -> storeRepository.findRetencionByFarmerIds(List.of(farmerId));
                 case "AVA_8_14"   -> storeRepository.findAva8a14ByFarmerIds(List.of(farmerId));
                 default           -> storeRepository.findAllActiveByFarmerIds(List.of(farmerId));

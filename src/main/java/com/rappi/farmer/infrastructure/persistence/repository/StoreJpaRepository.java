@@ -179,9 +179,26 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         @org.springframework.data.repository.query.Param("maxDays") int maxDays);
 
     /**
-     * ACTIVE (base líder): tiendas activas que no han conectado
-     * a Rappi Aliados en los últimos :days días (last_login_date NULL o más antiguo).
+     * ACTIVE 7 días: aging = 7 (según la fecha de cargue del Excel),
+     * HO exitoso (had_handoff = true) y al menos una gestión EFECTIVA,
+     * sin importar el canal/tipo de gestión.
      */
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT s.* FROM stores s " +
+        "WHERE s.active = true " +
+        "AND s.user_id IN :farmerIds " +
+        "AND s.aging = 7 " +
+        "AND s.had_handoff = true " +
+        "AND EXISTS ( " +
+        "  SELECT 1 FROM managements m " +
+        "  WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA' " +
+        ") " +
+        "ORDER BY s.store_name ASC", nativeQuery = true)
+    List<StoreEntity> findActive7DaysWithSuccessfulManagement(
+        @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    /** @deprecated Reemplazado por findActive7DaysWithSuccessfulManagement */
+    @Deprecated
     @org.springframework.data.jpa.repository.Query(value =
         "SELECT * FROM stores s WHERE s.active = true " +
         "AND (s.last_login_date IS NULL OR DATEDIFF(CURRENT_DATE(), s.last_login_date) >= :days) " +

@@ -165,6 +165,11 @@ public class StoreRepositoryAdapter implements StoreRepository {
         return jpaRepository.findChurnM1ByFarmerIds(farmerIds).stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<Store> findActive7DaysWithSuccessfulManagement(List<Long> farmerIds) {
+        return jpaRepository.findActive7DaysWithSuccessfulManagement(farmerIds).stream().map(this::toDomain).toList();
+    }
+
     private StoreEntity toEntity(Store store) {
         StoreEntity entity = new StoreEntity();
         entity.setId(store.getId());
