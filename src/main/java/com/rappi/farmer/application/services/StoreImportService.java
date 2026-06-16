@@ -57,6 +57,7 @@ public class StoreImportService {
 
         // Códigos procesados en este Excel (para limpiar sobrantes al final)
         java.util.Set<String> codesInExcel    = new java.util.HashSet<>();
+        java.util.Set<String> codesWithErrors = new java.util.HashSet<>();
         java.util.Set<Long>   farmerIdsTouched = new java.util.HashSet<>();
 
         for (StoreExcelRowDto row : rows) {
@@ -108,9 +109,10 @@ public class StoreImportService {
                 saveDailyMetric(savedStore.getId(), row, today);
 
             } catch (Exception e) {
-                log.error("Error importando tienda {}: {}", row.getStoreCode(), e.getMessage());
+                log.error("Error importando tienda {} ({}): {}", row.getStoreCode(), row.getStoreName(), e.getMessage(), e);
                 result.setErrors(result.getErrors() + 1);
                 result.getErrorList().add(new ImportResultDto.ErrorRow(row.getStoreCode(), e.getMessage()));
+                if (row.getStoreCode() != null) codesWithErrors.add(row.getStoreCode());
             }
         }
 
@@ -121,6 +123,7 @@ public class StoreImportService {
             List<Store> storesEnBD = storeRepository.findByUserId(farmerId);
             for (Store s : storesEnBD) {
                 if (s.getStoreCode() != null && codesInExcel.contains(s.getStoreCode())) continue;
+                if (s.getStoreCode() != null && codesWithErrors.contains(s.getStoreCode())) continue;
                 if (Boolean.FALSE.equals(s.getActive())) continue; // ya inactiva
                 try {
                     storeDeleteService.deactivateStore(s.getId());
@@ -196,12 +199,9 @@ public class StoreImportService {
         if (row.getAgingStage() != null) store.setAgingStage(row.getAgingStage());
         if (row.getLastLoginDate() != null) store.setLastLoginDate(row.getLastLoginDate());
         if (row.getGestionar() != null) store.setGestionar(row.getGestionar());
-        // Conserva la fecha de cargue más antigua: es la fuente de verdad para la edad de la tienda.
-        // Si la BD tiene una fecha más reciente (sobreescrita en cargas previas), el Excel la corrige.
+        // Fecha de cargue del Excel = fecha del snapshot Rappi en esa fila. Se actualiza siempre.
         if (row.getUploadDate() != null) {
-            if (store.getUploadDate() == null || row.getUploadDate().isBefore(store.getUploadDate())) {
-                store.setUploadDate(row.getUploadDate());
-            }
+            store.setUploadDate(row.getUploadDate());
         }
         // Conserva siempre la fecha más antigua: si el Excel trae la fecha real de inicio
         // y la BD tiene una fecha más reciente (por sobreescrituras anteriores), se corrige.

@@ -115,6 +115,31 @@ public class StoreController {
         ));
     }
 
+    /** Diagnóstico: estado de tiendas específicas por código (activa, upload_date, follow_up, etc.) */
+    @GetMapping("/debug-codes")
+    public ResponseEntity<List<Map<String, Object>>> debugCodes(@RequestParam List<String> codes) {
+        var jpa = ((com.rappi.farmer.infrastructure.persistence.adapter.StoreRepositoryAdapter)
+            storeRepository).getJpa();
+        List<Map<String, Object>> result = codes.stream()
+            .map(code -> {
+                var opt = jpa.findFirstByStoreCode(code);
+                if (opt.isEmpty()) return Map.<String, Object>of("code", code, "found", false);
+                var s = opt.get();
+                return Map.<String, Object>of(
+                    "code",           code,
+                    "found",          true,
+                    "active",         s.getActive(),
+                    "userId",         s.getUser() != null ? s.getUser().getId() : null,
+                    "channel",        s.getChannel(),
+                    "hadHandoff",     s.getHadHandoff(),
+                    "uploadDate",     String.valueOf(s.getUploadDate()),
+                    "lastFollowUp",   String.valueOf(s.getLastFollowUp()),
+                    "followUp30d",    String.valueOf(s.getFollowUpLast30d())
+                );
+            }).toList();
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/managements/today")
     public ResponseEntity<List<ManagementViewDto>> getTodayManagements() {
         return ResponseEntity.ok(managementService.getTodayManagements());
