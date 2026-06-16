@@ -361,8 +361,12 @@ export default function AiAssistant() {
   const loadRec = useCallback(async () => {
     setAiLoading(true); setAiError(null)
     try {
-      const { data } = await api.get('/ai/recommend', { timeout: 30000 })
+      const { data } = await api.get('/ai/recommend', { timeout: 45000 })
       setAiRec(data)
+      // Sincronizar managedCodes con lo que ya viene del servidor
+      if (data.managedResults) {
+        setManagedCodes(new Set(Object.keys(data.managedResults)))
+      }
     } catch (e) {
       setAiError(e.response?.data?.error || 'Error al cargar recomendación')
     } finally { setAiLoading(false) }
@@ -487,31 +491,57 @@ export default function AiAssistant() {
 
                 {aiRec && (
                   <>
+                    {/* Mensaje de cierre del día */}
+                    {aiRec.allDone ? (
+                      <div style={{
+                        textAlign: 'center', padding: '28px 16px',
+                        background: 'linear-gradient(135deg,rgba(34,197,94,0.08),rgba(16,185,129,0.04))',
+                        borderRadius: 12, border: '1.5px solid rgba(34,197,94,0.3)',
+                      }}>
+                        <div style={{ fontSize: 40, marginBottom: 10 }}>🎉</div>
+                        <div style={{ fontWeight: 800, fontSize: 15, color: '#22C55E', marginBottom: 6 }}>
+                          ¡Atendiste todo lo sugerido hoy!
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          Excelente trabajo. Nos vemos mañana con una nueva cartera.
+                        </div>
+                      </div>
+                    ) : (
+                    <>
                     <div style={{ padding: '10px 12px', borderRadius: 9, background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(109,40,217,0.04))', border: '1px solid rgba(124,58,237,0.18)', color: 'var(--text-primary)', fontSize: 12, lineHeight: 1.5, marginBottom: 12 }}>
                       {aiRec.message}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-                      <button onClick={loadRec} disabled={aiLoading} style={{ padding: '4px 12px', borderRadius: 7, border: '1.5px solid #7C3AED44', background: 'transparent', color: '#7C3AED', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                        🔄 Actualizar
-                      </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                        {Object.keys(aiRec.managedResults || {}).length}/{aiRec.priorities?.length || 0} gestionadas
+                      </span>
                     </div>
-                    {aiRec.priorities?.length > 0 && aiRec.priorities.map((p, i) => {
-                      const isManaged = p.storeCode && managedCodes.has(p.storeCode)
+                    {(aiRec.priorities?.length > 0) && aiRec.priorities.map((p, i) => {
+                      const result = aiRec.managedResults?.[p.storeCode]
+                      const isManaged = !!result || managedCodes.has(p.storeCode)
+                      const isEfectiva = result === 'EFECTIVA'
+                      const isNoContacto = result === 'NO_CONTACTO'
+                      const managedBg = isEfectiva ? 'rgba(34,197,94,0.06)' : isNoContacto ? 'rgba(148,163,184,0.08)' : 'rgba(34,197,94,0.06)'
+                      const managedBorder = isEfectiva ? 'rgba(34,197,94,0.3)' : isNoContacto ? 'rgba(148,163,184,0.3)' : 'rgba(34,197,94,0.3)'
                       return (
                         <div
                           key={p.storeCode ?? i}
                           onContextMenu={!isManaged && p.storeCode ? e => { e.preventDefault(); onRowCtx(e, p.storeCode) } : undefined}
-                          title={!isManaged && p.storeCode ? 'Clic derecho → ver detalle' : undefined}
+                          title={!isManaged && p.storeCode ? 'Clic derecho → registrar gestión' : undefined}
                           style={{
                             padding: '8px 10px', borderRadius: 9, marginBottom: 6,
-                            background: isManaged ? 'rgba(34,197,94,0.06)' : i % 2 === 0 ? 'var(--bg-input)' : 'transparent',
-                            border: isManaged ? '1px solid rgba(34,197,94,0.3)' : '1px solid var(--border)',
+                            background: isManaged ? managedBg : i % 2 === 0 ? 'var(--bg-input)' : 'transparent',
+                            border: `1px solid ${isManaged ? managedBorder : 'var(--border)'}`,
                             cursor: !isManaged && p.storeCode ? 'context-menu' : 'default',
-                            opacity: isManaged ? 0.7 : 1,
+                            opacity: isManaged ? 0.75 : 1,
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                            {isManaged
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: isManaged ? 0 : 3 }}>
+                            {isEfectiva
+                              ? <span style={{ padding: '1px 7px', borderRadius: 99, fontSize: 9, fontWeight: 800, background: 'rgba(34,197,94,0.15)', color: '#22C55E' }}>✅ EFECTIVA</span>
+                              : isNoContacto
+                              ? <span style={{ padding: '1px 7px', borderRadius: 99, fontSize: 9, fontWeight: 800, background: 'rgba(148,163,184,0.15)', color: '#64748B' }}>📵 NO CONTACTO</span>
+                              : isManaged
                               ? <span style={{ padding: '1px 7px', borderRadius: 99, fontSize: 9, fontWeight: 800, background: 'rgba(34,197,94,0.15)', color: '#22C55E' }}>✅ GESTIONADA</span>
                               : <span style={{
                                   padding: '1px 7px', borderRadius: 99, fontSize: 9, fontWeight: 800,
@@ -529,6 +559,8 @@ export default function AiAssistant() {
                         </div>
                       )
                     })}
+                    </>
+                    )}
                   </>
                 )}
               </div>
@@ -617,7 +649,11 @@ export default function AiAssistant() {
       <StoreContextMenu
         menu={ctxMenu}
         onClose={() => setCtxMenu(m => ({ ...m, visible: false }))}
-        onManaged={code => setManagedCodes(prev => new Set([...prev, code]))}
+        onManaged={code => {
+        setManagedCodes(prev => new Set([...prev, code]))
+        // Recargar para obtener resultado real (Efectiva/No contacto) desde el servidor
+        setTimeout(() => loadRec(), 800)
+      }}
       />
 
       <style>{`
