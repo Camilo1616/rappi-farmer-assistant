@@ -71,7 +71,7 @@ function InfoRow({ label, value, accent }) {
 }
 
 /* ── Context menu (clic derecho sobre fila de tabla o tarjeta) ──────────── */
-function StoreContextMenu({ menu, onClose }) {
+function StoreContextMenu({ menu, onClose, onManaged }) {
   const [tipo,      setTipo]      = useState('LLAMADA')
   const [resultado, setResultado] = useState('')
   const [comentario,setComentario]= useState('')
@@ -109,8 +109,9 @@ function StoreContextMenu({ menu, onClose }) {
         comments:       comentario.trim() || null,
       })
       setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      if (onManaged) onManaged(menu.storeCode)
       setResultado(''); setComentario('')
+      setTimeout(() => onClose(), 1800)
     } catch (e) {
       setSaveError(e.response?.data?.message || 'Error al guardar')
     } finally { setSaving(false) }
@@ -295,6 +296,7 @@ export default function AiAssistant() {
   const [pos,         setPos]        = useState({ x: 24, y: 0 })
   const [dragging,    setDragging]   = useState(false)
   const [ctxMenu,     setCtxMenu]    = useState({ visible: false, x: 0, y: 0, storeCode: null, data: null, loading: false })
+  const [managedCodes, setManagedCodes] = useState(new Set())
   const dragStart  = useRef(null)
   const chatEndRef = useRef(null)
 
@@ -481,31 +483,40 @@ export default function AiAssistant() {
                         🔄 Actualizar
                       </button>
                     </div>
-                    {aiRec.priorities?.length > 0 && aiRec.priorities.map((p, i) => (
-                      <div
-                        key={p.storeCode ?? i}
-                        onContextMenu={p.storeCode ? e => { e.preventDefault(); onRowCtx(e, p.storeCode) } : undefined}
-                        title={p.storeCode ? 'Clic derecho → ver detalle' : undefined}
-                        style={{
-                          padding: '8px 10px', borderRadius: 9, marginBottom: 6,
-                          background: i % 2 === 0 ? 'var(--bg-input)' : 'transparent',
-                          border: '1px solid var(--border)',
-                          cursor: p.storeCode ? 'context-menu' : 'default',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                          <span style={{
-                            padding: '1px 7px', borderRadius: 99, fontSize: 9, fontWeight: 800,
-                            background: p.priority === 'ALTA' ? 'rgba(239,68,68,0.12)' : p.priority === 'MEDIA' ? 'rgba(249,115,22,0.12)' : 'rgba(34,197,94,0.12)',
-                            color: p.priority === 'ALTA' ? '#EF4444' : p.priority === 'MEDIA' ? '#F97316' : '#22C55E',
-                          }}>{p.priority}</span>
-                          <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-primary)', flex: 1 }}>{p.storeName}</span>
-                          <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{p.storeCode}</span>
+                    {aiRec.priorities?.length > 0 && aiRec.priorities.map((p, i) => {
+                      const isManaged = p.storeCode && managedCodes.has(p.storeCode)
+                      return (
+                        <div
+                          key={p.storeCode ?? i}
+                          onContextMenu={!isManaged && p.storeCode ? e => { e.preventDefault(); onRowCtx(e, p.storeCode) } : undefined}
+                          title={!isManaged && p.storeCode ? 'Clic derecho → ver detalle' : undefined}
+                          style={{
+                            padding: '8px 10px', borderRadius: 9, marginBottom: 6,
+                            background: isManaged ? 'rgba(34,197,94,0.06)' : i % 2 === 0 ? 'var(--bg-input)' : 'transparent',
+                            border: isManaged ? '1px solid rgba(34,197,94,0.3)' : '1px solid var(--border)',
+                            cursor: !isManaged && p.storeCode ? 'context-menu' : 'default',
+                            opacity: isManaged ? 0.7 : 1,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                            {isManaged
+                              ? <span style={{ padding: '1px 7px', borderRadius: 99, fontSize: 9, fontWeight: 800, background: 'rgba(34,197,94,0.15)', color: '#22C55E' }}>✅ GESTIONADA</span>
+                              : <span style={{
+                                  padding: '1px 7px', borderRadius: 99, fontSize: 9, fontWeight: 800,
+                                  background: p.priority === 'ALTA' ? 'rgba(239,68,68,0.12)' : p.priority === 'MEDIA' ? 'rgba(249,115,22,0.12)' : 'rgba(34,197,94,0.12)',
+                                  color: p.priority === 'ALTA' ? '#EF4444' : p.priority === 'MEDIA' ? '#F97316' : '#22C55E',
+                                }}>{p.priority}</span>
+                            }
+                            <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-primary)', flex: 1 }}>{p.storeName}</span>
+                            <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{p.storeCode}</span>
+                          </div>
+                          {!isManaged && <>
+                            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>📌 {p.reason}</p>
+                            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>→ {p.action}</p>
+                          </>}
                         </div>
-                        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>📌 {p.reason}</p>
-                        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>→ {p.action}</p>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </>
                 )}
               </div>
@@ -571,7 +582,11 @@ export default function AiAssistant() {
       </div>
 
       {/* Context menu flotante */}
-      <StoreContextMenu menu={ctxMenu} onClose={() => setCtxMenu(m => ({ ...m, visible: false }))} />
+      <StoreContextMenu
+        menu={ctxMenu}
+        onClose={() => setCtxMenu(m => ({ ...m, visible: false }))}
+        onManaged={code => setManagedCodes(prev => new Set([...prev, code]))}
+      />
 
       <style>{`
         @keyframes bounce {

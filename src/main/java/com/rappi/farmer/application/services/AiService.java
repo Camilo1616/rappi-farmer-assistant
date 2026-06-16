@@ -249,6 +249,9 @@ public class AiService {
                   ]
                 }
 
+                ⚠️ CRÍTICO: SOLO incluye tiendas que aparezcan EXACTAMENTE en la CARTERA SEGMENTADA de abajo.
+                NO inventes códigos PE. NO incluyas tiendas que no estén en la lista.
+                Si una tienda no aparece en la lista, no existe en esta cartera.
                 Máximo 15 tiendas en "priorities", ordenadas de más a menos urgente.
 
                 CARTERA SEGMENTADA:
@@ -403,6 +406,11 @@ public class AiService {
                   .append(s.getCredentialsDate() != null ? "creds=" + s.getCredentialsDate() : "sin-creds")
                   .append("\n");
             });
+    }
+
+    /** Limpia la caché de recomendación (llamar al registrar una gestión). */
+    public void clearRecommendationCache() {
+        recCache.set(null);
     }
 
     /** Puntaje de urgencia descendente por ventana crítica. */
