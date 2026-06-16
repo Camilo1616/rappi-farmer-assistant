@@ -9,19 +9,27 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
 public class AiService {
 
-    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-    private static final String MODEL    = "llama-3.3-70b-versatile";
+    private static final String GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions";
+    /** Modelo rápido con límite de tokens/min 3x mayor que versatile. */
+    private static final String MODEL         = "llama-3.1-8b-instant";
+    private static final long   CACHE_SECONDS = 600; // 10 min
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
+
+    // Caché simple para la recomendación diaria
+    private record CachedRec(Map<String, Object> data, Instant expiresAt) {}
+    private final AtomicReference<CachedRec> recCache = new AtomicReference<>();
 
     public AiService(@Value("${groq.api.key:}") String apiKey) {
         this.apiKey = apiKey;
@@ -190,7 +198,13 @@ public class AiService {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> generateRecommendation(List<Store> stores) {
-        String context = buildStoreContext(stores, 40);
+        // Devolver caché si está vigente
+        CachedRec cached = recCache.get();
+        if (cached != null && Instant.now().isBefore(cached.expiresAt())) {
+            log.debug("Recomendación desde caché");
+            return cached.data();
+        }
+        String context = buildStoreContext(stores, 20); // reducido de 40 a 20
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
@@ -222,7 +236,7 @@ public class AiService {
                 Cartera actual:
                 """ + context;
 
-        String raw = callGroq(systemPrompt, userPrompt, 0.4, 4000);
+        String raw = callGroq(systemPrompt, userPrompt, 0.4, 1800); // reducido de 4000 a 1800
 
         try {
             // Limpiar posible markdown code block
@@ -230,7 +244,9 @@ public class AiService {
             if (json.startsWith("```")) {
                 json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
             }
-            return new ObjectMapper().readValue(json, Map.class);
+            Map<String, Object> result = new ObjectMapper().readValue(json, Map.class);
+            recCache.set(new CachedRec(result, Instant.now().plusSeconds(CACHE_SECONDS)));
+            return result;
         } catch (Exception e) {
             log.warn("No se pudo parsear JSON de IA, devolviendo raw: {}", e.getMessage());
             return Map.of("message", raw, "priorities", List.of());
@@ -243,7 +259,7 @@ public class AiService {
      * Chat conversacional sobre la cartera. Mantiene historial de la sesión.
      */
     public String chat(List<Store> stores, List<AiController.ChatMessage> history, String userMessage) {
-        String context = buildStoreContext(stores, 30);
+        String context = buildStoreContext(stores, 15);
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager de Rappi Colombia.
