@@ -97,9 +97,10 @@ public class DashboardService {
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
             boolean isSelf = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("self");
-            boolean isInsideSales = store.getChannel() != null
-                    && store.getChannel().toLowerCase().contains("inside");
-            if (isInsideSales) insideSales.add(dto);
+            boolean isGestionarIS = store.getHadHandoff() != null && !store.getHadHandoff()
+                    && store.getLastFollowUp() == null
+                    && "NO".equalsIgnoreCase(store.getFollowUpLast30d());
+            if (isGestionarIS) insideSales.add(dto);
 
             if (isSelf) {
                 selfOnboarding.add(dto);
