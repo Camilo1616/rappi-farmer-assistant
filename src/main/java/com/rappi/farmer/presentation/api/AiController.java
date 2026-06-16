@@ -6,6 +6,7 @@ import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.application.services.AiService;
 import com.rappi.farmer.domain.entities.Management;
 import com.rappi.farmer.domain.entities.Store;
+import com.rappi.farmer.domain.exceptions.RateLimitException;
 import com.rappi.farmer.domain.repositories.ManagementRepository;
 import com.rappi.farmer.domain.repositories.StoreRepository;
 import com.rappi.farmer.infrastructure.persistence.entity.DailyAiRecommendationEntity;
@@ -125,6 +126,13 @@ public class AiController {
                 entity.setCreatedAt(LocalDateTime.now());
                 recRepository.save(entity);
                 log.info("Recomendación del día generada y guardada para userId={}, {} tiendas", userId, priorities.size());
+            } catch (RateLimitException rle) {
+                log.warn("Rate limit generando recomendación para userId={}: {}s", userId, rle.getRetryAfterSeconds());
+                return ResponseEntity.status(429).body(Map.of(
+                        "rateLimited", true,
+                        "retryAfterSeconds", rle.getRetryAfterSeconds(),
+                        "error", "Trabajando con otros farmers — intenta en " + rle.getRetryAfterSeconds() + "s"
+                ));
             } catch (Exception e) {
                 log.error("Error generando recomendación IA: {}", e.getMessage());
                 return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
@@ -165,6 +173,11 @@ public class AiController {
         try {
             String reply = aiService.chat(stores, request.history(), request.message());
             return ResponseEntity.ok(Map.of("reply", reply));
+        } catch (RateLimitException rle) {
+            return ResponseEntity.status(429).body(Map.of(
+                    "rateLimited", true,
+                    "retryAfterSeconds", rle.getRetryAfterSeconds()
+            ));
         } catch (Exception e) {
             log.error("Error en chat IA: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));

@@ -9,6 +9,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.rappi.farmer.domain.exceptions.RateLimitException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -579,6 +580,7 @@ public class AiService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        String lastErrorBody = null;
 
         for (int attempt = 0; attempt <= 1; attempt++) {
             try {
@@ -589,10 +591,13 @@ public class AiService {
                 return ((String) message.get("content")).trim();
 
             } catch (org.springframework.web.client.HttpClientErrorException e) {
-                if (e.getStatusCode().value() == 429 && attempt == 0) {
-                    long waitMs = parse429WaitMs(e.getResponseBodyAsString());
-                    log.warn("Groq 429 — esperando {}ms antes de reintentar", waitMs);
-                    try { Thread.sleep(waitMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                if (e.getStatusCode().value() == 429) {
+                    lastErrorBody = e.getResponseBodyAsString();
+                    if (attempt == 0) {
+                        long waitMs = parse429WaitMs(lastErrorBody);
+                        log.warn("Groq 429 — esperando {}ms antes de reintentar", waitMs);
+                        try { Thread.sleep(waitMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                    }
                 } else {
                     log.error("Error Groq API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
                     throw new RuntimeException("Error IA " + e.getStatusCode());
@@ -602,20 +607,30 @@ public class AiService {
                 throw new RuntimeException("Error IA: " + e.getMessage());
             }
         }
-        throw new RuntimeException("Error IA: límite de velocidad de Groq superado");
+        // Ambos intentos fallaron — calcular cuánto debe esperar el cliente
+        long retrySecs = parse429RetryAfterSeconds(lastErrorBody != null ? lastErrorBody : "");
+        log.warn("Groq 429 persistente — cliente debe esperar {}s", retrySecs);
+        throw new RateLimitException(retrySecs);
     }
 
-    /** Extrae los segundos de espera del mensaje de error 429 de Groq. */
+    /** Extrae segundos de espera para el reintento del servidor (ms, máx 30s). */
     private long parse429WaitMs(String body) {
         try {
             java.util.regex.Matcher m = java.util.regex.Pattern
                     .compile("try again in ([0-9.]+)s").matcher(body);
-            if (m.find()) {
-                double secs = Double.parseDouble(m.group(1));
-                return Math.min((long)(secs * 1000) + 500, 30_000); // máx 30 s
-            }
+            if (m.find()) return Math.min((long)(Double.parseDouble(m.group(1)) * 1000) + 500, 30_000);
         } catch (Exception ignored) {}
-        return 15_000; // fallback: 15 s
+        return 12_000;
+    }
+
+    /** Extrae segundos de espera para devolver al cliente (segundos enteros). */
+    private long parse429RetryAfterSeconds(String body) {
+        try {
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("try again in ([0-9.]+)s").matcher(body);
+            if (m.find()) return (long) Math.ceil(Double.parseDouble(m.group(1)));
+        } catch (Exception ignored) {}
+        return 30;
     }
 
     public boolean isAvailable() {

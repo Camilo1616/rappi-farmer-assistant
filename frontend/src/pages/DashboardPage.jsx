@@ -61,7 +61,6 @@ const NAV_ITEMS = [
 ]
 
 const SECTIONS = [
-  { key: 'recommended',        title: 'Recomendado hoy',    short: 'Recomendado', icon: '⭐', color: '#FF441F' },
   { key: 'onboardingCritical', title: 'Onboarding Crítico', short: 'Onboarding',  icon: '🚨', color: '#EF4444' },
   { key: 'aliados',            title: 'Aliados AVA 8–14',   short: 'Aliados',     icon: '🔗', color: '#F97316' },
   { key: 'churnRisk',          title: 'Riesgo Churn',       short: 'Churn',       icon: '⚠️', color: '#EF4444' },

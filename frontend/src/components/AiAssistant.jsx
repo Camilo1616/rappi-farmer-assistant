@@ -283,6 +283,160 @@ function StoreContextMenu({ menu, onClose, onManaged }) {
   )
 }
 
+/* ── Robot Button ───────────────────────────────────────────────────────── */
+const TIPS = [
+  '¿Qué ataco hoy? 🎯',
+  'Tengo tu cartera lista 📋',
+  '¡Hagámoslo! 💪',
+  'Checa tus IS 👀',
+  'Onboarding crítico ⚠️',
+  'Soy tu copiloto 🚀',
+]
+
+function RobotButton({ open, dragging, onMouseDown, onClick }) {
+  const [hovered,  setHovered]  = useState(false)
+  const [tipIdx,   setTipIdx]   = useState(0)
+  const [blink,    setBlink]    = useState(false)
+  const [pulse,    setPulse]    = useState(false)
+
+  // Rotar tip cada 4s
+  useEffect(() => {
+    if (open) return
+    const id = setInterval(() => setTipIdx(i => (i + 1) % TIPS.length), 4000)
+    return () => clearInterval(id)
+  }, [open])
+
+  // Parpadeo de ojos aleatorio
+  useEffect(() => {
+    const blink = () => {
+      setBlink(true)
+      setTimeout(() => setBlink(false), 150)
+    }
+    const id = setInterval(blink, Math.random() * 2000 + 2000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Pulso de anillo cada 5s
+  useEffect(() => {
+    if (open) return
+    const id = setInterval(() => { setPulse(true); setTimeout(() => setPulse(false), 700) }, 5000)
+    return () => clearInterval(id)
+  }, [open])
+
+  const scale = hovered ? 1.12 : 1
+  const rot   = hovered ? (open ? -8 : 8) : 0
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title="Asistente IA — arrastra para mover"
+      style={{
+        cursor: dragging ? 'grabbing' : 'grab',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        userSelect: 'none',
+        position: 'relative',
+      }}
+    >
+      {/* Tooltip burbuja */}
+      {!open && (
+        <div style={{
+          background: hovered
+            ? 'linear-gradient(135deg,#6D28D9,#7C3AED)'
+            : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
+          color: '#fff', borderRadius: 12, padding: '5px 11px',
+          fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+          marginBottom: 5, boxShadow: hovered ? '0 4px 18px #7C3AED77' : '0 2px 12px #7C3AED55',
+          transition: 'all 0.2s',
+          transform: hovered ? 'scale(1.06) translateY(-2px)' : 'scale(1)',
+          animation: hovered ? 'none' : 'bubbleBounce 2.5s ease-in-out infinite',
+        }}>
+          {TIPS[tipIdx]}
+          {/* Triángulo */}
+          <div style={{
+            position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
+            width: 0, height: 0,
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: `6px solid ${hovered ? '#6D28D9' : '#7C3AED'}`,
+          }} />
+        </div>
+      )}
+
+      {/* Anillo de pulso */}
+      {pulse && !open && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+          width: 60, height: 60,
+          borderRadius: '50%',
+          border: '2px solid #A78BFA',
+          animation: 'ringPulse 0.7s ease-out forwards',
+          pointerEvents: 'none',
+        }} />
+      )}
+
+      {/* Cuerpo del robot */}
+      <div style={{
+        width: 62, height: 62,
+        borderRadius: '50%',
+        background: open
+          ? 'linear-gradient(135deg,#7C3AED,#4C1D95)'
+          : hovered
+          ? 'linear-gradient(135deg,#8B5CF6,#7C3AED)'
+          : 'linear-gradient(135deg,#6D28D9,#7C3AED)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 36,
+        boxShadow: open
+          ? '0 0 0 4px #7C3AED55, 0 8px 28px #7C3AED55'
+          : hovered
+          ? '0 0 0 3px #A78BFA88, 0 10px 30px #7C3AED66'
+          : '0 4px 20px #0005',
+        border: '3px solid ' + (open ? '#A78BFA' : hovered ? '#C4B5FD' : '#fff2'),
+        transform: `scale(${scale}) rotate(${rot}deg)`,
+        transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)',
+        filter: hovered ? 'brightness(1.1)' : 'brightness(1)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Brillo hover */}
+        {hovered && (
+          <div style={{
+            position: 'absolute', top: -8, left: -8, right: -8, bottom: -8,
+            background: 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.18) 0%, transparent 60%)',
+            pointerEvents: 'none',
+          }} />
+        )}
+        {/* Ojos personalizados en SVG */}
+        <svg width="38" height="38" viewBox="0 0 38 38" style={{ position: 'absolute' }}>
+          {/* Cabeza */}
+          <rect x="6" y="10" width="26" height="20" rx="6" fill="#fff" fillOpacity="0.13" />
+          {/* Antena */}
+          <line x1="19" y1="10" x2="19" y2="4" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="19" cy="3" r="2" fill={hovered ? '#F59E0B' : '#A78BFA'} style={{ transition: 'fill 0.2s' }} />
+          {/* Ojo izquierdo */}
+          <ellipse cx="13" cy="20" rx="3.5" ry={blink ? 0.4 : 3.5} fill="#fff" style={{ transition: 'ry 0.08s' }} />
+          <circle cx="13" cy="20" r={blink ? 0 : 1.5} fill={hovered ? '#F59E0B' : '#7C3AED'} style={{ transition: 'all 0.08s' }} />
+          {/* Ojo derecho */}
+          <ellipse cx="25" cy="20" rx="3.5" ry={blink ? 0.4 : 3.5} fill="#fff" style={{ transition: 'ry 0.08s' }} />
+          <circle cx="25" cy="20" r={blink ? 0 : 1.5} fill={hovered ? '#F59E0B' : '#7C3AED'} style={{ transition: 'all 0.08s' }} />
+          {/* Boca */}
+          <path
+            d={hovered
+              ? 'M13 28 Q19 33 25 28'
+              : open
+              ? 'M13 28 Q19 31 25 28'
+              : 'M14 28 Q19 30 24 28'}
+            stroke="#A78BFA" strokeWidth="2" fill="none" strokeLinecap="round"
+            style={{ transition: 'd 0.2s' }}
+          />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
 /* ── Componente principal ───────────────────────────────────────────────── */
 export default function AiAssistant() {
   const [open,        setOpen]       = useState(false)
@@ -299,6 +453,8 @@ export default function AiAssistant() {
   const [dragging,    setDragging]   = useState(false)
   const [ctxMenu,     setCtxMenu]    = useState({ visible: false, x: 0, y: 0, storeCode: null, data: null, loading: false })
   const [managedCodes, setManagedCodes] = useState(new Set())
+  const [rateLimit,   setRateLimit]    = useState({ active: false, secondsLeft: 0 })
+  const rateLimitTimer = useRef(null)
   const dragStart  = useRef(null)
   const chatEndRef = useRef(null)
 
@@ -331,6 +487,20 @@ export default function AiAssistant() {
   // Limpiar cooldown timer al desmontar
   useEffect(() => () => { if (cooldownRef.current) clearTimeout(cooldownRef.current) }, [])
 
+  // Countdown de rate limit — cuenta regresiva y auto-reintenta al llegar a 0
+  useEffect(() => {
+    if (!rateLimit.active) return
+    if (rateLimit.secondsLeft <= 0) {
+      setRateLimit({ active: false, secondsLeft: 0 })
+      loadRec()
+      return
+    }
+    rateLimitTimer.current = setTimeout(() => {
+      setRateLimit(prev => ({ ...prev, secondsLeft: prev.secondsLeft - 1 }))
+    }, 1000)
+    return () => clearTimeout(rateLimitTimer.current)
+  }, [rateLimit.active, rateLimit.secondsLeft])
+
   // Cerrar ctx menu al hacer click en cualquier lugar
   useEffect(() => {
     if (!ctxMenu.visible) return
@@ -361,14 +531,26 @@ export default function AiAssistant() {
   const loadRec = useCallback(async () => {
     setAiLoading(true); setAiError(null)
     try {
-      const { data } = await api.get('/ai/recommend', { timeout: 45000 })
+      const res = await api.get('/ai/recommend', { timeout: 45000 })
+      const data = res.data
+      if (data.rateLimited) {
+        const secs = data.retryAfterSeconds || 30
+        setRateLimit({ active: true, secondsLeft: secs })
+        setAiLoading(false)
+        return
+      }
       setAiRec(data)
-      // Sincronizar managedCodes con lo que ya viene del servidor
       if (data.managedResults) {
         setManagedCodes(new Set(Object.keys(data.managedResults)))
       }
     } catch (e) {
-      setAiError(e.response?.data?.error || 'Error al cargar recomendación')
+      const d = e.response?.data
+      if (e.response?.status === 429 || d?.rateLimited) {
+        const secs = d?.retryAfterSeconds || 30
+        setRateLimit({ active: true, secondsLeft: secs })
+      } else {
+        setAiError(d?.error || 'Error al cargar recomendación')
+      }
     } finally { setAiLoading(false) }
   }, [])
 
@@ -407,38 +589,12 @@ export default function AiAssistant() {
       <div style={{ position: 'fixed', left: pos.x, top: pos.y, zIndex: 9999 }}>
 
         {/* Robot arrastrable */}
-        <div
+        <RobotButton
+          open={open}
+          dragging={dragging}
           onMouseDown={onMouseDown}
           onClick={!dragging ? toggleOpen : undefined}
-          title="Asistente IA — arrastra para mover"
-          style={{
-            cursor: dragging ? 'grabbing' : 'grab',
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            userSelect: 'none',
-            filter: open ? 'drop-shadow(0 0 18px #7C3AED88)' : 'drop-shadow(0 4px 12px #0006)',
-            transition: 'filter 0.2s',
-          }}
-        >
-          {!open && (
-            <div style={{
-              background: 'linear-gradient(135deg,#7C3AED,#6D28D9)',
-              color: '#fff', borderRadius: 12, padding: '5px 10px',
-              fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
-              marginBottom: 4, boxShadow: '0 2px 12px #7C3AED55',
-              animation: 'bounce 2s infinite',
-            }}>
-              ¿Qué ataco hoy? 🎯
-            </div>
-          )}
-          <div style={{
-            width: 60, height: 60, borderRadius: '50%',
-            background: open ? 'linear-gradient(135deg,#7C3AED,#4C1D95)' : 'linear-gradient(135deg,#6D28D9,#7C3AED)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 34, boxShadow: open ? '0 0 0 4px #7C3AED55, 0 8px 24px #7C3AED44' : '0 4px 20px #0004',
-            border: '3px solid ' + (open ? '#A78BFA' : '#fff2'),
-            transition: 'all 0.25s',
-          }}>🤖</div>
-        </div>
+        />
 
         {/* Panel */}
         {open && (
@@ -478,6 +634,42 @@ export default function AiAssistant() {
               <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', userSelect: 'text' }}>
                 {aiLoading && <div style={{ textAlign: 'center', padding: 28, color: 'var(--text-secondary)', fontSize: 12 }}>⏳ Analizando cartera...</div>}
                 {aiError && <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: '#EF4444', fontSize: 12 }}>{aiError}</div>}
+
+                {/* Rate limit — robot trabajando con otros farmers */}
+                {rateLimit.active && !aiLoading && (
+                  <div style={{ textAlign: 'center', padding: '28px 16px' }}>
+                    <div style={{
+                      fontSize: 52, marginBottom: 8,
+                      display: 'inline-block',
+                      animation: 'robotWork 0.7s infinite alternate',
+                    }}>🤖</div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#7C3AED', marginBottom: 6 }}>
+                      Trabajando con otros farmers...
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
+                      La IA está ocupada ahora mismo.<br />Se reintentará automáticamente en:
+                    </div>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 72, height: 72, borderRadius: '50%',
+                      background: 'linear-gradient(135deg,#7C3AED18,#6D28D908)',
+                      border: '3px solid #7C3AED55',
+                      fontSize: 24, fontWeight: 900, color: '#7C3AED',
+                      marginBottom: 12,
+                    }}>
+                      {rateLimit.secondsLeft}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>segundos</div>
+                    <button
+                      onClick={() => { setRateLimit({ active: false, secondsLeft: 0 }); loadRec() }}
+                      style={{
+                        marginTop: 14, padding: '7px 18px', borderRadius: 8, border: 'none',
+                        background: 'linear-gradient(135deg,#7C3AED,#6D28D9)',
+                        color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer',
+                      }}
+                    >↺ Reintentar ahora</button>
+                  </div>
+                )}
 
                 {!aiRec && !aiLoading && !aiError && (
                   <div style={{ textAlign: 'center', padding: 28 }}>
@@ -657,9 +849,18 @@ export default function AiAssistant() {
       />
 
       <style>{`
-        @keyframes bounce {
-          0%,100%{transform:translateY(0)}
-          50%{transform:translateY(-5px)}
+        @keyframes bubbleBounce {
+          0%,100%{transform:translateY(0) scale(1)}
+          40%{transform:translateY(-4px) scale(1.03)}
+          70%{transform:translateY(-1px) scale(0.99)}
+        }
+        @keyframes ringPulse {
+          0%{transform:translateX(-50%) scale(1);opacity:0.8}
+          100%{transform:translateX(-50%) scale(2.2);opacity:0}
+        }
+        @keyframes robotWork {
+          0%{transform:translateY(0) rotate(-8deg)}
+          100%{transform:translateY(-6px) rotate(8deg)}
         }
       `}</style>
     </>
