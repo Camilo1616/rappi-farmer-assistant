@@ -497,52 +497,6 @@ export default function ProfilePage() {
         </section>
       )}
 
-      {/* ── Google Calendar (solo farmer) ── */}
-      {!isManager && (
-        <section className={styles.card}>
-          <h2 className={styles.cardTitle}>📅 Google Calendar</h2>
-          <p className={styles.fieldLabel} style={{ marginBottom: 12 }}>
-            Conecta tu cuenta de Google para sincronizar automáticamente las activaciones de Handoff.
-          </p>
-          <div className={styles.fieldRow}>
-            <span className={`${styles.metaChip}`} style={{ background: calConnected ? '#dcfce7' : '#fee2e2', color: calConnected ? '#166534' : '#991b1b' }}>
-              {calConnected ? '✅ Conectado' : '❌ No conectado'}
-            </span>
-            {!calConnected ? (
-              <button className={styles.btnPrimary} onClick={handleConnectCalendar} disabled={calLoading}>
-                {calLoading ? 'Abriendo...' : 'Conectar Google Calendar'}
-              </button>
-            ) : (
-              <>
-                <button className={styles.btnGhost} onClick={handleSyncCalendar} disabled={calLoading}>
-                  {calLoading ? 'Sincronizando...' : '🔄 Sincronizar ahora'}
-                </button>
-                <button className={styles.btnDemote} onClick={handleDisconnectCalendar}>
-                  Desconectar
-                </button>
-              </>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* ── Cambio de contraseña ── */}
-      <section className={styles.card}>
-        <h2 className={styles.cardTitle}>🔐 Cambiar contraseña</h2>
-        <div className={styles.pwdForm}>
-          <input className={styles.input} type="password" placeholder="Contraseña actual"
-            value={pwdCurrent} onChange={e => setPwdCurrent(e.target.value)} />
-          <input className={styles.input} type="password" placeholder="Nueva contraseña (mín. 6 caracteres)"
-            value={pwdNew} onChange={e => setPwdNew(e.target.value)} />
-          <input className={styles.input} type="password" placeholder="Confirmar nueva contraseña"
-            value={pwdConfirm} onChange={e => setPwdConfirm(e.target.value)} />
-          <button className={styles.btnPrimary} onClick={handleChangePassword}
-            disabled={pwdSaving || !pwdCurrent || !pwdNew || !pwdConfirm}>
-            {pwdSaving ? 'Guardando...' : 'Actualizar contraseña'}
-          </button>
-        </div>
-      </section>
-
       {/* ── Asistente IA ── */}
       <section className={styles.card}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
@@ -704,6 +658,52 @@ export default function ProfilePage() {
               background:'transparent', color:'var(--text-secondary)', fontSize:12, cursor:'pointer'
             }}>Limpiar</button>
           )}
+        </div>
+      </section>
+
+      {/* ── Google Calendar (solo farmer) ── */}
+      {!isManager && (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>📅 Google Calendar</h2>
+          <p className={styles.fieldLabel} style={{ marginBottom: 12 }}>
+            Conecta tu cuenta de Google para sincronizar automáticamente las activaciones de Handoff.
+          </p>
+          <div className={styles.fieldRow}>
+            <span className={`${styles.metaChip}`} style={{ background: calConnected ? '#dcfce7' : '#fee2e2', color: calConnected ? '#166534' : '#991b1b' }}>
+              {calConnected ? '✅ Conectado' : '❌ No conectado'}
+            </span>
+            {!calConnected ? (
+              <button className={styles.btnPrimary} onClick={handleConnectCalendar} disabled={calLoading}>
+                {calLoading ? 'Abriendo...' : 'Conectar Google Calendar'}
+              </button>
+            ) : (
+              <>
+                <button className={styles.btnGhost} onClick={handleSyncCalendar} disabled={calLoading}>
+                  {calLoading ? 'Sincronizando...' : '🔄 Sincronizar ahora'}
+                </button>
+                <button className={styles.btnDemote} onClick={handleDisconnectCalendar}>
+                  Desconectar
+                </button>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Cambio de contraseña ── */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>🔐 Cambiar contraseña</h2>
+        <div className={styles.pwdForm}>
+          <input className={styles.input} type="password" placeholder="Contraseña actual"
+            value={pwdCurrent} onChange={e => setPwdCurrent(e.target.value)} />
+          <input className={styles.input} type="password" placeholder="Nueva contraseña (mín. 6 caracteres)"
+            value={pwdNew} onChange={e => setPwdNew(e.target.value)} />
+          <input className={styles.input} type="password" placeholder="Confirmar nueva contraseña"
+            value={pwdConfirm} onChange={e => setPwdConfirm(e.target.value)} />
+          <button className={styles.btnPrimary} onClick={handleChangePassword}
+            disabled={pwdSaving || !pwdCurrent || !pwdNew || !pwdConfirm}>
+            {pwdSaving ? 'Guardando...' : 'Actualizar contraseña'}
+          </button>
         </div>
       </section>
 
