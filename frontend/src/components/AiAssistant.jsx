@@ -298,157 +298,162 @@ function RobotSVG({ hovered, open, blink }) {
   const eyeColor   = hovered ? '#F59E0B' : '#C4B5FD'
   const antennaClr = hovered ? '#F59E0B' : '#A78BFA'
 
-  // Brazos: hover = arriba celebrando, open = wave, idle = relajados
-  const lShoulderX = 26, lShoulderY = 76
-  const rShoulderX = 74, rShoulderY = 76
-  const lElbowX = hovered ? 10  : open ? 8   : 14
-  const lElbowY = hovered ? 58  : open ? 66  : 88
-  const lHandX  = hovered ? 6   : open ? 4   : 10
-  const lHandY  = hovered ? 40  : open ? 50  : 98
-  const rElbowX = hovered ? 90  : open ? 92  : 86
-  const rElbowY = hovered ? 58  : open ? 66  : 88
-  const rHandX  = hovered ? 94  : open ? 96  : 90
-  const rHandY  = hovered ? 40  : open ? 50  : 98
+  // skin, shirt, pants
+  const SKIN   = '#FBBF8C'
+  const SKIN_S = '#F59E5A'   // sombra piel
+  const SHIRT  = hovered ? '#7C3AED' : '#6D28D9'
+  const SHIRT_S= hovered ? '#5B21B6' : '#4C1D95'
+  const PANTS  = '#1E3A5F'
+  const PANTS_S= '#152B47'
+  const SHOE   = '#111827'
+  const SHOE_H = '#374151'
 
-  // Piernas: idle = rectas, hover = leve apertura
-  const lKneeX  = hovered ? 33 : 36
-  const lFootX  = hovered ? 28 : 34
-  const rKneeX  = hovered ? 67 : 64
-  const rFootX  = hovered ? 72 : 66
+  // Brazos: hover = celebrando arriba, open = wave, idle = caídos
+  const lEbX = hovered ? 8  : open ? 6  : 16
+  const lEbY = hovered ? 72 : open ? 80 : 96
+  const lHdX = hovered ? 4  : open ? 2  : 12
+  const lHdY = hovered ? 55 : open ? 65 : 108
+  const rEbX = hovered ? 92 : open ? 94 : 84
+  const rEbY = hovered ? 72 : open ? 80 : 96
+  const rHdX = hovered ? 96 : open ? 98 : 88
+  const rHdY = hovered ? 55 : open ? 65 : 108
 
   const mouthD = hovered
-    ? 'M36 52 Q50 62 64 52'
-    : open
-    ? 'M36 52 Q50 58 64 52'
-    : 'M38 52 Q50 56 62 52'
+    ? 'M36 52 Q50 63 64 52'
+    : open ? 'M36 52 Q50 58 64 52'
+    : 'M38 52 Q50 57 62 52'
 
   return (
-    <svg width="100" height="140" viewBox="0 0 100 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="100" height="148" viewBox="0 0 100 148" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={hovered ? '#8B5CF6' : '#7C3AED'} />
-          <stop offset="100%" stopColor="#4C1D95" />
+        <linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={hovered ? '#8B5CF6' : '#7C3AED'}/>
+          <stop offset="100%" stopColor="#4C1D95"/>
         </linearGradient>
-        <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={hovered ? '#6D28D9' : '#5B21B6'} />
-          <stop offset="100%" stopColor="#3B0764" />
+        <linearGradient id="shirtG" x1="50" y1="68" x2="50" y2="114" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={SHIRT}/>
+          <stop offset="100%" stopColor={SHIRT_S}/>
         </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        <linearGradient id="pantsG" x1="50" y1="112" x2="50" y2="140" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={PANTS}/>
+          <stop offset="100%" stopColor={PANTS_S}/>
+        </linearGradient>
+        <filter id="glow2">
+          <feGaussianBlur stdDeviation="1.8" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
 
       {/* Sombra piso */}
-      <ellipse cx="50" cy="138" rx="20" ry="3.5" fill="#7C3AED" fillOpacity="0.15"/>
+      <ellipse cx="50" cy="146" rx="22" ry="3.5" fill="#0003"/>
 
       {/* ── ANTENA ── */}
-      <line x1="50" y1="12" x2="50" y2="3" stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="50" cy="2.5" r="3.5" fill={antennaClr} filter="url(#glow)" style={{transition:'fill 0.2s'}}>
-        {hovered && <animate attributeName="r" values="3.5;5;3.5" dur="0.45s" repeatCount="indefinite"/>}
+      <line x1="50" y1="11" x2="50" y2="3" stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx="50" cy="2.5" r="3.5" fill={antennaClr} filter="url(#glow2)" style={{transition:'fill 0.2s'}}>
+        {hovered && <animate attributeName="r" values="3.5;5.2;3.5" dur="0.45s" repeatCount="indefinite"/>}
       </circle>
 
       {/* ── CABEZA ROBOT ── */}
-      <rect x="16" y="12" width="68" height="50" rx="14" fill="url(#hg)" stroke="#A78BFA" strokeWidth="1.5"/>
-      {/* Brillo cabeza */}
-      <rect x="20" y="16" width="28" height="12" rx="6" fill="#fff" fillOpacity="0.09"/>
+      <rect x="15" y="11" width="70" height="52" rx="14" fill="url(#hg2)" stroke="#A78BFA" strokeWidth="1.5"/>
+      <rect x="19" y="15" width="30" height="13" rx="6" fill="#fff" fillOpacity="0.08"/>
       {/* Oreja izq */}
-      <rect x="8"  y="24" width="9" height="16" rx="4.5" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1"/>
-      <rect x="10" y="28" width="5" height="8"  rx="2.5" fill="#A78BFA" fillOpacity="0.45"/>
+      <rect x="7"  y="23" width="9" height="16" rx="4.5" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1"/>
+      <rect x="9"  y="27" width="5" height="8"  rx="2.5" fill="#A78BFA" fillOpacity="0.4"/>
       {/* Oreja der */}
-      <rect x="83" y="24" width="9" height="16" rx="4.5" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1"/>
-      <rect x="85" y="28" width="5" height="8"  rx="2.5" fill="#A78BFA" fillOpacity="0.45"/>
+      <rect x="84" y="23" width="9" height="16" rx="4.5" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1"/>
+      <rect x="86" y="27" width="5" height="8"  rx="2.5" fill="#A78BFA" fillOpacity="0.4"/>
       {/* Ojo izq */}
       <ellipse cx="34" cy="34" rx="8.5" ry={eyeRy} fill="#1E0A3C" style={{transition:'ry 0.1s'}}/>
       <ellipse cx="34" cy="34" rx="6.5" ry={Math.max(eyeRy-2,0)} fill={eyeColor} style={{transition:'all 0.1s'}}/>
-      <circle  cx="37" cy="31" r="2"   fill="#fff" fillOpacity="0.7"/>
+      <circle  cx="37" cy="31" r="2"    fill="#fff" fillOpacity="0.75"/>
       {/* Ojo der */}
       <ellipse cx="66" cy="34" rx="8.5" ry={eyeRy} fill="#1E0A3C" style={{transition:'ry 0.1s'}}/>
       <ellipse cx="66" cy="34" rx="6.5" ry={Math.max(eyeRy-2,0)} fill={eyeColor} style={{transition:'all 0.1s'}}/>
-      <circle  cx="69" cy="31" r="2"   fill="#fff" fillOpacity="0.7"/>
+      <circle  cx="69" cy="31" r="2"    fill="#fff" fillOpacity="0.75"/>
       {/* Boca */}
       <path d={mouthD} stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round" style={{transition:'d 0.25s'}}/>
-      {hovered && <rect x="44" y="52" width="12" height="4" rx="2" fill="#fff" fillOpacity="0.4"/>}
+      {hovered && <rect x="44" y="53" width="12" height="4" rx="2" fill="#fff" fillOpacity="0.35"/>}
 
-      {/* ── CUELLO ── */}
-      <rect x="44" y="62" width="12" height="8" rx="4" fill="#4C1D95"/>
+      {/* ── CUELLO — piel ── */}
+      <rect x="43" y="63" width="14" height="10" rx="5" fill={SKIN}/>
+      <rect x="43" y="68" width="14" height="5"  rx="2" fill={SKIN_S} fillOpacity="0.4"/>
 
-      {/* ── CUERPO HUMANO — torso ── */}
-      {/* Hombros redondeados */}
-      <path d="M20 76 Q10 74 10 86 L10 106 Q10 110 14 110 L26 110 L26 76 Z" fill="url(#shirt)"/>
-      <path d="M80 76 Q90 74 90 86 L90 106 Q90 110 86 110 L74 110 L74 76 Z" fill="url(#shirt)"/>
-      {/* Torso principal */}
-      <rect x="26" y="68" width="48" height="44" rx="10" fill="url(#shirt)" stroke="#7C3AED" strokeWidth="1"/>
-      {/* Logo/emblema pecho */}
-      <circle cx="50" cy="84" r="9" fill="#1E0A3C" fillOpacity="0.5" stroke="#A78BFA" strokeWidth="1"/>
-      <text x="50" y="88" textAnchor="middle" fontSize="9" fontWeight="800" fill="#A78BFA">AI</text>
-      {/* Bolsillo */}
-      <rect x="55" y="96" width="14" height="10" rx="4" fill="#1E0A3C" fillOpacity="0.3" stroke="#A78BFA" strokeWidth="0.8"/>
-      <circle cx="59" cy="100" r="1.8" fill={hovered ? '#F59E0B' : '#22C55E'} style={{transition:'fill 0.2s'}}>
-        <animate attributeName="fillOpacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/>
-      </circle>
+      {/* ── CAMISA — torso ── */}
+      {/* Manga izq (camisa) */}
+      <path d={`M27 72 L${lEbX+4} ${lEbY} L${lEbX} ${lEbY} L24 72 Z`}
+        fill={SHIRT_S} style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      {/* Manga der (camisa) */}
+      <path d={`M73 72 L${rEbX-4} ${rEbY} L${rEbX} ${rEbY} L76 72 Z`}
+        fill={SHIRT_S} style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      {/* Torso */}
+      <rect x="24" y="68" width="52" height="46" rx="10" fill="url(#shirtG)"/>
+      {/* Cuello camisa (V-neck) */}
+      <path d="M42 68 L50 78 L58 68" fill={SHIRT_S} fillOpacity="0.5"/>
+      {/* Pliegue camisa */}
+      <line x1="50" y1="78" x2="50" y2="114" stroke={SHIRT_S} strokeWidth="1.2" strokeOpacity="0.35"/>
+      {/* Bolsillo izq */}
+      <rect x="29" y="80" width="13" height="11" rx="3" fill={SHIRT_S} fillOpacity="0.35" stroke="#A78BFA" strokeWidth="0.6"/>
+      {/* Botón */}
+      <circle cx="35.5" cy="97" r="2"  fill={SHIRT_S} stroke="#A78BFA" strokeWidth="0.5"/>
+      <circle cx="35.5" cy="105" r="2" fill={SHIRT_S} stroke="#A78BFA" strokeWidth="0.5"/>
 
-      {/* ── BRAZOS HUMANOS ── */}
-      {/* Brazo izq — upper */}
-      <line x1={lShoulderX} y1={lShoulderY} x2={lElbowX} y2={lElbowY}
-        stroke="#5B21B6" strokeWidth="10" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <line x1={lShoulderX} y1={lShoulderY} x2={lElbowX} y2={lElbowY}
-        stroke="#7C3AED" strokeWidth="6" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {/* Brazo izq — forearm */}
-      <line x1={lElbowX} y1={lElbowY} x2={lHandX} y2={lHandY}
-        stroke="#5B21B6" strokeWidth="9" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <line x1={lElbowX} y1={lElbowY} x2={lHandX} y2={lHandY}
-        stroke="#6D28D9" strokeWidth="5" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      {/* ── BRAZOS — piel ── */}
+      {/* Upper arm izq */}
+      <line x1="26" y1="74" x2={lEbX} y2={lEbY}
+        stroke={SKIN_S} strokeWidth="12" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      <line x1="26" y1="74" x2={lEbX} y2={lEbY}
+        stroke={SKIN}  strokeWidth="8"  strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      {/* Forearm izq */}
+      <line x1={lEbX} y1={lEbY} x2={lHdX} y2={lHdY}
+        stroke={SKIN_S} strokeWidth="10" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      <line x1={lEbX} y1={lEbY} x2={lHdX} y2={lHdY}
+        stroke={SKIN}   strokeWidth="6"  strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
       {/* Mano izq */}
-      <circle cx={lHandX} cy={lHandY} r="6" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1.2" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {hovered && <text x={lHandX} y={lHandY+4} textAnchor="middle" fontSize="7">✌️</text>}
+      <circle cx={lHdX} cy={lHdY} r="6.5" fill={SKIN}  style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      <circle cx={lHdX} cy={lHdY} r="6.5" fill={SKIN_S} fillOpacity="0.3" style={{transition:'all 0.3s'}}/>
+      {hovered && <text x={lHdX} y={lHdY+4} textAnchor="middle" fontSize="8" style={{userSelect:'none'}}>✌️</text>}
 
-      {/* Brazo der — upper */}
-      <line x1={rShoulderX} y1={rShoulderY} x2={rElbowX} y2={rElbowY}
-        stroke="#5B21B6" strokeWidth="10" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <line x1={rShoulderX} y1={rShoulderY} x2={rElbowX} y2={rElbowY}
-        stroke="#7C3AED" strokeWidth="6" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {/* Brazo der — forearm */}
-      <line x1={rElbowX} y1={rElbowY} x2={rHandX} y2={rHandY}
-        stroke="#5B21B6" strokeWidth="9" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <line x1={rElbowX} y1={rElbowY} x2={rHandX} y2={rHandY}
-        stroke="#6D28D9" strokeWidth="5" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      {/* Upper arm der */}
+      <line x1="74" y1="74" x2={rEbX} y2={rEbY}
+        stroke={SKIN_S} strokeWidth="12" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      <line x1="74" y1="74" x2={rEbX} y2={rEbY}
+        stroke={SKIN}  strokeWidth="8"  strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      {/* Forearm der */}
+      <line x1={rEbX} y1={rEbY} x2={rHdX} y2={rHdY}
+        stroke={SKIN_S} strokeWidth="10" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      <line x1={rEbX} y1={rEbY} x2={rHdX} y2={rHdY}
+        stroke={SKIN}   strokeWidth="6"  strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
       {/* Mano der */}
-      <circle cx={rHandX} cy={rHandY} r="6" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1.2" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {hovered && <text x={rHandX} y={rHandY+4} textAnchor="middle" fontSize="7">🤙</text>}
+      <circle cx={rHdX} cy={rHdY} r="6.5" fill={SKIN}   style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
+      <circle cx={rHdX} cy={rHdY} r="6.5" fill={SKIN_S} fillOpacity="0.3" style={{transition:'all 0.3s'}}/>
+      {hovered && <text x={rHdX} y={rHdY+4} textAnchor="middle" fontSize="8" style={{userSelect:'none'}}>🤙</text>}
 
-      {/* ── CADERAS / CINTURA ── */}
-      <rect x="30" y="110" width="40" height="8" rx="4" fill="#4C1D95" stroke="#7C3AED" strokeWidth="0.8"/>
-      {/* Cinturón */}
-      <rect x="44" y="111" width="12" height="6" rx="3" fill="#6D28D9"/>
-      <rect x="47" y="112.5" width="6" height="3" rx="1.5" fill="#A78BFA" fillOpacity="0.6"/>
+      {/* ── CINTURÓN ── */}
+      <rect x="24" y="112" width="52" height="7" rx="3.5" fill="#92400E"/>
+      <rect x="44" y="112.5" width="12" height="6" rx="2" fill="#B45309"/>
+      <rect x="47" y="113.5" width="6" height="4"  rx="1.5" fill="#F59E0B"/>
 
-      {/* ── PIERNAS HUMANAS ── */}
-      {/* Muslo izq */}
-      <line x1="38" y1="118" x2={lKneeX} y2="124"
-        stroke="#4C1D95" strokeWidth="13" strokeLinecap="round" style={{transition:'all 0.3s'}}/>
-      <line x1="38" y1="118" x2={lKneeX} y2="124"
-        stroke="#5B21B6" strokeWidth="9" strokeLinecap="round" style={{transition:'all 0.3s'}}/>
-      {/* Pantorrilla izq */}
-      <line x1={lKneeX} y1="124" x2={lFootX} y2="134"
-        stroke="#4C1D95" strokeWidth="11" strokeLinecap="round" style={{transition:'all 0.3s'}}/>
-      <line x1={lKneeX} y1="124" x2={lFootX} y2="134"
-        stroke="#5B21B6" strokeWidth="7" strokeLinecap="round" style={{transition:'all 0.3s'}}/>
-      {/* Pie izq */}
-      <ellipse cx={lFootX-2} cy="136" rx="9" ry="4" fill="#3B0764" stroke="#7C3AED" strokeWidth="0.8" style={{transition:'all 0.3s'}}/>
+      {/* ── PANTALÓN ── */}
+      {/* Parte superior pantalón */}
+      <rect x="24" y="117" width="52" height="6" rx="0" fill="url(#pantsG)"/>
+      {/* Costura central */}
+      <line x1="50" y1="117" x2="50" y2="123" stroke={PANTS_S} strokeWidth="1"/>
 
-      {/* Muslo der */}
-      <line x1="62" y1="118" x2={rKneeX} y2="124"
-        stroke="#4C1D95" strokeWidth="13" strokeLinecap="round" style={{transition:'all 0.3s'}}/>
-      <line x1="62" y1="118" x2={rKneeX} y2="124"
-        stroke="#5B21B6" strokeWidth="9" strokeLinecap="round" style={{transition:'all 0.3s'}}/>
-      {/* Pantorrilla der */}
-      <line x1={rKneeX} y1="124" x2={rFootX} y2="134"
-        stroke="#4C1D95" strokeWidth="11" strokeLinecap="round" style={{transition:'all 0.3s'}}/>
-      <line x1={rKneeX} y1="124" x2={rFootX} y2="134"
-        stroke="#5B21B6" strokeWidth="7" strokeLinecap="round" style={{transition:'all 0.3s'}}/>
-      {/* Pie der */}
-      <ellipse cx={rFootX+2} cy="136" rx="9" ry="4" fill="#3B0764" stroke="#7C3AED" strokeWidth="0.8" style={{transition:'all 0.3s'}}/>
+      {/* Pierna izq pantalón */}
+      <path d="M24 123 L24 138 Q24 141 28 141 L44 141 Q47 141 47 138 L50 123 Z" fill={PANTS}/>
+      <line x1="36" y1="123" x2="34" y2="141" stroke={PANTS_S} strokeWidth="0.8" strokeOpacity="0.6"/>
+
+      {/* Pierna der pantalón */}
+      <path d="M76 123 L76 138 Q76 141 72 141 L56 141 Q53 141 53 138 L50 123 Z" fill={PANTS}/>
+      <line x1="64" y1="123" x2="66" y2="141" stroke={PANTS_S} strokeWidth="0.8" strokeOpacity="0.6"/>
+
+      {/* ── ZAPATOS ── */}
+      {/* Zapato izq */}
+      <ellipse cx="34" cy="142" rx="12" ry="5" fill={SHOE}/>
+      <ellipse cx="31" cy="141" rx="8"  ry="3" fill={SHOE_H} fillOpacity="0.4"/>
+      {/* Zapato der */}
+      <ellipse cx="66" cy="142" rx="12" ry="5" fill={SHOE}/>
+      <ellipse cx="63" cy="141" rx="8"  ry="3" fill={SHOE_H} fillOpacity="0.4"/>
     </svg>
   )
 }
@@ -710,7 +715,7 @@ export default function AiAssistant() {
         {/* Panel */}
         {open && (
           <div style={{
-            position: 'absolute', top: 170, left: 0,
+            position: 'absolute', top: 188, left: 0,
             width: PANEL_W, height: PANEL_H,
             background: 'var(--bg-card)',
             border: '1.5px solid #7C3AED55',
