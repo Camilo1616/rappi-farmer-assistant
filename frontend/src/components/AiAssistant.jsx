@@ -293,38 +293,144 @@ const TIPS = [
   'Soy tu copiloto 🚀',
 ]
 
-function RobotButton({ open, dragging, onMouseDown, onClick }) {
-  const [hovered,  setHovered]  = useState(false)
-  const [tipIdx,   setTipIdx]   = useState(0)
-  const [blink,    setBlink]    = useState(false)
-  const [pulse,    setPulse]    = useState(false)
+function RobotSVG({ hovered, open, blink }) {
+  // Brazos: hover = levantados, idle = caídos, open = wave
+  const leftArmD  = hovered ? 'M28 52 Q18 38 22 28' : open ? 'M28 52 Q14 44 16 32' : 'M28 52 Q20 56 18 62'
+  const rightArmD = hovered ? 'M72 52 Q82 38 78 28' : open ? 'M72 52 Q86 44 84 32' : 'M72 52 Q80 56 82 62'
+  const eyeRy = blink ? 0.5 : 7
+  const mouthD = hovered
+    ? 'M34 74 Q50 84 66 74'
+    : open
+    ? 'M34 74 Q50 80 66 74'
+    : 'M36 74 Q50 79 64 74'
+  const antennaColor = hovered ? '#F59E0B' : '#A78BFA'
+  const eyeColor     = hovered ? '#F59E0B' : '#C4B5FD'
 
-  // Rotar tip cada 4s
+  return (
+    <svg width="100" height="120" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Sombra suave */}
+      <ellipse cx="50" cy="117" rx="22" ry="4" fill="#7C3AED" fillOpacity="0.18" />
+
+      {/* Antena */}
+      <line x1="50" y1="14" x2="50" y2="4" stroke="#A78BFA" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="50" cy="3" r="4" fill={antennaColor} style={{ transition: 'fill 0.25s' }}>
+        {hovered && <animate attributeName="r" values="4;5.5;4" dur="0.5s" repeatCount="indefinite" />}
+      </circle>
+
+      {/* Cabeza */}
+      <rect x="18" y="14" width="64" height="52" rx="16"
+        fill="url(#headGrad)" stroke="#A78BFA" strokeWidth="1.5" />
+
+      {/* Reflejo cabeza */}
+      <rect x="22" y="18" width="26" height="14" rx="7" fill="#fff" fillOpacity="0.1" />
+
+      {/* Ojo izquierdo */}
+      <ellipse cx="34" cy="36" rx="9" ry={eyeRy} fill="#1E0A3C" style={{ transition: 'ry 0.1s' }} />
+      <ellipse cx="34" cy="36" rx="7" ry={Math.max(eyeRy - 2, 0)} fill={eyeColor} fillOpacity="0.9" style={{ transition: 'all 0.1s' }} />
+      <circle cx="37" cy="33" r="2" fill="#fff" fillOpacity="0.7" />
+
+      {/* Ojo derecho */}
+      <ellipse cx="66" cy="36" rx="9" ry={eyeRy} fill="#1E0A3C" style={{ transition: 'ry 0.1s' }} />
+      <ellipse cx="66" cy="36" rx="7" ry={Math.max(eyeRy - 2, 0)} fill={eyeColor} fillOpacity="0.9" style={{ transition: 'all 0.1s' }} />
+      <circle cx="69" cy="33" r="2" fill="#fff" fillOpacity="0.7" />
+
+      {/* Boca */}
+      <path d={mouthD} stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'd 0.25s' }} />
+      {/* Dientes hover */}
+      {hovered && <rect x="43" y="74" width="14" height="5" rx="2" fill="#fff" fillOpacity="0.5" />}
+
+      {/* Oreja izq */}
+      <rect x="10" y="28" width="10" height="18" rx="5" fill="#6D28D9" stroke="#A78BFA" strokeWidth="1" />
+      <rect x="12" y="33" width="6" height="8" rx="3" fill="#A78BFA" fillOpacity="0.5" />
+      {/* Oreja der */}
+      <rect x="80" y="28" width="10" height="18" rx="5" fill="#6D28D9" stroke="#A78BFA" strokeWidth="1" />
+      <rect x="82" y="33" width="6" height="8" rx="3" fill="#A78BFA" fillOpacity="0.5" />
+
+      {/* Cuello */}
+      <rect x="42" y="64" width="16" height="10" rx="4" fill="#5B21B6" />
+
+      {/* Cuerpo */}
+      <rect x="20" y="72" width="60" height="38" rx="12"
+        fill="url(#bodyGrad)" stroke="#A78BFA" strokeWidth="1.5" />
+
+      {/* Panel del pecho */}
+      <rect x="30" y="80" width="40" height="22" rx="7" fill="#1E0A3C" fillOpacity="0.4" />
+      {/* Luces del panel */}
+      <circle cx="38" cy="89" r="3.5" fill={hovered ? '#F59E0B' : '#22C55E'} style={{ transition: 'fill 0.25s' }}>
+        <animate attributeName="fillOpacity" values="1;0.4;1" dur={hovered ? '0.4s' : '1.8s'} repeatCount="indefinite" />
+      </circle>
+      <circle cx="50" cy="89" r="3.5" fill="#7C3AED">
+        <animate attributeName="fillOpacity" values="1;0.4;1" dur="1.2s" begin="0.3s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="62" cy="89" r="3.5" fill={hovered ? '#EF4444' : '#06B6D4'} style={{ transition: 'fill 0.25s' }}>
+        <animate attributeName="fillOpacity" values="1;0.4;1" dur="2s" begin="0.6s" repeatCount="indefinite" />
+      </circle>
+      {/* Barra de progreso */}
+      <rect x="33" y="97" width="34" height="3" rx="2" fill="#fff" fillOpacity="0.08" />
+      <rect x="33" y="97" width={hovered ? 34 : 20} height="3" rx="2" fill="#A78BFA" fillOpacity="0.7" style={{ transition: 'width 0.4s' }} />
+
+      {/* Brazo izquierdo */}
+      <path d={leftArmD} stroke="#6D28D9" strokeWidth="9" strokeLinecap="round" style={{ transition: 'd 0.3s cubic-bezier(0.34,1.56,0.64,1)' }} />
+      <path d={leftArmD} stroke="#A78BFA" strokeWidth="5" strokeLinecap="round" style={{ transition: 'd 0.3s cubic-bezier(0.34,1.56,0.64,1)' }} />
+      {/* Mano izq */}
+      <circle cx={hovered ? 22 : open ? 16 : 18} cy={hovered ? 28 : open ? 32 : 62} r="5"
+        fill="#6D28D9" stroke="#A78BFA" strokeWidth="1.5" style={{ transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)' }} />
+
+      {/* Brazo derecho */}
+      <path d={rightArmD} stroke="#6D28D9" strokeWidth="9" strokeLinecap="round" style={{ transition: 'd 0.3s cubic-bezier(0.34,1.56,0.64,1)' }} />
+      <path d={rightArmD} stroke="#A78BFA" strokeWidth="5" strokeLinecap="round" style={{ transition: 'd 0.3s cubic-bezier(0.34,1.56,0.64,1)' }} />
+      {/* Mano der */}
+      <circle cx={hovered ? 78 : open ? 84 : 82} cy={hovered ? 28 : open ? 32 : 62} r="5"
+        fill="#6D28D9" stroke="#A78BFA" strokeWidth="1.5" style={{ transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)' }} />
+
+      {/* Pierna izquierda */}
+      <rect x="28" y="108" width="14" height="10" rx="5" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1" />
+      {/* Pie izq */}
+      <rect x="24" y="114" width="18" height="6" rx="3" fill="#4C1D95" stroke="#A78BFA" strokeWidth="1" />
+
+      {/* Pierna derecha */}
+      <rect x="58" y="108" width="14" height="10" rx="5" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1" />
+      {/* Pie der */}
+      <rect x="58" y="114" width="18" height="6" rx="3" fill="#4C1D95" stroke="#A78BFA" strokeWidth="1" />
+
+      {/* Gradientes */}
+      <defs>
+        <linearGradient id="headGrad" x1="18" y1="14" x2="82" y2="66" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={hovered ? '#8B5CF6' : '#7C3AED'} />
+          <stop offset="100%" stopColor={hovered ? '#6D28D9' : '#4C1D95'} />
+        </linearGradient>
+        <linearGradient id="bodyGrad" x1="20" y1="72" x2="80" y2="110" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={hovered ? '#7C3AED' : '#6D28D9'} />
+          <stop offset="100%" stopColor="#3B0764" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
+function RobotButton({ open, dragging, onMouseDown, onClick }) {
+  const [hovered, setHovered] = useState(false)
+  const [tipIdx,  setTipIdx]  = useState(0)
+  const [blink,   setBlink]   = useState(false)
+  const [pulse,   setPulse]   = useState(false)
+
   useEffect(() => {
     if (open) return
     const id = setInterval(() => setTipIdx(i => (i + 1) % TIPS.length), 4000)
     return () => clearInterval(id)
   }, [open])
 
-  // Parpadeo de ojos aleatorio
   useEffect(() => {
-    const blink = () => {
-      setBlink(true)
-      setTimeout(() => setBlink(false), 150)
-    }
-    const id = setInterval(blink, Math.random() * 2000 + 2000)
+    const doBlink = () => { setBlink(true); setTimeout(() => setBlink(false), 120) }
+    const id = setInterval(doBlink, Math.random() * 2500 + 2000)
     return () => clearInterval(id)
   }, [])
 
-  // Pulso de anillo cada 5s
   useEffect(() => {
     if (open) return
-    const id = setInterval(() => { setPulse(true); setTimeout(() => setPulse(false), 700) }, 5000)
+    const id = setInterval(() => { setPulse(true); setTimeout(() => setPulse(false), 800) }, 4500)
     return () => clearInterval(id)
   }, [open])
-
-  const scale = hovered ? 1.12 : 1
-  const rot   = hovered ? (open ? -8 : 8) : 0
 
   return (
     <div
@@ -336,31 +442,36 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
       style={{
         cursor: dragging ? 'grabbing' : 'grab',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        userSelect: 'none',
-        position: 'relative',
+        userSelect: 'none', position: 'relative',
+        filter: open
+          ? 'drop-shadow(0 0 18px #7C3AED99)'
+          : hovered
+          ? 'drop-shadow(0 6px 20px #7C3AED88)'
+          : 'drop-shadow(0 4px 14px #0006)',
+        transition: 'filter 0.25s',
       }}
     >
-      {/* Tooltip burbuja */}
+      {/* Burbuja de tip */}
       {!open && (
         <div style={{
+          position: 'relative',
           background: hovered
             ? 'linear-gradient(135deg,#6D28D9,#7C3AED)'
             : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
-          color: '#fff', borderRadius: 12, padding: '5px 11px',
+          color: '#fff', borderRadius: 12, padding: '5px 12px',
           fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
-          marginBottom: 5, boxShadow: hovered ? '0 4px 18px #7C3AED77' : '0 2px 12px #7C3AED55',
-          transition: 'all 0.2s',
-          transform: hovered ? 'scale(1.06) translateY(-2px)' : 'scale(1)',
-          animation: hovered ? 'none' : 'bubbleBounce 2.5s ease-in-out infinite',
+          marginBottom: 6,
+          boxShadow: hovered ? '0 4px 20px #7C3AED88' : '0 2px 12px #7C3AED55',
+          transform: hovered ? 'scale(1.07) translateY(-3px)' : 'scale(1)',
+          animation: hovered ? 'none' : 'bubbleBounce 2.8s ease-in-out infinite',
+          transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)',
         }}>
           {TIPS[tipIdx]}
-          {/* Triángulo */}
           <div style={{
             position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
             width: 0, height: 0,
-            borderLeft: '6px solid transparent',
-            borderRight: '6px solid transparent',
-            borderTop: `6px solid ${hovered ? '#6D28D9' : '#7C3AED'}`,
+            borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+            borderTop: '6px solid #7C3AED',
           }} />
         </div>
       )}
@@ -368,70 +479,25 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
       {/* Anillo de pulso */}
       {pulse && !open && (
         <div style={{
-          position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-          width: 60, height: 60,
-          borderRadius: '50%',
-          border: '2px solid #A78BFA',
-          animation: 'ringPulse 0.7s ease-out forwards',
+          position: 'absolute', bottom: 4, left: '50%',
+          width: 80, height: 80, marginLeft: -40,
+          borderRadius: '50%', border: '2px solid #A78BFA',
+          animation: 'ringPulse 0.8s ease-out forwards',
           pointerEvents: 'none',
         }} />
       )}
 
-      {/* Cuerpo del robot */}
+      {/* Robot SVG completo */}
       <div style={{
-        width: 62, height: 62,
-        borderRadius: '50%',
-        background: open
-          ? 'linear-gradient(135deg,#7C3AED,#4C1D95)'
-          : hovered
-          ? 'linear-gradient(135deg,#8B5CF6,#7C3AED)'
-          : 'linear-gradient(135deg,#6D28D9,#7C3AED)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 36,
-        boxShadow: open
-          ? '0 0 0 4px #7C3AED55, 0 8px 28px #7C3AED55'
-          : hovered
-          ? '0 0 0 3px #A78BFA88, 0 10px 30px #7C3AED66'
-          : '0 4px 20px #0005',
-        border: '3px solid ' + (open ? '#A78BFA' : hovered ? '#C4B5FD' : '#fff2'),
-        transform: `scale(${scale}) rotate(${rot}deg)`,
-        transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)',
-        filter: hovered ? 'brightness(1.1)' : 'brightness(1)',
-        position: 'relative',
-        overflow: 'hidden',
+        transform: hovered
+          ? 'scale(1.08) translateY(-4px)'
+          : open
+          ? 'scale(1.04)'
+          : 'scale(1)',
+        transition: 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1)',
+        animation: !hovered && !open ? 'robotFloat 3s ease-in-out infinite' : 'none',
       }}>
-        {/* Brillo hover */}
-        {hovered && (
-          <div style={{
-            position: 'absolute', top: -8, left: -8, right: -8, bottom: -8,
-            background: 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.18) 0%, transparent 60%)',
-            pointerEvents: 'none',
-          }} />
-        )}
-        {/* Ojos personalizados en SVG */}
-        <svg width="38" height="38" viewBox="0 0 38 38" style={{ position: 'absolute' }}>
-          {/* Cabeza */}
-          <rect x="6" y="10" width="26" height="20" rx="6" fill="#fff" fillOpacity="0.13" />
-          {/* Antena */}
-          <line x1="19" y1="10" x2="19" y2="4" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="19" cy="3" r="2" fill={hovered ? '#F59E0B' : '#A78BFA'} style={{ transition: 'fill 0.2s' }} />
-          {/* Ojo izquierdo */}
-          <ellipse cx="13" cy="20" rx="3.5" ry={blink ? 0.4 : 3.5} fill="#fff" style={{ transition: 'ry 0.08s' }} />
-          <circle cx="13" cy="20" r={blink ? 0 : 1.5} fill={hovered ? '#F59E0B' : '#7C3AED'} style={{ transition: 'all 0.08s' }} />
-          {/* Ojo derecho */}
-          <ellipse cx="25" cy="20" rx="3.5" ry={blink ? 0.4 : 3.5} fill="#fff" style={{ transition: 'ry 0.08s' }} />
-          <circle cx="25" cy="20" r={blink ? 0 : 1.5} fill={hovered ? '#F59E0B' : '#7C3AED'} style={{ transition: 'all 0.08s' }} />
-          {/* Boca */}
-          <path
-            d={hovered
-              ? 'M13 28 Q19 33 25 28'
-              : open
-              ? 'M13 28 Q19 31 25 28'
-              : 'M14 28 Q19 30 24 28'}
-            stroke="#A78BFA" strokeWidth="2" fill="none" strokeLinecap="round"
-            style={{ transition: 'd 0.2s' }}
-          />
-        </svg>
+        <RobotSVG hovered={hovered} open={open} blink={blink} />
       </div>
     </div>
   )
@@ -599,7 +665,7 @@ export default function AiAssistant() {
         {/* Panel */}
         {open && (
           <div style={{
-            position: 'absolute', top: 68, left: 0,
+            position: 'absolute', top: 148, left: 0,
             width: PANEL_W, height: PANEL_H,
             background: 'var(--bg-card)',
             border: '1.5px solid #7C3AED55',
@@ -855,8 +921,12 @@ export default function AiAssistant() {
           70%{transform:translateY(-1px) scale(0.99)}
         }
         @keyframes ringPulse {
-          0%{transform:translateX(-50%) scale(1);opacity:0.8}
-          100%{transform:translateX(-50%) scale(2.2);opacity:0}
+          0%{transform:scale(1);opacity:0.8}
+          100%{transform:scale(2.4);opacity:0}
+        }
+        @keyframes robotFloat {
+          0%,100%{transform:translateY(0)}
+          50%{transform:translateY(-6px)}
         }
         @keyframes robotWork {
           0%{transform:translateY(0) rotate(-8deg)}
