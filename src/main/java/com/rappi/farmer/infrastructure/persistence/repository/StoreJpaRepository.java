@@ -259,6 +259,21 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds AND s.had_handoff = true AND s.onboarding_date IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 8 AND 28 AND EXISTS (SELECT 1 FROM managements m WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA') AND NOT EXISTS (SELECT 1 FROM daily_metrics dm WHERE dm.store_id = s.id AND dm.orders_count > 0)", nativeQuery = true)
     long countDebugFinal8a28(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
 
+    /**
+     * GESTIONAR_IS: Inside Sales + sin HO + sin Follow Up (last_follow_up nulo y follow_up_last_30d = 0 o nulo).
+     */
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT s.* FROM stores s " +
+        "WHERE s.active = true " +
+        "AND s.user_id IN :farmerIds " +
+        "AND LOWER(s.channel) LIKE '%inside%' " +
+        "AND (s.had_handoff IS NULL OR s.had_handoff = false) " +
+        "AND s.last_follow_up IS NULL " +
+        "AND (s.follow_up_last_30d IS NULL OR s.follow_up_last_30d = 0) " +
+        "ORDER BY s.store_name ASC", nativeQuery = true)
+    List<StoreEntity> findGestionarIsByFarmerIds(
+        @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
     /** @deprecated Reemplazado por findActive7DaysWithSuccessfulManagement */
     @Deprecated
     @org.springframework.data.jpa.repository.Query(value =

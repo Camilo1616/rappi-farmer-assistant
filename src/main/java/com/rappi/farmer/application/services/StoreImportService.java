@@ -211,6 +211,8 @@ public class StoreImportService {
             }
         }
         if (row.getCredentialsDate() != null) store.setCredentialsDate(row.getCredentialsDate());
+        store.setLastFollowUp(row.getLastFollowUp());
+        store.setFollowUpLast30d(row.getFollowUpLast30d());
         if (farmerId != null) store.setFarmerId(farmerId);
 
         boolean anteriorSinHandoff = !Boolean.TRUE.equals(store.getHadHandoff());

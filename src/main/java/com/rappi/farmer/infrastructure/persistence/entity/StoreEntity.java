@@ -71,6 +71,12 @@ public class StoreEntity {
     @Column(name = "credentials_date")
     private LocalDate credentialsDate;
 
+    @Column(name = "last_follow_up")
+    private LocalDate lastFollowUp;
+
+    @Column(name = "follow_up_last_30d")
+    private Integer followUpLast30d;
+
     @Column(name = "user_id", insertable = false, updatable = false)
     private Long userId;
 

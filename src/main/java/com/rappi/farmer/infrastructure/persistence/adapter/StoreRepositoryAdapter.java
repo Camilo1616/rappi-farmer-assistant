@@ -168,6 +168,11 @@ public class StoreRepositoryAdapter implements StoreRepository {
     }
 
     @Override
+    public List<Store> findGestionarIsByFarmerIds(List<Long> farmerIds) {
+        return jpaRepository.findGestionarIsByFarmerIds(farmerIds).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public List<Store> findActive7DaysWithSuccessfulManagement(List<Long> farmerIds) {
         return jpaRepository.findActive7DaysWithSuccessfulManagement(farmerIds).stream().map(this::toDomain).toList();
     }
@@ -197,6 +202,8 @@ public class StoreRepositoryAdapter implements StoreRepository {
         entity.setGestionar(store.getGestionar());
         entity.setUploadDate(store.getUploadDate());
         entity.setCredentialsDate(store.getCredentialsDate());
+        entity.setLastFollowUp(store.getLastFollowUp());
+        entity.setFollowUpLast30d(store.getFollowUpLast30d());
         entity.setUpdatedAt(LocalDateTime.now());
         if (store.getId() == null) entity.setCreatedAt(LocalDateTime.now());
         if (store.getFarmerId() != null) {
@@ -214,7 +221,8 @@ public class StoreRepositoryAdapter implements StoreRepository {
                 e.getActive(), e.getConnectionPercentage(), e.getCurrentStatus(),
                 e.getHadHandoff(), e.getHandoffActivatedAt(), farmerId, e.getAging(),
                 e.getAgingStage(), e.getLastLoginDate(),
-                e.getGestionar(), e.getUploadDate(), farmerEmail, e.getCredentialsDate()
+                e.getGestionar(), e.getUploadDate(), farmerEmail, e.getCredentialsDate(),
+                e.getLastFollowUp(), e.getFollowUpLast30d()
         );
         return s;
     }

@@ -38,5 +38,6 @@ public interface StoreRepository {
     List<Store> findRetencionByFarmerIds(List<Long> farmerIds);
     List<Store> findAva8a14ByFarmerIds(List<Long> farmerIds);
     List<Store> findAllActiveByFarmerIds(List<Long> farmerIds);
+    List<Store> findGestionarIsByFarmerIds(List<Long> farmerIds);
     List<Store> findActiveSelfWithoutHandoff();
 }

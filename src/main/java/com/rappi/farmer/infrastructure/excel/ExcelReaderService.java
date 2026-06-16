@@ -45,9 +45,11 @@ public class ExcelReaderService {
     private static final String COL_FARMER         = "FARMER";
     private static final String COL_LAST_LOGIN     = "Último Login";
     private static final String COL_AVA_MTD        = "AVA_MTD";
-    private static final String COL_GESTIONAR      = "GESTIONAR";
-    private static final String COL_UPLOAD_DATE    = "FECHA DE CARGUE";
-    private static final String COL_CREDENTIALS    = "Fecha credenciales";
+    private static final String COL_GESTIONAR        = "GESTIONAR";
+    private static final String COL_UPLOAD_DATE      = "FECHA DE CARGUE";
+    private static final String COL_CREDENTIALS      = "Fecha credenciales";
+    private static final String COL_LAST_FOLLOW_UP   = "Último FollowUP";
+    private static final String COL_FOLLOW_UP_30D    = "FollowUp last 30D";
 
     // Columnas mínimas que deben estar presentes para que el archivo sea válido
     private static final List<String> REQUIRED_COLS = List.of(
@@ -104,6 +106,8 @@ public class ExcelReaderService {
                             .gestionar(getString(row, cols, COL_GESTIONAR))
                             .uploadDate(getDate(row, cols, COL_UPLOAD_DATE))
                             .credentialsDate(getDate(row, cols, COL_CREDENTIALS))
+                            .lastFollowUp(getDate(row, cols, COL_LAST_FOLLOW_UP))
+                            .followUpLast30d(getInteger(row, cols, COL_FOLLOW_UP_30D))
                             .build());
 
                 } catch (Exception e) {

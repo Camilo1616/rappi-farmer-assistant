@@ -29,4 +29,6 @@ public class StoreExcelRowDto {
     private String gestionar;
     private LocalDate uploadDate;
     private LocalDate credentialsDate;
+    private LocalDate lastFollowUp;
+    private Integer followUpLast30d;
 }

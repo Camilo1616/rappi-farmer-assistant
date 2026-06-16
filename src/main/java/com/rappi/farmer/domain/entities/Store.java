@@ -31,4 +31,6 @@ public class Store {
     private LocalDate uploadDate;
     private String farmerEmail;
     private LocalDate credentialsDate;
+    private LocalDate lastFollowUp;
+    private Integer followUpLast30d;
 }
