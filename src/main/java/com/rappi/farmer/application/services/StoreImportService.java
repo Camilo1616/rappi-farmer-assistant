@@ -42,14 +42,12 @@ public class StoreImportService {
     private final StoreDeleteService storeDeleteService;
     private final EntityManager entityManager;
 
-    // Cache email → userId para no consultar BD por cada fila (thread-safe)
-    private final java.util.Map<String, Long> farmerEmailCache = new java.util.concurrent.ConcurrentHashMap<>();
-
     @Transactional
     public ImportResultDto importFromExcel(File file) throws IOException {
         List<StoreExcelRowDto> rows = excelReaderService.read(file);
         LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Bogota"));
-        farmerEmailCache.clear();
+        // Cache local al método — evita consultas repetidas a BD y aislamiento entre importaciones concurrentes
+        java.util.Map<String, Long> farmerEmailCache = new java.util.HashMap<>();
 
 
 
@@ -74,7 +72,7 @@ public class StoreImportService {
                 }
 
                 // Siempre usar el email de la columna FARMER para asignar la tienda
-                Long farmerId = resolverFarmerPorEmail(farmerEmail);
+                Long farmerId = resolverFarmerPorEmail(farmerEmail, farmerEmailCache);
 
                 if (farmerId == null) {
                     result.setSkipped(result.getSkipped() + 1);
@@ -286,7 +284,7 @@ public class StoreImportService {
      * Busca el usuario por email en caché o BD.
      * Si no existe, lo crea automáticamente como FARMER_MASS.
      */
-    private Long resolverFarmerPorEmail(String email) {
+    private Long resolverFarmerPorEmail(String email, java.util.Map<String, Long> farmerEmailCache) {
         return farmerEmailCache.computeIfAbsent(email, k -> {
             Optional<User> user = userRepository.findByEmail(k);
             if (user.isPresent()) {

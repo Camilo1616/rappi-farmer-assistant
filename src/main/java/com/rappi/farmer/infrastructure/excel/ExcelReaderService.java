@@ -140,14 +140,36 @@ public class ExcelReaderService {
             if (!name.isBlank()) {
                 map.put(name, cell.getColumnIndex());
                 map.put(name.toUpperCase(), cell.getColumnIndex());
+                // Versión sin tildes para tolerancia a diferencias de encoding
+                String normalized = normalize(name);
+                map.put(normalized, cell.getColumnIndex());
+                map.put(normalized.toUpperCase(), cell.getColumnIndex());
             }
         }
-        log.info("Columnas detectadas en Excel: {}", map.keySet());
+        log.info("Columnas detectadas en Excel: {}", map.keySet().stream()
+                .filter(k -> !k.equals(k.toUpperCase()) || k.equals(normalize(k).toUpperCase()))
+                .sorted().toList());
         return map;
     }
 
-    private String getString(Row row, Map<String, Integer> cols, String colName) {
+    /** Quita tildes y caracteres especiales para comparación flexible de nombres de columna. */
+    private String normalize(String s) {
+        return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+    }
+
+    private Integer resolveColIndex(Map<String, Integer> cols, String colName) {
         Integer idx = cols.get(colName);
+        if (idx != null) return idx;
+        idx = cols.get(colName.toUpperCase());
+        if (idx != null) return idx;
+        idx = cols.get(normalize(colName));
+        if (idx != null) return idx;
+        return cols.get(normalize(colName).toUpperCase());
+    }
+
+    private String getString(Row row, Map<String, Integer> cols, String colName) {
+        Integer idx = resolveColIndex(cols, colName);
         if (idx == null) return null;
         Cell cell = row.getCell(idx);
         if (cell == null) return null;
@@ -167,7 +189,7 @@ public class ExcelReaderService {
      * Si ya viene como 38.0 o 87.88, lo deja como está.
      */
     private BigDecimal getPercentage(Row row, Map<String, Integer> cols, String colName) {
-        Integer idx = cols.get(colName);
+        Integer idx = resolveColIndex(cols, colName);
         if (idx == null) return null;
         Cell cell = row.getCell(idx);
         if (cell == null) return null;
@@ -192,7 +214,7 @@ public class ExcelReaderService {
     }
 
     private LocalDate getDate(Row row, Map<String, Integer> cols, String colName) {
-        Integer idx = cols.get(colName);
+        Integer idx = resolveColIndex(cols, colName);
         if (idx == null) return null;
         Cell cell = row.getCell(idx);
         if (cell == null) return null;
@@ -209,7 +231,7 @@ public class ExcelReaderService {
     }
 
     private Integer getInteger(Row row, Map<String, Integer> cols, String colName) {
-        Integer idx = cols.get(colName);
+        Integer idx = resolveColIndex(cols, colName);
         if (idx == null) return null;
         Cell cell = row.getCell(idx);
         if (cell == null) return null;
@@ -234,7 +256,10 @@ public class ExcelReaderService {
      */
     private void validateRequiredColumns(Map<String, Integer> cols, String fileName) {
         List<String> missing = REQUIRED_COLS.stream()
-                .filter(req -> !cols.containsKey(req) && !cols.containsKey(req.toUpperCase()))
+                .filter(req -> !cols.containsKey(req)
+                        && !cols.containsKey(req.toUpperCase())
+                        && !cols.containsKey(normalize(req))
+                        && !cols.containsKey(normalize(req).toUpperCase()))
                 .toList();
 
         if (!missing.isEmpty()) {
