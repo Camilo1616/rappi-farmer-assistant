@@ -180,8 +180,8 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
 
     /**
      * ACTIVE 7 días: aging = 7 (según la fecha de cargue del Excel),
-     * HO exitoso (had_handoff = true) y al menos una gestión EFECTIVA,
-     * sin importar el canal/tipo de gestión.
+     * HO exitoso (had_handoff = true), al menos una gestión EFECTIVA
+     * (cualquier canal) y SIN ventas registradas (orders_count = 0 o sin métricas).
      */
     @org.springframework.data.jpa.repository.Query(value =
         "SELECT s.* FROM stores s " +
@@ -192,6 +192,10 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         "AND EXISTS ( " +
         "  SELECT 1 FROM managements m " +
         "  WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA' " +
+        ") " +
+        "AND NOT EXISTS ( " +
+        "  SELECT 1 FROM daily_metrics dm " +
+        "  WHERE dm.store_id = s.id AND dm.orders_count > 0 " +
         ") " +
         "ORDER BY s.store_name ASC", nativeQuery = true)
     List<StoreEntity> findActive7DaysWithSuccessfulManagement(
