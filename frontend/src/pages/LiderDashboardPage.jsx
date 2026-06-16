@@ -5,6 +5,7 @@ import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { logout } from '../services/authService'
 import ProfilePage from './ProfilePage'
+import styles from './DashboardPage.module.css'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace('/api', '')
 
@@ -40,12 +41,23 @@ const BASE_TYPE_LABEL = {
   AVA_8_14: 'AVA 8-14', PRIORIZACION: 'Priorización',
 }
 
-const NAV = [
-  { key: 'dashboard', icon: '◼',  label: 'Dashboard' },
-  { key: 'equipo',    icon: '👥', label: 'Equipo hoy' },
-  { key: 'bases',     icon: '📦', label: 'Bases' },
-  { key: 'profile',   icon: '👤', label: 'Mi perfil' },
+const IC = ({ d, d2 }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />{d2 && <path d={d2} />}
+  </svg>
+)
+
+const NAV_ITEMS_LIDER = [
+  { key: 'dashboard', icon: <IC d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" d2="M9 22V12h6v10" />, color: '#FF441F', bg: 'rgba(255,68,31,0.13)',  label: 'Dashboard'  },
+  { key: 'equipo',    icon: <IC d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" d2="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />, color: '#3B82F6', bg: 'rgba(59,130,246,0.13)', label: 'Equipo hoy' },
+  { key: 'bases',     icon: <IC d="M12 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" d2="M14 2v6h6" />, color: '#8B5CF6', bg: 'rgba(139,92,246,0.13)', label: 'Bases'      },
+  { key: 'profile',   icon: <IC d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" d2="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />, color: '#94A3B8', bg: 'rgba(148,163,184,0.13)', label: 'Mi perfil' },
 ]
+
+function getInitials(name = '') {
+  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
 
 function semaforo(f) {
   if (f.gestionesHoy === 0) return { icon: '🔴', label: 'Sin iniciar', color: '#dc2626' }
@@ -884,19 +896,22 @@ function MetricGrid({ data }) {
 /* ─── Página principal ──────────────────────────────────────────────── */
 export default function LiderDashboardPage() {
   const { user } = useAuth()
-  const [activeNav, setActiveNav] = useState('dashboard')
-  const [data, setData]           = useState(null)
-  const [bases, setBases]         = useState([])
-  const [managements, setMgts]    = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [sort, setSort]           = useState('semaforo')
+  const [activeNav, setActiveNav]             = useState('dashboard')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [profileOpen, setProfileOpen]         = useState(false)
+  const [data, setData]                       = useState(null)
+  const [bases, setBases]                     = useState([])
+  const [managements, setMgts]               = useState([])
+  const [loading, setLoading]                 = useState(true)
+  const [sort, setSort]                       = useState('semaforo')
   const [expandedBase, setExpandedBase]       = useState(null)
   const [baseStoresData, setBaseStoresData]   = useState({})
   const [baseStoresLoading, setBSLoading]     = useState({})
-  const [notifs, setNotifs]       = useState([])
-  const [unread, setUnread]       = useState(0)
-  const [notifOpen, setNotifOpen] = useState(false)
-  const notifRef = useRef()
+  const [notifs, setNotifs]                   = useState([])
+  const [unread, setUnread]                   = useState(0)
+  const [notifOpen, setNotifOpen]             = useState(false)
+  const notifRef   = useRef()
+  const profileRef = useRef()
 
   const loadBases = useCallback(async () => {
     const r = await getBasesForLider().catch(() => null)
@@ -975,32 +990,35 @@ export default function LiderDashboardPage() {
   const greeting = new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches'
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)', fontFamily: 'Inter, sans-serif' }}>
+    <div className={styles.layout}>
 
-      {/* ── Sidebar ── */}
-      <aside style={{ width: 224, background: '#0f172a', display: 'flex', flexDirection: 'column',
-        padding: '24px 0', flexShrink: 0, boxShadow: '2px 0 12px rgba(0,0,0,0.2)' }}>
-        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#ff441f', letterSpacing: '-0.5px' }}>Rappi Farmer</span>
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Panel Líder</div>
+      {/* ── Sidebar (mismo diseño que farmer) ── */}
+      <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
+        <div className={styles.sidebarBrand}>
+          <span className={styles.sidebarDot} />
+          {!sidebarCollapsed && <span className={styles.sidebarBrandName}>Rappi Farmer</span>}
+          <button
+            className={styles.sidebarToggle}
+            onClick={() => setSidebarCollapsed(c => !c)}
+            title={sidebarCollapsed ? 'Expandir' : 'Colapsar'}
+          >
+            {sidebarCollapsed ? '›' : '‹'}
+          </button>
         </div>
 
-        <nav style={{ flex: 1, padding: '12px 0' }}>
-          {NAV.map(({ key, icon, label }) => (
-            <button key={key} onClick={() => setActiveNav(key)} style={{
-              display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-              padding: '10px 20px',
-              background: activeNav === key ? 'rgba(255,68,31,0.15)' : 'transparent',
-              border: 'none',
-              borderLeft: activeNav === key ? '3px solid #ff441f' : '3px solid transparent',
-              color: activeNav === key ? '#ff441f' : '#94a3b8',
-              fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-              transition: 'background 0.15s, color 0.15s',
-            }}>
-              <span>{icon}</span>
-              <span>{label}</span>
-              {key === 'bases' && bases.length > 0 && (
+        <nav className={styles.sidebarNav}>
+          {NAV_ITEMS_LIDER.map(item => (
+            <button
+              key={item.key}
+              className={`${styles.navItem} ${activeNav === item.key ? styles.active : ''}`}
+              onClick={() => setActiveNav(item.key)}
+              title={sidebarCollapsed ? item.label : undefined}
+            >
+              <span className={styles.navIconWrap} style={{ background: item.bg, borderColor: item.color + '33', color: item.color }}>
+                {item.icon}
+              </span>
+              {!sidebarCollapsed && <span className={styles.navLabel}>{item.label}</span>}
+              {!sidebarCollapsed && item.key === 'bases' && bases.length > 0 && (
                 <span style={{ marginLeft: 'auto', background: '#ff441f', color: '#fff',
                   fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '1px 6px', lineHeight: 1.4 }}>
                   {bases.length}
@@ -1010,77 +1028,71 @@ export default function LiderDashboardPage() {
           ))}
         </nav>
 
-        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            {user?.avatarUrl
-              ? <img src={`${API_BASE}${user.avatarUrl}`} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover' }} />
-              : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#ff441f',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                  {user?.fullName?.[0]?.toUpperCase()}
+        <div className={styles.sidebarFooter} ref={profileRef}>
+          {profileOpen && (
+            <div className={styles.profileMenu}>
+              <div className={styles.profileMenuHeader}>
+                <div className={styles.avatarLg}>{getInitials(user?.fullName)}</div>
+                <div>
+                  <p className={styles.profileMenuName}>{user?.fullName}</p>
+                  <p className={styles.profileMenuEmail}>{user?.email}</p>
                 </div>
-            }
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', margin: 0,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullName}</p>
-              <p style={{ fontSize: 11, color: '#64748b', margin: '1px 0 0' }}>Líder</p>
+              </div>
+              <div className={styles.profileMenuDivider} />
+              <button className={styles.profileMenuItem} onClick={() => { setActiveNav('profile'); setProfileOpen(false) }}>
+                <span>👤</span> Mi perfil
+              </button>
+              <div className={styles.profileMenuDivider} />
+              <button className={`${styles.profileMenuItem} ${styles.profileMenuItemDanger}`} onClick={() => { setProfileOpen(false); handleLogout() }}>
+                <span>⏻</span> Cerrar sesión
+              </button>
             </div>
+          )}
+          <div
+            className={`${styles.userCard} ${profileOpen ? styles.userCardActive : ''}`}
+            onClick={() => setProfileOpen(o => !o)}
+            role="button" tabIndex={0}
+            onKeyDown={e => e.key === 'Enter' && setProfileOpen(o => !o)}
+          >
+            <div className={styles.avatar}>{getInitials(user?.fullName)}</div>
+            {!sidebarCollapsed && (
+              <div className={styles.userInfo}>
+                <div className={styles.userFullName}>{user?.fullName}</div>
+                <div className={styles.userRole}>Líder</div>
+              </div>
+            )}
+            {!sidebarCollapsed && <span className={styles.chevron}>{profileOpen ? '▲' : '▼'}</span>}
           </div>
-          <button onClick={handleLogout} style={{ fontSize: 11, color: '#64748b', background: 'none',
-            border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
-            onMouseEnter={e => e.target.style.color = '#ef4444'}
-            onMouseLeave={e => e.target.style.color = '#64748b'}>
-            Cerrar sesión
-          </button>
         </div>
       </aside>
 
-      {/* ── Panel principal ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* ── Contenido ── */}
+      <div className={styles.content}>
 
         {/* Topbar */}
-        <div style={{ height: 56, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 28px', flexShrink: 0 }}>
-          <h1 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            {NAV.find(n => n.key === activeNav)?.label}
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{now}</span>
-            {/* Campana */}
-            <div ref={notifRef} style={{ position: 'relative' }}>
-              <button onClick={openNotifs} style={{ position: 'relative', background: 'none',
-                border: 'none', fontSize: 18, cursor: 'pointer', padding: '4px 6px' }}>
+        <div className={styles.topbar}>
+          <h1 className={styles.pageTitle}>{NAV_ITEMS_LIDER.find(n => n.key === activeNav)?.label}</h1>
+          <div className={styles.topbarRight}>
+            <span className={styles.date} style={{ textTransform: 'capitalize' }}>{now}</span>
+            <div className={styles.notifWrap} ref={notifRef}>
+              <button className={styles.notifBtn} onClick={openNotifs}>
                 🔔
-                {unread > 0 && (
-                  <span style={{ position: 'absolute', top: 0, right: 0, background: '#ef4444',
-                    color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 99,
-                    padding: '1px 5px', lineHeight: 1.4 }}>{unread > 9 ? '9+' : unread}</span>
-                )}
+                {unread > 0 && <span className={styles.notifBadge}>{unread > 9 ? '9+' : unread}</span>}
               </button>
               {notifOpen && (
-                <div style={{ position: 'absolute', right: 0, top: '100%', width: 320,
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: 12, boxShadow: 'var(--shadow-lg)', zIndex: 1000, overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Notificaciones</span>
+                <div className={styles.notifDropdown}>
+                  <div className={styles.notifHeader}>
+                    <span>Notificaciones</span>
                     {unread > 0 && (
-                      <button onClick={handleMarkRead} style={{ fontSize: 11, color: '#3b82f6',
-                        background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Marcar leído
-                      </button>
+                      <button className={styles.markReadBtn} onClick={handleMarkRead}>Marcar todo leído</button>
                     )}
                   </div>
                   {notifs.length === 0
-                    ? <p style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Sin notificaciones</p>
+                    ? <p className={styles.notifEmpty}>Sin notificaciones</p>
                     : notifs.slice(0, 10).map((n, i) => (
-                      <div key={n.id || i} style={{ padding: '10px 16px', borderBottom: '1px solid var(--border-subtle)',
-                        background: n.read ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
-                        <p style={{ margin: 0, fontSize: 12, fontWeight: n.read ? 400 : 600, color: 'var(--text-primary)' }}>
-                          {n.title || n.message}
-                        </p>
-                        {n.body && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>{n.body}</p>}
+                      <div key={n.id || i} className={`${styles.notifItem} ${!n.read ? styles.notifUnread : ''}`}>
+                        <span className={styles.notifMsg}>{n.title || n.message}</span>
+                        {n.body && <span className={styles.notifBody}>{n.body}</span>}
                       </div>
                     ))
                   }
@@ -1090,8 +1102,7 @@ export default function LiderDashboardPage() {
           </div>
         </div>
 
-        {/* Content */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
+        <main className={styles.main}>
 
           {/* Dashboard */}
           {activeNav === 'dashboard' && (
@@ -1107,25 +1118,30 @@ export default function LiderDashboardPage() {
                   <MetricGrid data={data} />
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                     {[
-                      { key: 'equipo', icon: '👥', label: 'Ver equipo hoy', desc: `${data?.farmers?.length ?? 0} farmers activos`, color: '#3b82f6' },
-                      { key: 'bases',  icon: '📦', label: 'Gestionar bases', desc: `${bases.length} bases creadas`, color: '#7c3aed' },
-                    ].map(({ key, icon, label, desc, color }) => (
-                      <button key={key} onClick={() => setActiveNav(key)} style={{
-                        display: 'flex', alignItems: 'center', gap: 14,
-                        background: 'var(--bg-card)', border: '1px solid var(--border)',
-                        borderRadius: 14, padding: '18px 20px', cursor: 'pointer',
-                        textAlign: 'left', fontFamily: 'inherit', boxShadow: 'var(--shadow-sm)',
-                        transition: 'border-color 0.15s, box-shadow 0.15s',
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.boxShadow = 'var(--shadow-md)' }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)' }}>
-                        <span style={{ fontSize: 28 }}>{icon}</span>
-                        <div>
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</p>
-                          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>{desc}</p>
-                        </div>
-                      </button>
-                    ))}
+                      { key: 'equipo', color: '#3b82f6', label: 'Ver equipo hoy',   desc: `${data?.farmers?.length ?? 0} farmers activos` },
+                      { key: 'bases',  color: '#7c3aed', label: 'Gestionar bases',  desc: `${bases.length} bases creadas` },
+                    ].map(({ key, label, desc, color }) => {
+                      const nav = NAV_ITEMS_LIDER.find(n => n.key === key)
+                      return (
+                        <button key={key} onClick={() => setActiveNav(key)} style={{
+                          display: 'flex', alignItems: 'center', gap: 14,
+                          background: 'var(--bg-card)', border: '1px solid var(--border)',
+                          borderRadius: 14, padding: '18px 20px', cursor: 'pointer',
+                          textAlign: 'left', fontFamily: 'inherit', boxShadow: 'var(--shadow-sm)',
+                          transition: 'border-color 0.15s, box-shadow 0.15s',
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.boxShadow = 'var(--shadow-md)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)' }}>
+                          <span className={styles.navIconWrap} style={{ background: nav?.bg, borderColor: color + '33', color, width: 40, height: 40, fontSize: 20 }}>
+                            {nav?.icon}
+                          </span>
+                          <div>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>{desc}</p>
+                          </div>
+                        </button>
+                      )
+                    })}
                   </div>
                 </>
               )}
@@ -1135,9 +1151,7 @@ export default function LiderDashboardPage() {
           {/* Equipo hoy */}
           {activeNav === 'equipo' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                Equipo hoy
-              </h2>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Equipo hoy</h2>
               {loading ? <Spinner /> : (
                 <EquipoTab farmers={data?.farmers || []} managements={managements} sort={sort} setSort={setSort} />
               )}
@@ -1147,19 +1161,12 @@ export default function LiderDashboardPage() {
           {/* Bases */}
           {activeNav === 'bases' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  Bases de datos
-                </h2>
-              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Bases de datos</h2>
               {loading ? <Spinner /> : (
                 <BasesTab
-                  bases={bases}
-                  farmers={data?.farmers || []}
-                  baseStoresData={baseStoresData}
-                  baseStoresLoading={baseStoresLoading}
-                  expandedBase={expandedBase}
-                  setExpandedBase={setExpandedBase}
+                  bases={bases} farmers={data?.farmers || []}
+                  baseStoresData={baseStoresData} baseStoresLoading={baseStoresLoading}
+                  expandedBase={expandedBase} setExpandedBase={setExpandedBase}
                   onBaseCreated={() => { load(); loadBases() }}
                 />
               )}
