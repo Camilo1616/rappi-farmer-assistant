@@ -296,4 +296,15 @@ app.post('/reconnect', (req, res) => {
 app.listen(PORT, () => {
   console.log(`[WA] Servicio multi-sesión escuchando en puerto ${PORT}`)
   restorePersistedSessions()
+
+  // Watchdog: cada 5 minutos revisa sesiones desconectadas y las reinicia
+  setInterval(() => {
+    for (const [sessionId, s] of sessions.entries()) {
+      if (!s.connected && !s.initializing) {
+        console.log(`[WA:${sessionId}] Watchdog: sesión inactiva, reconectando...`)
+        deleteChromiumLocks(AUTH_DIR, sessionId)
+        initSession(sessionId)
+      }
+    }
+  }, 5 * 60 * 1000)
 })
