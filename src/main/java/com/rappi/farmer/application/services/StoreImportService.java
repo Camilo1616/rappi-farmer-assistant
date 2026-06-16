@@ -189,6 +189,7 @@ public class StoreImportService {
     }
 
     private void updateStore(Store store, StoreExcelRowDto row, Long farmerId) {
+        store.setActive(true); // reactivar si estaba desactivada de un cargue anterior
         store.setStoreName(row.getStoreName());
         if (row.getBrandId() != null) store.setBrandId(row.getBrandId());
         store.setPhoneNumber(row.getPhoneNumber());
