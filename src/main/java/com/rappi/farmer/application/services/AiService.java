@@ -24,7 +24,7 @@ public class AiService {
     private static final String GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions";
     /** Modelo rápido con límite de tokens/min 3x mayor que versatile. */
     private static final String MODEL         = "llama-3.1-8b-instant";
-    private static final long   CACHE_SECONDS = 600; // 10 min
+    private static final long   CACHE_SECONDS = 1200; // 20 min
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -550,67 +550,72 @@ public class AiService {
     // ── HTTP a Groq ───────────────────────────────────────────────────────────
 
     private String callGroqMessages(List<Map<String, String>> messages, double temperature, int maxTokens) {
-        if (apiKey == null || apiKey.isBlank()) {
+        if (apiKey == null || apiKey.isBlank())
             throw new IllegalStateException("IA no disponible: configura GROQ_API_KEY");
-        }
         Map<String, Object> body = Map.of(
                 "model", MODEL, "temperature", temperature,
                 "max_tokens", maxTokens, "messages", messages);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
-        try {
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    GROQ_URL, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
-            var choices = (List<?>) response.getBody().get("choices");
-            var message = (Map<?, ?>) ((Map<?, ?>) choices.get(0)).get("message");
-            return ((String) message.get("content")).trim();
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            log.error("Error Groq API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("Error IA " + e.getStatusCode());
-        } catch (Exception e) {
-            log.error("Error inesperado llamando Groq: {}", e.getMessage());
-            throw new RuntimeException("Error IA: " + e.getMessage());
-        }
+        return executeWithRetry(body);
     }
 
     private String callGroq(String systemPrompt, String userPrompt, double temperature, int maxTokens) {
-        if (apiKey == null || apiKey.isBlank()) {
+        if (apiKey == null || apiKey.isBlank())
             throw new IllegalStateException("IA no disponible: configura GROQ_API_KEY");
-        }
-
         Map<String, Object> body = Map.of(
-                "model",       MODEL,
-                "temperature", temperature,
-                "max_tokens",  maxTokens,
+                "model", MODEL, "temperature", temperature, "max_tokens", maxTokens,
                 "messages", List.of(
                         Map.of("role", "system", "content", systemPrompt),
-                        Map.of("role", "user",   "content", userPrompt)
-                )
-        );
+                        Map.of("role", "user",   "content", userPrompt)));
+        return executeWithRetry(body);
+    }
 
+    /**
+     * Ejecuta la llamada a Groq con un reintento automático si llega un 429.
+     * Parsea el tiempo de espera sugerido por Groq ("try again in Xs") y duerme ese tiempo
+     * antes de reintentar (máximo 30 s para no bloquear el hilo demasiado).
+     */
+    private String executeWithRetry(Map<String, Object> body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-        try {
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    GROQ_URL, HttpMethod.POST,
-                    new HttpEntity<>(body, headers),
-                    Map.class);
+        for (int attempt = 0; attempt <= 1; attempt++) {
+            try {
+                ResponseEntity<Map> response = restTemplate.exchange(
+                        GROQ_URL, HttpMethod.POST, entity, Map.class);
+                var choices = (List<?>) response.getBody().get("choices");
+                var message = (Map<?, ?>) ((Map<?, ?>) choices.get(0)).get("message");
+                return ((String) message.get("content")).trim();
 
-            var choices = (List<?>) response.getBody().get("choices");
-            var message = (Map<?, ?>) ((Map<?, ?>) choices.get(0)).get("message");
-            String content = ((String) message.get("content")).trim();
-            log.debug("IA generó {} chars", content.length());
-            return content;
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            log.error("Error Groq API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("Error IA " + e.getStatusCode());
-        } catch (Exception e) {
-            log.error("Error inesperado llamando Groq: {}", e.getMessage());
-            throw new RuntimeException("Error IA: " + e.getMessage());
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
+                if (e.getStatusCode().value() == 429 && attempt == 0) {
+                    long waitMs = parse429WaitMs(e.getResponseBodyAsString());
+                    log.warn("Groq 429 — esperando {}ms antes de reintentar", waitMs);
+                    try { Thread.sleep(waitMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                } else {
+                    log.error("Error Groq API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+                    throw new RuntimeException("Error IA " + e.getStatusCode());
+                }
+            } catch (Exception e) {
+                log.error("Error inesperado llamando Groq: {}", e.getMessage());
+                throw new RuntimeException("Error IA: " + e.getMessage());
+            }
         }
+        throw new RuntimeException("Error IA: límite de velocidad de Groq superado");
+    }
+
+    /** Extrae los segundos de espera del mensaje de error 429 de Groq. */
+    private long parse429WaitMs(String body) {
+        try {
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("try again in ([0-9.]+)s").matcher(body);
+            if (m.find()) {
+                double secs = Double.parseDouble(m.group(1));
+                return Math.min((long)(secs * 1000) + 500, 30_000); // máx 30 s
+            }
+        } catch (Exception ignored) {}
+        return 15_000; // fallback: 15 s
     }
 
     public boolean isAvailable() {
