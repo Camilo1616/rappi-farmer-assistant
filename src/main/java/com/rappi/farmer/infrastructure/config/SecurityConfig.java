@@ -76,7 +76,7 @@ public class SecurityConfig {
         return email -> userRepository.findByEmail(email)
                 .map(u -> org.springframework.security.core.userdetails.User
                         .withUsername(u.getEmail())
-                        .password(u.getPassword() != null ? u.getPassword() : "")
+                        .password(u.getPasswordHash() != null ? u.getPasswordHash() : "")
                         .roles(u.getRole() != null ? u.getRole() : "FARMER_MASS")
                         .build())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
