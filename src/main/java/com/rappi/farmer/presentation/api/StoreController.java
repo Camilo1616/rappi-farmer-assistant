@@ -140,7 +140,7 @@ public class StoreController {
         return ResponseEntity.ok(result);
     }
 
-    /** Detalle compacto de una tienda por código — usado por el asistente IA para el menú contextual. */
+    /** Detalle compacto de una tienda por storeCode — usado por el asistente IA. Requiere Map.ofEntries (>10 pares). */
     @GetMapping("/by-code/{storeCode}")
     public ResponseEntity<?> getByCode(@PathVariable String storeCode) {
         var opt = storeRepository.findByStoreCode(storeCode);
