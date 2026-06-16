@@ -205,7 +205,7 @@ public class AiService {
             log.debug("Recomendación desde caché");
             return cached.data();
         }
-        String context = buildStoreContext(stores, 20); // reducido de 40 a 20
+        String context = buildStoreContext(stores, 5); // máx 5 por segmento → ~25 tiendas total
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
@@ -254,7 +254,7 @@ public class AiService {
                 CARTERA SEGMENTADA:
                 """ + context;
 
-        String raw = callGroq(systemPrompt, userPrompt, 0.4, 1800); // reducido de 4000 a 1800
+        String raw = callGroq(systemPrompt, userPrompt, 0.3, 2200);
 
         try {
             // Limpiar posible markdown code block
@@ -277,7 +277,7 @@ public class AiService {
      * Chat conversacional sobre la cartera. Mantiene historial de la sesión.
      */
     public String chat(List<Store> stores, List<AiController.ChatMessage> history, String userMessage) {
-        String context = buildStoreContext(stores, 15);
+        String context = buildStoreContext(stores, 4);
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
