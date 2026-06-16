@@ -46,67 +46,241 @@ function Md({ children, onRowCtx }) {
   )
 }
 
-/* ── Context menu (clic derecho sobre fila de tabla) ───────────────────── */
+/* ── Helpers visuales ───────────────────────────────────────────────────── */
+const TIPO_OPTS = [
+  { value: 'WHATSAPP',   label: '💬 WhatsApp' },
+  { value: 'LLAMADA',    label: '📞 Llamada'  },
+  { value: 'ACTIVACION', label: '🚀 Activación' },
+  { value: 'SEGUIMIENTO',label: '🔁 Seguimiento' },
+  { value: 'SAC',        label: '🎧 SAC'      },
+]
+const RESULTADO_OPTS = [
+  { value: 'EFECTIVA',             label: '✅ Efectiva',           color: '#22C55E' },
+  { value: 'NO_CONTACTO',          label: '📵 No contacto',        color: '#94A3B8' },
+  { value: 'NO_RESPONDE',          label: '🔇 No responde',        color: '#F59E0B' },
+  { value: 'PROBLEMA_TECNICO',     label: '🔧 Prob. técnico',      color: '#EF4444' },
+  { value: 'REQUIERE_SEGUIMIENTO', label: '🔁 Req. seguimiento',   color: '#8B5CF6' },
+]
+
+function InfoRow({ label, value, accent }) {
+  if (!value || value === '—' || value === '-') return null
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '4px 0', borderBottom: '1px solid rgba(128,128,128,0.08)' }}>
+      <span style={{ fontSize: 10, color: 'var(--text-secondary,#888)', fontWeight: 600,
+        textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700,
+        color: accent || 'var(--text-primary,#111)', textAlign: 'right', maxWidth: '60%' }}>{value}</span>
+    </div>
+  )
+}
+
+/* ── Context menu (clic derecho sobre fila de tabla o tarjeta) ──────────── */
 function StoreContextMenu({ menu, onClose }) {
+  const [tipo,      setTipo]      = useState('LLAMADA')
+  const [resultado, setResultado] = useState('')
+  const [comentario,setComentario]= useState('')
+  const [saving,    setSaving]    = useState(false)
+  const [saved,     setSaved]     = useState(false)
+  const [saveError, setSaveError] = useState(null)
+
+  // Resetear form al abrir nueva tienda
+  useEffect(() => {
+    if (menu.visible) { setTipo('LLAMADA'); setResultado(''); setComentario(''); setSaved(false); setSaveError(null) }
+  }, [menu.storeCode, menu.visible])
+
   if (!menu.visible) return null
   const d = menu.data
 
-  // Ajustar posición si se sale de la pantalla
-  const left = Math.min(menu.x, window.innerWidth - 310)
-  const top  = Math.min(menu.y, window.innerHeight - 340)
+  const left = Math.min(menu.x + 8, window.innerWidth  - 380)
+  const top  = Math.min(menu.y,     window.innerHeight - 580)
+
+  const hasHo  = d?.hadHandoff === 'true' || d?.hadHandoff === true
+  const aging  = d?.aging ? parseInt(d.aging) : null
+  const agingColor = aging != null
+    ? (aging <= 7 ? '#EF4444' : aging <= 14 ? '#F97316' : '#22C55E')
+    : '#94A3B8'
+
+  const ava = d?.connectionPct && d.connectionPct !== '—' ? parseFloat(d.connectionPct) : null
+  const avaColor = ava != null ? (ava < 30 ? '#EF4444' : ava < 60 ? '#F97316' : '#22C55E') : '#94A3B8'
+
+  const handleSave = async () => {
+    if (!resultado || !d?.id) return
+    setSaving(true); setSaveError(null)
+    try {
+      await api.post(`/stores/${d.id}/management`, {
+        managementType: tipo,
+        resultType:     resultado,
+        comments:       comentario.trim() || null,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      setResultado(''); setComentario('')
+    } catch (e) {
+      setSaveError(e.response?.data?.message || 'Error al guardar')
+    } finally { setSaving(false) }
+  }
 
   return (
     <div
       onClick={e => e.stopPropagation()}
       style={{
         position: 'fixed', left, top, zIndex: 99999,
+        width: 360,
         background: 'var(--bg-card,#fff)',
-        border: '1.5px solid rgba(124,58,237,0.4)',
-        borderRadius: 12,
-        padding: '12px 14px',
-        minWidth: 280, maxWidth: 310,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+        border: '1.5px solid rgba(124,58,237,0.35)',
+        borderRadius: 16,
+        boxShadow: '0 12px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(124,58,237,0.12)',
         fontSize: 12,
         userSelect: 'text',
+        overflow: 'hidden',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontWeight: 800, fontSize: 13, color: 'var(--text-primary,#111)' }}>
-          {menu.loading ? 'Cargando...' : d ? d.storeName : 'No encontrada'}
-        </span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--text-secondary,#888)', padding: '0 2px' }}>✕</button>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg,#7C3AED18,#6D28D908)',
+        borderBottom: '1px solid rgba(124,58,237,0.15)',
+        padding: '10px 14px',
+        display: 'flex', alignItems: 'flex-start', gap: 8,
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {menu.loading
+            ? <div style={{ height: 16, background: 'rgba(128,128,128,0.15)', borderRadius: 4, marginBottom: 4 }} />
+            : <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary,#111)',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {d ? d.storeName : '⚠️ No encontrada'}
+              </div>
+          }
+          {d && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+              <span style={{ background: 'rgba(124,58,237,0.12)', color: '#7C3AED',
+                borderRadius: 5, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{d.storeCode}</span>
+              {aging != null && (
+                <span style={{ background: agingColor + '18', color: agingColor,
+                  borderRadius: 5, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>
+                  {aging}d · {d.agingStage || '—'}
+                </span>
+              )}
+              <span style={{ background: hasHo ? '#22C55E18' : '#EF444418',
+                color: hasHo ? '#22C55E' : '#EF4444',
+                borderRadius: 5, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>
+                {hasHo ? '✅ HO' : '❌ Sin HO'}
+              </span>
+              {ava != null && (
+                <span style={{ background: avaColor + '18', color: avaColor,
+                  borderRadius: 5, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>
+                  AVA {ava}%
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 16, color: 'var(--text-secondary,#888)', padding: 2, flexShrink: 0, lineHeight: 1 }}>✕</button>
       </div>
 
-      {menu.loading && <div style={{ color: 'var(--text-secondary,#888)', fontSize: 12 }}>Buscando tienda...</div>}
-
-      {!menu.loading && d && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '5px 10px', alignItems: 'start' }}>
-          {[
-            ['Código',        d.storeCode],
-            ['Brand ID',      d.brandId],
-            ['Store ID',      d.id],
-            ['Teléfono',      d.phoneNumber],
-            ['Canal',         d.channel],
-            ['Aging',         `${d.aging} días (${d.agingStage})`],
-            ['Onboarding',    d.onboardingDate],
-            ['Estado',        d.currentStatus],
-            ['HO activado',   d.hadHandoff === 'true' || d.hadHandoff === true ? '✅ Sí' : '❌ No'],
-            ['AVA MTD',       d.connectionPct != null ? `${d.connectionPct}%` : '—'],
-            ['Último FU',     d.lastFollowUp],
-            ['FU 30d',        d.followUpLast30d],
-            ['Gestionar',     d.gestionar],
-          ].map(([label, val]) => (
-            val && val !== '—' ? [
-              <span key={label + '_l'} style={{ color: 'var(--text-secondary,#888)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{label}</span>,
-              <span key={label + '_v'} style={{ fontWeight: 600, color: 'var(--text-primary,#111)', wordBreak: 'break-all' }}>{String(val)}</span>
-            ] : null
-          ))}
+      {menu.loading && (
+        <div style={{ padding: '20px 14px', textAlign: 'center', color: 'var(--text-secondary,#888)' }}>
+          <div style={{ fontSize: 20, marginBottom: 6 }}>⏳</div>
+          Buscando tienda...
         </div>
       )}
 
       {!menu.loading && !d && (
-        <div style={{ color: 'var(--text-secondary,#888)', fontSize: 12 }}>
-          Código no encontrado. Asegúrate de hacer clic derecho en una fila con código PE.
+        <div style={{ padding: '16px 14px', color: 'var(--text-secondary,#888)', textAlign: 'center', fontSize: 12 }}>
+          Código PE no encontrado en la base de datos.
+        </div>
+      )}
+
+      {!menu.loading && d && (
+        <div>
+          {/* Info de la tienda */}
+          <div style={{ padding: '8px 14px 4px' }}>
+            <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
+              color: '#7C3AED', letterSpacing: '0.8px', marginBottom: 4 }}>📋 Información</div>
+            <InfoRow label="Canal"      value={d.channel} />
+            <InfoRow label="Teléfono"   value={d.phoneNumber} />
+            <InfoRow label="Brand ID"   value={d.brandId} />
+            <InfoRow label="Onboarding" value={d.onboardingDate} />
+            <InfoRow label="Estado"     value={d.currentStatus}
+              accent={d.currentStatus?.toLowerCase().includes('churn') ? '#EF4444' : undefined} />
+            <InfoRow label="Último FU"  value={d.lastFollowUp} />
+            <InfoRow label="FU 30d"     value={d.followUpLast30d}
+              accent={d.followUpLast30d === 'NO' ? '#EF4444' : '#22C55E'} />
+            <InfoRow label="Gestionar"  value={d.gestionar}
+              accent={d.gestionar?.toUpperCase() === 'IS' ? '#EF4444' : '#7C3AED'} />
+          </div>
+
+          {/* Separador */}
+          <div style={{ height: 1, background: 'rgba(124,58,237,0.15)', margin: '6px 0' }} />
+
+          {/* Registrar gestión */}
+          <div style={{ padding: '8px 14px 12px' }}>
+            <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
+              color: '#7C3AED', letterSpacing: '0.8px', marginBottom: 8 }}>⚡ Registrar gestión</div>
+
+            {/* Tipo */}
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 7 }}>
+              {TIPO_OPTS.map(o => (
+                <button key={o.value} onClick={() => setTipo(o.value)} style={{
+                  padding: '3px 8px', borderRadius: 6, border: '1.5px solid',
+                  borderColor: tipo === o.value ? '#7C3AED' : 'var(--border,#e5e7eb)',
+                  background:  tipo === o.value ? '#7C3AED' : 'transparent',
+                  color:       tipo === o.value ? '#fff' : 'var(--text-secondary,#888)',
+                  fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                }}>{o.label}</button>
+              ))}
+            </div>
+
+            {/* Resultado */}
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 7 }}>
+              {RESULTADO_OPTS.map(o => (
+                <button key={o.value} onClick={() => setResultado(o.value)} style={{
+                  padding: '3px 8px', borderRadius: 6, border: '1.5px solid',
+                  borderColor: resultado === o.value ? o.color : 'var(--border,#e5e7eb)',
+                  background:  resultado === o.value ? o.color + '22' : 'transparent',
+                  color:       resultado === o.value ? o.color : 'var(--text-secondary,#888)',
+                  fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                }}>{o.label}</button>
+              ))}
+            </div>
+
+            {/* Comentario */}
+            <textarea
+              value={comentario}
+              onChange={e => setComentario(e.target.value)}
+              placeholder="Comentario (opcional)..."
+              rows={2}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '6px 8px', borderRadius: 7,
+                border: '1.5px solid var(--border,#e5e7eb)',
+                background: 'var(--bg-input,#f9f9f9)',
+                color: 'var(--text-primary,#111)',
+                fontSize: 11, resize: 'none', outline: 'none',
+                fontFamily: 'inherit', marginBottom: 7,
+              }}
+            />
+
+            {saveError && <div style={{ color: '#EF4444', fontSize: 11, marginBottom: 6 }}>⚠️ {saveError}</div>}
+            {saved     && <div style={{ color: '#22C55E', fontSize: 11, marginBottom: 6 }}>✅ Gestión registrada</div>}
+
+            <button
+              onClick={handleSave}
+              disabled={!resultado || saving}
+              style={{
+                width: '100%', padding: '7px 0', borderRadius: 8, border: 'none',
+                background: !resultado || saving
+                  ? 'var(--bg-input,#e5e7eb)'
+                  : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
+                color: !resultado || saving ? 'var(--text-secondary,#888)' : '#fff',
+                fontWeight: 800, fontSize: 12, cursor: !resultado || saving ? 'default' : 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {saving ? '⏳ Guardando...' : '💾 Registrar gestión'}
+            </button>
+          </div>
         </div>
       )}
     </div>
