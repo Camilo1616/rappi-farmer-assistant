@@ -140,6 +140,30 @@ public class StoreController {
         return ResponseEntity.ok(result);
     }
 
+    /** Detalle compacto de una tienda por código — usado por el asistente IA para el menú contextual. */
+    @GetMapping("/by-code/{storeCode}")
+    public ResponseEntity<?> getByCode(@PathVariable String storeCode) {
+        return storeRepository.findByStoreCode(storeCode)
+                .map(s -> ResponseEntity.ok(Map.of(
+                        "id",                 s.getId() != null ? s.getId() : "",
+                        "storeCode",          s.getStoreCode() != null ? s.getStoreCode() : "",
+                        "brandId",            s.getBrandId() != null ? s.getBrandId() : "—",
+                        "storeName",          s.getStoreName() != null ? s.getStoreName() : "",
+                        "phoneNumber",        s.getPhoneNumber() != null ? s.getPhoneNumber() : "—",
+                        "channel",            s.getChannel() != null ? s.getChannel() : "—",
+                        "aging",              s.getAging() != null ? s.getAging() : 0,
+                        "agingStage",         s.getAgingStage() != null ? s.getAgingStage() : "—",
+                        "currentStatus",      s.getCurrentStatus() != null ? s.getCurrentStatus() : "—",
+                        "hadHandoff",         Boolean.TRUE.equals(s.getHadHandoff()),
+                        "connectionPct",      s.getConnectionPercentage() != null ? s.getConnectionPercentage() : 0,
+                        "onboardingDate",     s.getOnboardingDate() != null ? s.getOnboardingDate().toString() : "—",
+                        "lastFollowUp",       s.getLastFollowUp() != null ? s.getLastFollowUp().toString() : "—",
+                        "followUpLast30d",    s.getFollowUpLast30d() != null ? s.getFollowUpLast30d() : "—",
+                        "gestionar",          s.getGestionar() != null ? s.getGestionar() : "—"
+                )))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/managements/today")
     public ResponseEntity<List<ManagementViewDto>> getTodayManagements() {
         return ResponseEntity.ok(managementService.getTodayManagements());

@@ -213,10 +213,10 @@ public class AiService {
                   ]
                 }
 
-                Reglas de priorización:
-                - ALTA: sin órdenes L4W=0, churn activo, AVA < 30%, día 7 de onboarding sin activación
-                - MEDIA: AVA entre 30-60%, días 8-14 sin seguimiento, sin login reciente
-                - BAJA: tiendas saludables que solo necesitan check-in
+                Reglas de priorización (en orden de urgencia):
+                - ALTA: onboarding día 1-7 sin activación (HO=NO), día 8-14 sin HO o AVA<60%, AVA MTD < 10%, churn activo
+                - MEDIA: AVA entre 10-30%, sin seguimiento FU30d=NO, aging 15-30d sin contacto
+                - BAJA: tiendas estables, solo check-in
 
                 Devuelve máximo 15 tiendas en "priorities", las más críticas primero.
                 Cartera actual:
@@ -284,15 +284,7 @@ public class AiService {
         sb.append("-------------------------------------------------------------------\n");
 
         stores.stream()
-            .sorted((a, b) -> {
-                // Sin handoff primero, luego por AVA más baja
-                int hoA = Boolean.TRUE.equals(a.getHadHandoff()) ? 1 : 0;
-                int hoB = Boolean.TRUE.equals(b.getHadHandoff()) ? 1 : 0;
-                if (hoA != hoB) return Integer.compare(hoA, hoB);
-                double avaA = a.getConnectionPercentage() != null ? a.getConnectionPercentage().doubleValue() : 100;
-                double avaB = b.getConnectionPercentage() != null ? b.getConnectionPercentage().doubleValue() : 100;
-                return Double.compare(avaA, avaB);
-            })
+            .sorted((a, b) -> Integer.compare(urgencyScore(b), urgencyScore(a)))
             .limit(maxStores)
             .forEach(s -> {
                 sb.append(s.getStoreCode()).append(" | ")
@@ -307,6 +299,23 @@ public class AiService {
             });
 
         return sb.toString();
+    }
+
+    /** Puntaje de urgencia descendente: onboarding 1-7 > 8-14 sin HO > AVA<10% > churn > resto. */
+    private int urgencyScore(Store s) {
+        int aging = s.getAging() != null ? s.getAging() : 999;
+        boolean noHo = !Boolean.TRUE.equals(s.getHadHandoff());
+        double ava = s.getConnectionPercentage() != null ? s.getConnectionPercentage().doubleValue() : 100;
+        String status = s.getCurrentStatus() != null ? s.getCurrentStatus().toLowerCase() : "";
+
+        if (aging <= 7 && noHo)                  return 100; // onboarding crítico sin activar
+        if (aging >= 8 && aging <= 14 && noHo)   return 90;  // ventana aliados sin HO
+        if (aging >= 8 && aging <= 14 && ava < 60) return 85;  // ventana aliados AVA baja
+        if (ava < 10)                             return 80;  // AVA muy baja (<10%)
+        if (status.contains("churn"))             return 70;  // churn activo
+        if (ava < 30)                             return 60;  // AVA baja
+        if (noHo)                                 return 50;  // sin HO fuera de ventana
+        return 10;
     }
 
     // ── Resumen diario ────────────────────────────────────────────────────────
