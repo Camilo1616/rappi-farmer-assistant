@@ -251,7 +251,7 @@ public class BaseController {
 
         if (storeIds.isEmpty()) return ResponseEntity.ok(List.of());
 
-        LocalDateTime startOfDay = java.time.LocalDate.now().atStartOfDay();
+        LocalDateTime startOfDay = java.time.LocalDate.now(java.time.ZoneId.of("America/Bogota")).atStartOfDay();
         LocalDateTime endOfDay   = startOfDay.plusDays(1);
 
         // Gestiones de hoy para estas tiendas

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -52,9 +53,11 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
         return toDomain(managementJpaRepository.save(entity));
     }
 
+    private static final ZoneId BOGOTA = ZoneId.of("America/Bogota");
+
     @Override
     public Optional<Management> findLatestTodayByStoreId(Long storeId) {
-        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime start = LocalDate.now(BOGOTA).atStartOfDay();
         LocalDateTime end = start.plusDays(1);
         return managementJpaRepository.findByStoreIdAndToday(storeId, start, end)
                 .stream()
@@ -83,7 +86,7 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
 
     @Override
     public List<Management> findAllToday() {
-        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime start = LocalDate.now(BOGOTA).atStartOfDay();
         LocalDateTime end = start.plusDays(1);
         return managementJpaRepository.findAllToday(start, end).stream()
                 .map(this::toDomain)
@@ -92,7 +95,7 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
 
     @Override
     public List<Management> findTodayByUser(Long userId) {
-        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime start = LocalDate.now(BOGOTA).atStartOfDay();
         LocalDateTime end = start.plusDays(1);
         return managementJpaRepository.findTodayByUserId(userId, start, end)
                 .stream().map(this::toDomain).collect(Collectors.toList());

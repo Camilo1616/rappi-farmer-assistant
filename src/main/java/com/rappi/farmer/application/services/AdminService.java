@@ -38,14 +38,14 @@ public class AdminService {
     public List<FarmerSummaryDto> getAllFarmers() {
         Long liderId = sessionContext.getCurrentUserId();
         List<User> farmers = liderId != null ? userService.findFarmersByLider(liderId) : List.of();
-        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime start = LocalDate.now(java.time.ZoneId.of("America/Bogota")).atStartOfDay();
         LocalDateTime end = start.plusDays(1);
         return farmers.stream().map(f -> buildSummary(f, start, end)).collect(Collectors.toList());
     }
 
     /** Retorna las gestiones del día de un farmer específico. */
     public List<ManagementViewDto> getFarmerTodayManagements(Long userId) {
-        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime start = LocalDate.now(java.time.ZoneId.of("America/Bogota")).atStartOfDay();
         LocalDateTime end = start.plusDays(1);
         return managementJpaRepository.findTodayByUserId(userId, start, end)
                 .stream()
@@ -71,7 +71,7 @@ public class AdminService {
         User farmer = userService.findAll().stream()
                 .filter(u -> u.getId().equals(userId)).findFirst()
                 .orElseThrow();
-        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime start = LocalDate.now(java.time.ZoneId.of("America/Bogota")).atStartOfDay();
         return buildSummary(farmer, start, start.plusDays(1));
     }
 

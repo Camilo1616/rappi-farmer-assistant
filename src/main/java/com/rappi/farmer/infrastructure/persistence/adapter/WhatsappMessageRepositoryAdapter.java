@@ -58,7 +58,7 @@ public class WhatsappMessageRepositoryAdapter implements WhatsappMessageReposito
     @Override
     @Transactional(readOnly = true)
     public long countSentToday() {
-        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime start = LocalDate.now(java.time.ZoneId.of("America/Bogota")).atStartOfDay();
         return jpaRepository.countSentToday(start, start.plusDays(1));
     }
 
