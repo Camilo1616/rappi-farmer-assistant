@@ -20,6 +20,8 @@ public class StoreRepositoryAdapter implements StoreRepository {
     private final StoreJpaRepository jpaRepository;
     private final UserJpaRepository userJpaRepository;
 
+    public StoreJpaRepository getJpa() { return jpaRepository; }
+
     @Override
     public Store save(Store store) {
         StoreEntity entity = toEntity(store);

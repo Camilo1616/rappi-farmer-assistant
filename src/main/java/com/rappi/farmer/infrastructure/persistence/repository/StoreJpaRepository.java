@@ -225,6 +225,40 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
     List<StoreEntity> findActive8to28DaysWithSuccessfulManagement(
         @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
 
+    // ── Queries de diagnóstico (temporal) ──
+
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds", nativeQuery = true)
+    long countDebugTotal(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds AND s.had_handoff = true", nativeQuery = true)
+    long countDebugHandoff(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds AND s.had_handoff = true AND s.onboarding_date IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) = 7", nativeQuery = true)
+    long countDebugFecha7(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds AND s.had_handoff = true AND s.onboarding_date IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 8 AND 28", nativeQuery = true)
+    long countDebugFecha8a28(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds AND s.had_handoff = true AND EXISTS (SELECT 1 FROM managements m WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA')", nativeQuery = true)
+    long countDebugEfectiva(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds AND s.had_handoff = true AND NOT EXISTS (SELECT 1 FROM daily_metrics dm WHERE dm.store_id = s.id AND dm.orders_count > 0)", nativeQuery = true)
+    long countDebugSinVentas(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds AND s.had_handoff = true AND s.onboarding_date IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) = 7 AND EXISTS (SELECT 1 FROM managements m WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA') AND NOT EXISTS (SELECT 1 FROM daily_metrics dm WHERE dm.store_id = s.id AND dm.orders_count > 0)", nativeQuery = true)
+    long countDebugFinal7(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT COUNT(*) FROM stores s WHERE s.active = true AND s.user_id IN :farmerIds AND s.had_handoff = true AND s.onboarding_date IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 8 AND 28 AND EXISTS (SELECT 1 FROM managements m WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA') AND NOT EXISTS (SELECT 1 FROM daily_metrics dm WHERE dm.store_id = s.id AND dm.orders_count > 0)", nativeQuery = true)
+    long countDebugFinal8a28(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
+
     /** @deprecated Reemplazado por findActive7DaysWithSuccessfulManagement */
     @Deprecated
     @org.springframework.data.jpa.repository.Query(value =

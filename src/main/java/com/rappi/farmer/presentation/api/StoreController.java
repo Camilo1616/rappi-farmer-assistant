@@ -90,6 +90,31 @@ public class StoreController {
         return ResponseEntity.ok(stores);
     }
 
+    /** Diagnóstico: cuántas tiendas pasan cada filtro de la base ACTIVE/ACTIVE_28 */
+    @GetMapping("/debug-base")
+    public ResponseEntity<Map<String, Object>> debugBase(@RequestParam List<Long> farmerIds) {
+        var jpa = ((com.rappi.farmer.infrastructure.persistence.adapter.StoreRepositoryAdapter)
+            storeRepository).getJpa();
+        long total       = jpa.countDebugTotal(farmerIds);
+        long handoff     = jpa.countDebugHandoff(farmerIds);
+        long fecha7      = jpa.countDebugFecha7(farmerIds);
+        long fecha8a28   = jpa.countDebugFecha8a28(farmerIds);
+        long efectiva    = jpa.countDebugEfectiva(farmerIds);
+        long sinVentas   = jpa.countDebugSinVentas(farmerIds);
+        long final7      = jpa.countDebugFinal7(farmerIds);
+        long final8a28   = jpa.countDebugFinal8a28(farmerIds);
+        return ResponseEntity.ok(Map.of(
+            "1_activas_en_farmers",      total,
+            "2_con_handoff",             handoff,
+            "3a_onboarding_dia7",        fecha7,
+            "3b_onboarding_dias8a28",    fecha8a28,
+            "4_con_gestion_efectiva",    efectiva,
+            "5_sin_ventas_en_metrics",   sinVentas,
+            "FINAL_active7",             final7,
+            "FINAL_active8a28",          final8a28
+        ));
+    }
+
     @GetMapping("/managements/today")
     public ResponseEntity<List<ManagementViewDto>> getTodayManagements() {
         return ResponseEntity.ok(managementService.getTodayManagements());
