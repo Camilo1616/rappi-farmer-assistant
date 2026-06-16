@@ -61,6 +61,21 @@ function forceReset(sessionId) {
   s.initStartedAt = null
 }
 
+const CHROMIUM_LOCKS = new Set(['SingletonLock', 'SingletonSocket', 'SingletonCookie'])
+
+function deleteChromiumLocks(dir, sessionId) {
+  try {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry)
+      if (CHROMIUM_LOCKS.has(entry)) {
+        try { rmSync(full); console.log(`[WA:${sessionId}] Lock eliminado: ${full}`) } catch {}
+      } else {
+        try { if (statSync(full).isDirectory()) deleteChromiumLocks(full, sessionId) } catch {}
+      }
+    }
+  } catch {}
+}
+
 function initSession(sessionId) {
   const s = sessions.get(sessionId)
   if (!s) return
@@ -85,12 +100,9 @@ function initSession(sessionId) {
   const sessionDir = join(AUTH_DIR, sessionId)
   if (!existsSync(sessionDir)) mkdirSync(sessionDir, { recursive: true })
 
-  // Eliminar SingletonLock que deja Chromium al morir el container — impide reinicio en nueva máquina
-  const lockFile = join(AUTH_DIR, '.wwebjs_auth', `session-${sessionId}`, 'SingletonLock')
-  if (existsSync(lockFile)) {
-    try { rmSync(lockFile) } catch {}
-    console.log(`[WA:${sessionId}] SingletonLock eliminado`)
-  }
+  // Eliminar locks de Chromium que quedan al morir el container — impide reinicio en nueva máquina
+  // Buscar recursivamente porque whatsapp-web.js puede guardar el perfil en distintas rutas
+  deleteChromiumLocks(AUTH_DIR, sessionId)
 
   console.log(`[WA:${sessionId}] Iniciando sesión...`)
 
