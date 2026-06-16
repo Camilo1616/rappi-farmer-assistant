@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -213,27 +214,44 @@ public class AiService {
                 """;
 
         String userPrompt = """
-                Analiza esta cartera de restaurantes y devuelve un JSON con exactamente esta estructura:
+                Eres el asistente de un Account Manager (AM) de Rappi Colombia que gestiona la activación y retención de restaurantes aliados.
+
+                GLOSARIO IMPORTANTE:
+                - HO (Handoff): activación del restaurante en la app Rappi Aliados. Sin HO el restaurante NO puede recibir pedidos.
+                - AVA MTD %: porcentaje de conexión mensual con Rappi Aliados. Meta mínima: 60%.
+                - IS: estado "In Store" — el AM visitó o va a visitar la tienda físicamente hoy. Máxima urgencia.
+                - Aging: días desde que el restaurante entró al programa. Ventana crítica: días 1-14.
+                - FU30d: si el restaurante tuvo algún seguimiento en los últimos 30 días (SI/NO).
+                - UltimoFU: hace cuántos días fue el último follow-up.
+                - Gestionar: campo de acción sugerida del sistema (IS, WhatsApp, Llamada, etc.).
+
+                REGLAS DE PRIORIZACIÓN:
+                1. IS (días 1-14): ACCIÓN HOY — visita en tienda programada, coordinar activación en sitio.
+                2. Aging 1-7 días HO=NO: ALTA urgencia — contactar para activar Rappi Aliados inmediatamente.
+                3. Aging 1-7 días HO=SI: verificar que ya esté recibiendo pedidos y AVA > 0%.
+                4. Aging 8-14 días HO=NO: ALTA urgencia — se perdió la ventana ideal, recuperar activación.
+                5. Aging 8-14 días AVA < 60%: ALTA — reforzar uso de app Rappi Aliados.
+                6. Churn activo: retención urgente, preguntar por problemas y ofrecer solución concreta.
+                7. AVA < 40% fuera de ventana: MEDIA — monitoreo de conexión.
+                8. FU30d=NO con >7 días sin contacto: MEDIA — check-in mínimo.
+
+                Devuelve ÚNICAMENTE este JSON válido (sin markdown, sin texto extra):
                 {
-                  "message": "Mensaje motivacional y estratégico de 2-3 oraciones para el AM. Menciona cuántas tiendas necesitan atención urgente y por qué.",
+                  "message": "Resumen estratégico del día para el AM: cuántas tiendas en ventana crítica, cuántas IS, y el foco principal de hoy. 2-3 oraciones directas.",
                   "priorities": [
                     {
                       "storeCode": "PE...",
-                      "storeName": "Nombre",
+                      "storeName": "Nombre del restaurante",
                       "priority": "ALTA|MEDIA|BAJA",
-                      "reason": "Por qué es prioridad (1 frase corta)",
-                      "action": "Acción concreta a tomar hoy (1 frase)"
+                      "reason": "Por qué es urgente hoy (menciona aging, HO, AVA o estado específico)",
+                      "action": "Acción concreta y específica para hacer HOY"
                     }
                   ]
                 }
 
-                Reglas de priorización (en orden de urgencia):
-                - ALTA: onboarding día 1-7 sin activación (HO=NO), día 8-14 sin HO o AVA<60%, AVA MTD < 10%, churn activo
-                - MEDIA: AVA entre 10-30%, sin seguimiento FU30d=NO, aging 15-30d sin contacto
-                - BAJA: tiendas estables, solo check-in
+                Máximo 15 tiendas en "priorities", ordenadas de más a menos urgente.
 
-                Devuelve máximo 15 tiendas en "priorities", las más críticas primero.
-                Cartera actual:
+                CARTERA SEGMENTADA:
                 """ + context;
 
         String raw = callGroq(systemPrompt, userPrompt, 0.4, 1800); // reducido de 4000 a 1800
@@ -262,21 +280,24 @@ public class AiService {
         String context = buildStoreContext(stores, 15);
 
         String systemPrompt = """
-                Eres el asistente estratégico de un Account Manager de Rappi Colombia.
-                Tienes acceso a su cartera de restaurantes activa (se incluye abajo).
+                Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
+                Gestionas la activación y retención de restaurantes en Rappi.
+
+                GLOSARIO:
+                - HO (Handoff): activación en Rappi Aliados. Sin HO el restaurante no recibe pedidos.
+                - AVA MTD %: conexión mensual con Rappi Aliados. Meta: ≥60%.
+                - IS: visita física en tienda programada hoy — máxima urgencia.
+                - Aging: días en el programa. Ventana crítica: 1-14 días.
+                - FU30d: seguimiento en últimos 30 días (SI/NO).
 
                 FORMATO OBLIGATORIO:
-                - Usa SIEMPRE markdown válido en tus respuestas.
-                - Para listas de tiendas usa SIEMPRE tablas markdown con esta sintaxis exacta:
-                  | Tienda | Código | Motivo | Acción |
-                  |--------|--------|--------|--------|
-                  | Nombre | PExxxxx | razón | acción |
-                - Para listas simples usa viñetas con guión: - item
-                - Para énfasis usa **negrita**
-                - Sé directo y conciso. Máximo 400 palabras.
-                - NUNCA respondas con texto plano sin formato cuando hay datos tabulares.
+                - Usa markdown válido siempre.
+                - Para listas de tiendas: tablas markdown con columnas: | Tienda | Código | Aging | HO | AVA% | Acción |
+                - Para listas simples: viñetas con guión.
+                - Énfasis con **negrita**. Máximo 350 palabras. Directo y accionable.
+                - NUNCA texto plano cuando hay datos tabulares.
 
-                Contexto de la cartera:
+                Cartera segmentada por urgencia:
                 """ + context;
 
         List<Map<String, String>> messages = new ArrayList<>();
@@ -292,45 +313,115 @@ public class AiService {
         return callGroqMessages(messages, 0.7, 1500);
     }
 
-    /** Construye un resumen comprimido de la cartera para mandar a la IA. */
-    private String buildStoreContext(List<Store> stores, int maxStores) {
+    /**
+     * Construye contexto segmentado por urgencia para la IA.
+     * Agrupa tiendas por ventana crítica para que la IA priorice correctamente.
+     */
+    private String buildStoreContext(List<Store> stores, int maxPerSegment) {
+        LocalDate today = LocalDate.now();
         StringBuilder sb = new StringBuilder();
+        sb.append("=== RESUMEN CARTERA ===\n");
         sb.append("Total tiendas activas: ").append(stores.size()).append("\n\n");
-        sb.append("Código | Nombre | Canal | Aging | HO | AVA% | Estado | FollowUp30d\n");
-        sb.append("-------------------------------------------------------------------\n");
 
-        stores.stream()
-            .sorted((a, b) -> Integer.compare(urgencyScore(b), urgencyScore(a)))
-            .limit(maxStores)
-            .forEach(s -> {
-                sb.append(s.getStoreCode()).append(" | ")
-                  .append(s.getStoreName()).append(" | ")
-                  .append(s.getChannel() != null ? s.getChannel() : "-").append(" | ")
-                  .append(s.getAging() != null ? s.getAging() + "d" : "-").append(" | ")
-                  .append(Boolean.TRUE.equals(s.getHadHandoff()) ? "SI" : "NO").append(" | ")
-                  .append(s.getConnectionPercentage() != null
-                      ? s.getConnectionPercentage().toPlainString() + "%" : "-").append(" | ")
-                  .append(s.getCurrentStatus() != null ? s.getCurrentStatus() : "-").append(" | ")
-                  .append(s.getFollowUpLast30d() != null ? s.getFollowUpLast30d() : "-").append("\n");
-            });
+        // Segmentar
+        List<Store> seg17    = new ArrayList<>(); // onboarding 1-7 días (ventana IS crítica)
+        List<Store> seg814   = new ArrayList<>(); // onboarding 8-14 días (ventana AVA/HO)
+        List<Store> churn    = new ArrayList<>(); // churn activo
+        List<Store> avaLow   = new ArrayList<>(); // AVA < 40%
+        List<Store> isStores = new ArrayList<>(); // gestionar = IS (entraron hoy/reciente a IS)
+        List<Store> resto    = new ArrayList<>();
+
+        for (Store s : stores) {
+            int aging = s.getAging() != null ? s.getAging() : 999;
+            double ava = s.getConnectionPercentage() != null ? s.getConnectionPercentage().doubleValue() : 100;
+            String status = s.getCurrentStatus() != null ? s.getCurrentStatus().toLowerCase() : "";
+            String gestionar = s.getGestionar() != null ? s.getGestionar().toUpperCase() : "";
+
+            if (gestionar.contains("IS") && aging <= 14) { isStores.add(s); continue; }
+            if (aging >= 1  && aging <= 7)                { seg17.add(s);   continue; }
+            if (aging >= 8  && aging <= 14)               { seg814.add(s);  continue; }
+            if (status.contains("churn"))                 { churn.add(s);   continue; }
+            if (ava < 40 && ava > 0)                      { avaLow.add(s);  continue; }
+            resto.add(s);
+        }
+
+        appendSegment(sb, "🔴 PRIORIDAD MÁXIMA — IS (Ingresaron a IS, acción HOY)",
+                isStores, maxPerSegment, today,
+                "Estas tiendas acaban de entrar al estado IS. Deben ser contactadas HOY sin falta.");
+
+        appendSegment(sb, "🔴 ONBOARDING 1-7 DÍAS (ventana crítica de activación)",
+                seg17, maxPerSegment, today,
+                "Primeros 7 días = los más críticos. Si no se activan aquí hay riesgo alto de churn. HO=NO significa que el Handoff (activación) aún no ocurrió.");
+
+        appendSegment(sb, "🟠 ONBOARDING 8-14 DÍAS (ventana AVA/Aliados)",
+                seg814, maxPerSegment, today,
+                "Entre día 8-14 la meta es AVA > 60%. Si AVA es baja o HO=NO hay que actuar urgente.");
+
+        appendSegment(sb, "🔴 CHURN ACTIVO",
+                churn, maxPerSegment, today,
+                "Tiendas en riesgo de abandonar Rappi. Requieren acción de retención inmediata.");
+
+        appendSegment(sb, "🟡 AVA BAJA (< 40%)",
+                avaLow, maxPerSegment, today,
+                "Conexión Rappi Aliados por debajo del objetivo. Afecta directamente las ventas.");
+
+        if (!resto.isEmpty()) {
+            sb.append("\n📋 Otras tiendas activas: ").append(resto.size())
+              .append(" (estables, solo check-in si hay tiempo)\n");
+        }
 
         return sb.toString();
     }
 
-    /** Puntaje de urgencia descendente: onboarding 1-7 > 8-14 sin HO > AVA<10% > churn > resto. */
+    private void appendSegment(StringBuilder sb, String title, List<Store> stores,
+                                int max, LocalDate today, String contexto) {
+        if (stores.isEmpty()) return;
+        sb.append("\n--- ").append(title).append(" ---\n");
+        sb.append("Contexto: ").append(contexto).append("\n");
+        sb.append("Columnas: Código | Nombre | Canal | Aging | HO | FechaHO | AVA% | Estado | UltimoFU | FU30d | Gestionar | UltimoLogin | CredsFecha\n");
+
+        stores.stream()
+            .sorted((a, b) -> Integer.compare(urgencyScore(b), urgencyScore(a)))
+            .limit(max)
+            .forEach(s -> {
+                long diasSinFu = s.getLastFollowUp() != null
+                    ? java.time.temporal.ChronoUnit.DAYS.between(s.getLastFollowUp(), today) : -1;
+
+                sb.append(s.getStoreCode()).append(" | ")
+                  .append(s.getStoreName() != null ? s.getStoreName() : "-").append(" | ")
+                  .append(s.getChannel() != null ? s.getChannel() : "-").append(" | ")
+                  .append(s.getAging() != null ? s.getAging() + "d" : "-").append(" | ")
+                  .append(Boolean.TRUE.equals(s.getHadHandoff()) ? "HO=SI" : "HO=NO").append(" | ")
+                  .append(s.getHandoffActivatedAt() != null ? s.getHandoffActivatedAt() : "sin-HO").append(" | ")
+                  .append(s.getConnectionPercentage() != null
+                      ? s.getConnectionPercentage().toPlainString() + "%" : "AVA=-").append(" | ")
+                  .append(s.getCurrentStatus() != null ? s.getCurrentStatus() : "-").append(" | ")
+                  .append(diasSinFu >= 0 ? diasSinFu + "d-sin-FU" : "sin-FU").append(" | ")
+                  .append(s.getFollowUpLast30d() != null ? "FU30=" + s.getFollowUpLast30d() : "FU30=-").append(" | ")
+                  .append(s.getGestionar() != null ? s.getGestionar() : "-").append(" | ")
+                  .append(s.getLastLoginDate() != null ? "login=" + s.getLastLoginDate() : "sin-login").append(" | ")
+                  .append(s.getCredentialsDate() != null ? "creds=" + s.getCredentialsDate() : "sin-creds")
+                  .append("\n");
+            });
+    }
+
+    /** Puntaje de urgencia descendente por ventana crítica. */
     private int urgencyScore(Store s) {
         int aging = s.getAging() != null ? s.getAging() : 999;
         boolean noHo = !Boolean.TRUE.equals(s.getHadHandoff());
         double ava = s.getConnectionPercentage() != null ? s.getConnectionPercentage().doubleValue() : 100;
         String status = s.getCurrentStatus() != null ? s.getCurrentStatus().toLowerCase() : "";
+        String gestionar = s.getGestionar() != null ? s.getGestionar().toUpperCase() : "";
 
-        if (aging <= 7 && noHo)                  return 100; // onboarding crítico sin activar
-        if (aging >= 8 && aging <= 14 && noHo)   return 90;  // ventana aliados sin HO
-        if (aging >= 8 && aging <= 14 && ava < 60) return 85;  // ventana aliados AVA baja
-        if (ava < 10)                             return 80;  // AVA muy baja (<10%)
-        if (status.contains("churn"))             return 70;  // churn activo
-        if (ava < 30)                             return 60;  // AVA baja
-        if (noHo)                                 return 50;  // sin HO fuera de ventana
+        if (gestionar.contains("IS") && aging <= 14)    return 110; // IS reciente = máxima urgencia
+        if (aging <= 7  && noHo)                        return 100; // onboarding 1-7 sin HO
+        if (aging <= 7  && !noHo)                       return 95;  // onboarding 1-7 con HO (check AVA)
+        if (aging >= 8  && aging <= 14 && noHo)         return 90;  // ventana aliados sin HO
+        if (aging >= 8  && aging <= 14 && ava < 60)     return 85;  // ventana aliados AVA baja
+        if (ava < 10)                                   return 80;  // AVA crítica
+        if (status.contains("churn"))                   return 70;  // churn activo
+        if (ava < 30)                                   return 60;  // AVA baja
+        if (noHo)                                       return 50;  // sin HO fuera de ventana
         return 10;
     }
 
