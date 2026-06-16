@@ -163,13 +163,16 @@ export default function AiAssistant() {
     return () => window.removeEventListener('click', close)
   }, [ctxMenu.visible])
 
-  // Clic derecho en fila de tabla → buscar tienda
-  const onRowCtx = useCallback(async (e, rowText) => {
+  // Clic derecho en fila de tabla o tarjeta → buscar tienda
+  const onRowCtx = useCallback(async (e, rowTextOrCode) => {
     e.preventDefault()
     e.stopPropagation()
-    const match = rowText.match(/PE\d{4,}/i)
-    if (!match) return
-    const storeCode = match[0].toUpperCase()
+    // Acepta código directo (ej: "PE1234") o texto de fila con código embebido
+    const direct = /^PE\d{4,}$/i.test(rowTextOrCode)
+    const storeCode = direct
+      ? rowTextOrCode.toUpperCase()
+      : (rowTextOrCode.match(/PE\d{4,}/i)?.[0]?.toUpperCase() ?? null)
+    if (!storeCode) return
     setCtxMenu({ visible: true, x: e.clientX, y: e.clientY, storeCode, data: null, loading: true })
     try {
       const { data } = await api.get(`/stores/by-code/${storeCode}`)
@@ -310,11 +313,17 @@ export default function AiAssistant() {
                       </button>
                     </div>
                     {aiRec.priorities?.length > 0 && aiRec.priorities.map((p, i) => (
-                      <div key={p.storeCode ?? i} style={{
-                        padding: '8px 10px', borderRadius: 9, marginBottom: 6,
-                        background: i % 2 === 0 ? 'var(--bg-input)' : 'transparent',
-                        border: '1px solid var(--border)',
-                      }}>
+                      <div
+                        key={p.storeCode ?? i}
+                        onContextMenu={p.storeCode ? e => { e.preventDefault(); onRowCtx(e, p.storeCode) } : undefined}
+                        title={p.storeCode ? 'Clic derecho → ver detalle' : undefined}
+                        style={{
+                          padding: '8px 10px', borderRadius: 9, marginBottom: 6,
+                          background: i % 2 === 0 ? 'var(--bg-input)' : 'transparent',
+                          border: '1px solid var(--border)',
+                          cursor: p.storeCode ? 'context-menu' : 'default',
+                        }}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                           <span style={{
                             padding: '1px 7px', borderRadius: 99, fontSize: 9, fontWeight: 800,
