@@ -303,6 +303,8 @@ public class AiService {
                 - Para resúmenes numéricos usa los totales del encabezado de la cartera.
                 - Máximo 400 palabras. Directo y accionable.
                 - Énfasis con **negrita** en datos clave.
+                - IMPORTANTE: NO tienes acceso a las gestiones registradas hoy (llamadas, WhatsApps, etc.).
+                  Si preguntan cuántas gestiones llevan, responde exactamente: "No tengo acceso a tus gestiones de hoy — consulta el contador en el Dashboard."
 
                 """ + context;
 

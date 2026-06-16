@@ -2,9 +2,7 @@ package com.rappi.farmer.presentation.api;
 
 import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.application.services.AiService;
-import com.rappi.farmer.domain.entities.Management;
 import com.rappi.farmer.domain.entities.Store;
-import com.rappi.farmer.domain.repositories.ManagementRepository;
 import com.rappi.farmer.domain.repositories.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,8 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -24,7 +20,6 @@ public class AiController {
 
     private final AiService aiService;
     private final StoreRepository storeRepository;
-    private final ManagementRepository managementRepository;
     private final SessionContext sessionContext;
 
     @GetMapping("/status")
@@ -83,19 +78,10 @@ public class AiController {
             return ResponseEntity.status(503).body(Map.of("error", "IA no disponible — configura GROQ_API_KEY"));
         }
         Long userId = sessionContext.getCurrentUserId();
-        List<Store> allStores = storeRepository.findActiveByUser(userId);
-        if (allStores.isEmpty()) {
+        List<Store> stores = storeRepository.findActiveByUser(userId);
+        if (stores.isEmpty()) {
             return ResponseEntity.ok(Map.of("message", "Sin tiendas activas hoy.", "priorities", List.of()));
         }
-        // Excluir tiendas ya gestionadas hoy para que la IA no las repita
-        Set<Long> managedTodayIds = managementRepository.findTodayByUser(userId).stream()
-                .filter(m -> !m.isBrandSync()) // ignorar propagaciones hermanas
-                .map(Management::getStoreId)
-                .filter(id -> id != null)
-                .collect(Collectors.toSet());
-        List<Store> stores = managedTodayIds.isEmpty()
-                ? allStores
-                : allStores.stream().filter(s -> !managedTodayIds.contains(s.getId())).toList();
         try {
             Map<String, Object> result = aiService.generateRecommendation(stores, userId);
             return ResponseEntity.ok(result);
