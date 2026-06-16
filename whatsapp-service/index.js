@@ -157,6 +157,44 @@ function initSession(sessionId) {
   s.client = client
 }
 
+// Prefijos de países donde opera Rappi (en orden de probabilidad)
+const COUNTRY_PREFIXES = ['57', '52', '51', '55', '54', '56', '593', '595', '598', '591', '502', '503', '504', '505', '506', '507']
+
+/**
+ * Resuelve el chatId de WhatsApp para un número de teléfono.
+ * Prueba el número tal como viene (si ya tiene código de país),
+ * luego intenta con cada prefijo de país hasta encontrar uno registrado.
+ */
+async function resolveWhatsappId(client, phone) {
+  const digits = phone.replace(/\D/g, '')
+  if (!digits) return null
+
+  // Si el número ya tiene suficientes dígitos para incluir código de país (>= 10)
+  // intentar primero tal como está
+  const candidates = []
+
+  // El número como viene (puede ya tener prefijo)
+  candidates.push(digits)
+
+  // Si tiene 9 o 10 dígitos (sin prefijo), agregar variantes con cada país
+  if (digits.length <= 10) {
+    for (const prefix of COUNTRY_PREFIXES) {
+      candidates.push(prefix + digits)
+    }
+  } else {
+    // También probar sin el primer dígito por si tiene un 0 al inicio
+    if (digits.startsWith('0')) candidates.push(digits.slice(1))
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const numberId = await client.getNumberId(candidate)
+      if (numberId) return numberId._serialized
+    } catch {}
+  }
+  return null
+}
+
 // ── Express ───────────────────────────────────────────────────────────────────
 
 const app = express()
@@ -204,10 +242,13 @@ app.post('/send', async (req, res) => {
   }
 
   try {
-    const digits = phone.replace(/\D/g, '')
-    const chatId = `${digits}@c.us`
+    const chatId = await resolveWhatsappId(s.client, phone)
+    if (!chatId) {
+      console.log(`[WA:${sessionId}] Número no encontrado en WA:`, phone)
+      return res.json({ result: 'NUMERO_INVALIDO', phone })
+    }
     await s.client.sendMessage(chatId, message)
-    console.log(`[WA:${sessionId}] Enviado a`, phone)
+    console.log(`[WA:${sessionId}] Enviado a`, phone, '→', chatId)
     res.json({ result: 'ENVIADO', phone })
   } catch (err) {
     console.error(`[WA:${sessionId}] Error enviando a`, phone, '—', err.message)
