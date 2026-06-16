@@ -293,6 +293,8 @@ export default function AiAssistant() {
   const [chatHistory, setChatHistory]= useState([])
   const [chatInput,   setChatInput]  = useState('')
   const [chatLoading, setChatLoading]= useState(false)
+  const [chatCooldown,setChatCooldown]= useState(false)
+  const cooldownRef = useRef(null)
   const [pos,         setPos]        = useState({ x: 24, y: 0 })
   const [dragging,    setDragging]   = useState(false)
   const [ctxMenu,     setCtxMenu]    = useState({ visible: false, x: 0, y: 0, storeCode: null, data: null, loading: false })
@@ -325,6 +327,9 @@ export default function AiAssistant() {
   useEffect(() => {
     if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory])
+
+  // Limpiar cooldown timer al desmontar
+  useEffect(() => () => { if (cooldownRef.current) clearTimeout(cooldownRef.current) }, [])
 
   // Cerrar ctx menu al hacer click en cualquier lugar
   useEffect(() => {
@@ -364,18 +369,25 @@ export default function AiAssistant() {
   }, [])
 
   const sendChat = useCallback(async () => {
-    if (!chatInput.trim() || chatLoading) return
+    if (!chatInput.trim() || chatLoading || chatCooldown) return
     const userMsg = { role: 'user', content: chatInput.trim() }
     const newHistory = [...chatHistory, userMsg]
     setChatHistory(newHistory)
     setChatInput('')
     setChatLoading(true)
     try {
-      const { data } = await api.post('/ai/chat', { history: newHistory.slice(-8), message: userMsg.content }, { timeout: 30000 })
+      const { data } = await api.post('/ai/chat', { history: newHistory.slice(-4), message: userMsg.content }, { timeout: 30000 })
       setChatHistory(h => [...h, { role: 'assistant', content: data.reply }])
     } catch (e) {
-      setChatHistory(h => [...h, { role: 'assistant', content: '⚠️ ' + (e.response?.data?.error || 'Error') }])
-    } finally { setChatLoading(false) }
+      const msg = e.response?.status === 429
+        ? '⏳ Límite de velocidad alcanzado — espera unos segundos e intenta de nuevo.'
+        : '⚠️ ' + (e.response?.data?.error || 'Error al conectar con la IA')
+      setChatHistory(h => [...h, { role: 'assistant', content: msg }])
+    } finally {
+      setChatLoading(false)
+      setChatCooldown(true)
+      cooldownRef.current = setTimeout(() => setChatCooldown(false), 3500)
+    }
   }, [chatInput, chatHistory, chatLoading])
 
   const toggleOpen = () => {
@@ -541,7 +553,7 @@ export default function AiAssistant() {
                       ].map(q => (
                         <div
                           key={q}
-                          onClick={() => setChatInput(q)}
+                          onClick={() => { if (!chatLoading && !chatCooldown) { setChatInput(q) } }}
                           style={{
                             cursor: 'pointer', padding: '5px 8px', borderRadius: 6, marginBottom: 4,
                             background: 'var(--bg-input)', border: '1px solid var(--border)',
@@ -584,12 +596,13 @@ export default function AiAssistant() {
                     placeholder="Pregunta algo..."
                     style={{ flex: 1, padding: '8px 10px', borderRadius: 7, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }}
                   />
-                  <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} style={{
+                  <button onClick={sendChat} disabled={chatLoading || chatCooldown || !chatInput.trim()} style={{
                     padding: '8px 14px', borderRadius: 7, border: 'none',
-                    background: chatLoading || !chatInput.trim() ? 'var(--bg-input)' : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
-                    color: chatLoading || !chatInput.trim() ? 'var(--text-secondary)' : '#fff',
-                    fontWeight: 700, fontSize: 13, cursor: chatLoading || !chatInput.trim() ? 'default' : 'pointer',
-                  }}>↑</button>
+                    background: chatLoading || chatCooldown || !chatInput.trim() ? 'var(--bg-input)' : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
+                    color: chatLoading || chatCooldown || !chatInput.trim() ? 'var(--text-secondary)' : '#fff',
+                    fontWeight: 700, fontSize: 13, cursor: chatLoading || chatCooldown || !chatInput.trim() ? 'default' : 'pointer',
+                    title: chatCooldown ? 'Espera un momento...' : '',
+                  }}>{chatCooldown ? '⏳' : '↑'}</button>
                   {chatHistory.length > 0 && (
                     <button onClick={() => setChatHistory([])} style={{ padding: '8px 10px', borderRadius: 7, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>🗑️</button>
                   )}
