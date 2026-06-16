@@ -1,7 +1,7 @@
 import express from 'express'
 import pkg from 'whatsapp-web.js'
 import QRCode from 'qrcode'
-import { existsSync, mkdirSync, readdirSync, statSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, statSync, rmSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -84,6 +84,13 @@ function initSession(sessionId) {
 
   const sessionDir = join(AUTH_DIR, sessionId)
   if (!existsSync(sessionDir)) mkdirSync(sessionDir, { recursive: true })
+
+  // Eliminar SingletonLock que deja Chromium al morir el container — impide reinicio en nueva máquina
+  const lockFile = join(AUTH_DIR, '.wwebjs_auth', `session-${sessionId}`, 'SingletonLock')
+  if (existsSync(lockFile)) {
+    try { rmSync(lockFile) } catch {}
+    console.log(`[WA:${sessionId}] SingletonLock eliminado`)
+  }
 
   console.log(`[WA:${sessionId}] Iniciando sesión...`)
 
