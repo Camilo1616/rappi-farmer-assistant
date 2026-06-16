@@ -307,34 +307,41 @@ function RobotSVG({ hovered, open, blink, walkPhase = 0 }) {
   const SHOE   = '#111827'
   const SHOE_H = '#374151'
 
-  // Oscilación de caminata
-  const sw = Math.sin(walkPhase)       // -1 a 1, ciclo de paso
-  const swAbs = Math.abs(sw)
+  // ── Ciclo de marcha (vista frontal) ──────────────────────────────
+  // liftL: qué tan levantada está la pierna izquierda (0=abajo, 1=arriba)
+  // liftR: opuesto
+  const liftL = Math.max(0,  Math.sin(walkPhase))  // 0–1
+  const liftR = Math.max(0, -Math.sin(walkPhase))  // 0–1
 
-  // Brazos
+  // Pierna izq: rodilla sube y se abre, pie sube y toca el suelo
+  const lKX = 37 + liftL * 4;   const lKY = 127 - liftL * 14
+  const lFX = 35 + liftL * 6;   const lFY = 141 - liftL * 20
+  // Pierna der: opuesta
+  const rKX = 63 - liftR * 4;   const rKY = 127 - liftR * 14
+  const rFX = 65 - liftR * 6;   const rFY = 141 - liftR * 20
+
+  // Leve rebote del cuerpo (sube en cada paso)
+  const bodyBob = -(liftL + liftR) * 2.5
+
+  // ── Brazos ────────────────────────────────────────────────────────
   let lEbX, lEbY, lHdX, lHdY, rEbX, rEbY, rHdX, rHdY
   if (hovered) {
-    lEbX=8;  lEbY=72; lHdX=4;  lHdY=55
-    rEbX=92; rEbY=72; rHdX=96; rHdY=55
+    // Arriba celebrando
+    lEbX=8;  lEbY=68; lHdX=5;  lHdY=50
+    rEbX=92; rEbY=68; rHdX=95; rHdY=50
   } else if (open) {
-    lEbX=6;  lEbY=80; lHdX=2;  lHdY=65
-    rEbX=94; rEbY=80; rHdX=98; rHdY=65
+    // Wave
+    lEbX=6;  lEbY=78; lHdX=2;  lHdY=62
+    rEbX=94; rEbY=78; rHdX=98; rHdY=62
   } else {
-    // caminata: brazo izq atrás cuando pierna izq adelante (natural)
-    const aSwing = sw * 14
-    lEbX = 16 - aSwing * 0.4; lEbY = 92 + swAbs * 3
-    lHdX = 12 - aSwing;       lHdY = 106 - swAbs * 2
-    rEbX = 84 + aSwing * 0.4; rEbY = 92 + swAbs * 3
-    rHdX = 88 + aSwing;       rHdY = 106 - swAbs * 2
+    // Brazo opuesto a pierna: izq baja cuando pierna izq sube
+    const aL = liftL * 12   // cuánto sube el brazo der (y baja el izq)
+    const aR = liftR * 12
+    lEbX = 16;  lEbY = 90 + aR * 0.3
+    lHdX = 11;  lHdY = 106 + aR - aL * 0.5
+    rEbX = 84;  rEbY = 90 + aL * 0.3
+    rHdX = 89;  rHdY = 106 + aL - aR * 0.5
   }
-
-  // Piernas caminata
-  // pierna izq adelante cuando sw > 0
-  const lKX = 36 + sw * 9;   const lKY = 129 - swAbs * 5
-  const lFX = 34 + sw * 13;  const lFY = 141 - Math.max(0,  sw) * 9
-  // pierna der opuesta
-  const rKX = 64 - sw * 9;   const rKY = 129 - swAbs * 5
-  const rFX = 66 - sw * 13;  const rFY = 141 - Math.max(0, -sw) * 9
 
   const mouthD = hovered
     ? 'M36 52 Q50 63 64 52'
@@ -342,7 +349,7 @@ function RobotSVG({ hovered, open, blink, walkPhase = 0 }) {
     : 'M38 52 Q50 57 62 52'
 
   return (
-    <svg width="100" height="148" viewBox="0 0 100 148" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="100" height="148" viewBox={`0 ${-bodyBob} 100 148`} fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor={hovered ? '#8B5CF6' : '#7C3AED'}/>
@@ -596,14 +603,18 @@ export default function AiAssistant() {
   const [walkPhase,   setWalkPhase]    = useState(0)
   const [walkDir,     setWalkDir]      = useState(1)
   const rateLimitTimer = useRef(null)
-  const walkRef    = useRef({ dir: 1, phase: 0 })
+  const walkRef    = useRef({ dir: 1, phase: 0, dy: 0.45 })
   const rafRef     = useRef(null)
   const dragStart  = useRef(null)
   const chatEndRef = useRef(null)
 
-  useEffect(() => { setPos({ x: 24, y: window.innerHeight * 0.65 }) }, [])
+  useEffect(() => {
+    setPos({ x: 40, y: window.innerHeight * 0.6 })
+    // dirección diagonal inicial
+    walkRef.current.dy = 0.45
+  }, [])
 
-  // Caminata autónoma — pausa al arrastrar o al abrir el panel
+  // Caminata diagonal — rebota en los 4 bordes, cubre toda la pantalla
   useEffect(() => {
     if (open || dragging) { cancelAnimationFrame(rafRef.current); return }
     let lastTs = null
@@ -611,14 +622,18 @@ export default function AiAssistant() {
       if (lastTs === null) { lastTs = ts; rafRef.current = requestAnimationFrame(tick); return }
       const dt = Math.min(ts - lastTs, 50)
       lastTs = ts
-      walkRef.current.phase += 0.0055 * dt   // velocidad de paso
-      const speed = 0.05 * dt                // px por frame
+      walkRef.current.phase += 0.006 * dt
+      const speed = 0.048 * dt
       setPos(prev => {
         let nx = prev.x + walkRef.current.dir * speed
-        const maxX = window.innerWidth - 120
+        let ny = prev.y + walkRef.current.dy  * speed
+        const maxX = window.innerWidth  - 110
+        const maxY = window.innerHeight - 175
         if (nx >= maxX) { nx = maxX; walkRef.current.dir = -1; setWalkDir(-1) }
         if (nx <= 0)    { nx = 0;    walkRef.current.dir =  1; setWalkDir( 1) }
-        return { ...prev, x: nx }
+        if (ny >= maxY) { ny = maxY; walkRef.current.dy  = -Math.abs(walkRef.current.dy) }
+        if (ny <= 0)    { ny = 0;    walkRef.current.dy  =  Math.abs(walkRef.current.dy) }
+        return { x: nx, y: ny }
       })
       setWalkPhase(walkRef.current.phase)
       rafRef.current = requestAnimationFrame(tick)
