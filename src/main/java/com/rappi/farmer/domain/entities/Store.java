@@ -32,5 +32,5 @@ public class Store {
     private String farmerEmail;
     private LocalDate credentialsDate;
     private LocalDate lastFollowUp;
-    private Integer followUpLast30d;
+    private String followUpLast30d;
 }

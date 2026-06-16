@@ -260,16 +260,15 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
     long countDebugFinal8a28(@org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
 
     /**
-     * GESTIONAR_IS: Inside Sales + sin HO + sin Follow Up (last_follow_up nulo y follow_up_last_30d = 0 o nulo).
+     * GESTIONAR_IS: sin HO + sin Follow Up (last_follow_up nulo y follow_up_last_30d = 'NO').
      */
     @org.springframework.data.jpa.repository.Query(value =
         "SELECT s.* FROM stores s " +
         "WHERE s.active = true " +
         "AND s.user_id IN :farmerIds " +
-        "AND LOWER(s.channel) LIKE '%inside%' " +
-        "AND (s.had_handoff IS NULL OR s.had_handoff = false) " +
+        "AND s.had_handoff = false " +
         "AND s.last_follow_up IS NULL " +
-        "AND (s.follow_up_last_30d IS NULL OR s.follow_up_last_30d = 0) " +
+        "AND UPPER(s.follow_up_last_30d) = 'NO' " +
         "ORDER BY s.store_name ASC", nativeQuery = true)
     List<StoreEntity> findGestionarIsByFarmerIds(
         @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);

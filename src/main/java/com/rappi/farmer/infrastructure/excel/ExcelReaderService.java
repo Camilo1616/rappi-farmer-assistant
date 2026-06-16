@@ -107,7 +107,7 @@ public class ExcelReaderService {
                             .uploadDate(getDate(row, cols, COL_UPLOAD_DATE))
                             .credentialsDate(getDate(row, cols, COL_CREDENTIALS))
                             .lastFollowUp(getDate(row, cols, COL_LAST_FOLLOW_UP))
-                            .followUpLast30d(getInteger(row, cols, COL_FOLLOW_UP_30D))
+                            .followUpLast30d(getString(row, cols, COL_FOLLOW_UP_30D))
                             .build());
 
                 } catch (Exception e) {

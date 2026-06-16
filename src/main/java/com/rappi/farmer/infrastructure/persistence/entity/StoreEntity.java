@@ -75,7 +75,7 @@ public class StoreEntity {
     private LocalDate lastFollowUp;
 
     @Column(name = "follow_up_last_30d")
-    private Integer followUpLast30d;
+    private String followUpLast30d;
 
     @Column(name = "user_id", insertable = false, updatable = false)
     private Long userId;
