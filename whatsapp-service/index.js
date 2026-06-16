@@ -19,11 +19,17 @@ if (!existsSync(AUTH_DIR)) mkdirSync(AUTH_DIR, { recursive: true })
 
 const sessions = new Map()  // sessionId -> { client, qrBase64, connected, initializing, initStartedAt }
 
+const VALID_SESSION_RE = /^u\d+$/  // solo "u" seguido de dígitos
+
 function restorePersistedSessions() {
   if (!existsSync(AUTH_DIR)) return
   try {
     const entries = readdirSync(AUTH_DIR)
     for (const entry of entries) {
+      if (!VALID_SESSION_RE.test(entry)) {
+        console.log(`[WA] Ignorando carpeta del sistema: ${entry}`)
+        continue
+      }
       const full = join(AUTH_DIR, entry)
       if (statSync(full).isDirectory() && !sessions.has(entry)) {
         console.log(`[WA] Restaurando sesión guardada: ${entry}`)
