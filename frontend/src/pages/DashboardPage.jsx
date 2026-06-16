@@ -8,6 +8,7 @@ import { getDashboard, getBasesForFarmer, updateBaseStatus,
          getUnreadCount, getNotifications, markAllNotifRead } from '../services/dashboardService'
 import { getStores } from '../services/storeService'
 import api from '../services/api'
+import AiAssistant from '../components/AiAssistant'
 import StoreSection from '../components/StoreSection'
 import StoreTable from '../components/StoreTable'
 import MetricCard from '../components/MetricCard'
@@ -651,6 +652,8 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
         <MetricCard label="Riesgo churn"      value={churnCount}   color="red"    icon="⚠️" trend="urgente" />
         <MetricCard label="Saludables"        value={healthyCount} color="green"  icon="✅" trend="meta" />
       </div>
+
+      <AiAssistant />
 
       {/* Tabs — grid 5×2 compacto para caber en portátiles */}
       <div className={styles.tabGrid}>
