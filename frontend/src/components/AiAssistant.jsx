@@ -90,7 +90,7 @@ function StoreContextMenu({ menu, onClose }) {
             ['Aging',         `${d.aging} días (${d.agingStage})`],
             ['Onboarding',    d.onboardingDate],
             ['Estado',        d.currentStatus],
-            ['HO activado',   d.hadHandoff ? '✅ Sí' : '❌ No'],
+            ['HO activado',   d.hadHandoff === 'true' || d.hadHandoff === true ? '✅ Sí' : '❌ No'],
             ['AVA MTD',       d.connectionPct != null ? `${d.connectionPct}%` : '—'],
             ['Último FU',     d.lastFollowUp],
             ['FU 30d',        d.followUpLast30d],

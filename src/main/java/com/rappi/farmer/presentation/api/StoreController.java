@@ -143,25 +143,27 @@ public class StoreController {
     /** Detalle compacto de una tienda por código — usado por el asistente IA para el menú contextual. */
     @GetMapping("/by-code/{storeCode}")
     public ResponseEntity<?> getByCode(@PathVariable String storeCode) {
-        return storeRepository.findByStoreCode(storeCode)
-                .map(s -> ResponseEntity.ok(Map.of(
-                        "id",                 s.getId() != null ? s.getId() : "",
-                        "storeCode",          s.getStoreCode() != null ? s.getStoreCode() : "",
-                        "brandId",            s.getBrandId() != null ? s.getBrandId() : "—",
-                        "storeName",          s.getStoreName() != null ? s.getStoreName() : "",
-                        "phoneNumber",        s.getPhoneNumber() != null ? s.getPhoneNumber() : "—",
-                        "channel",            s.getChannel() != null ? s.getChannel() : "—",
-                        "aging",              s.getAging() != null ? s.getAging() : 0,
-                        "agingStage",         s.getAgingStage() != null ? s.getAgingStage() : "—",
-                        "currentStatus",      s.getCurrentStatus() != null ? s.getCurrentStatus() : "—",
-                        "hadHandoff",         Boolean.TRUE.equals(s.getHadHandoff()),
-                        "connectionPct",      s.getConnectionPercentage() != null ? s.getConnectionPercentage() : 0,
-                        "onboardingDate",     s.getOnboardingDate() != null ? s.getOnboardingDate().toString() : "—",
-                        "lastFollowUp",       s.getLastFollowUp() != null ? s.getLastFollowUp().toString() : "—",
-                        "followUpLast30d",    s.getFollowUpLast30d() != null ? s.getFollowUpLast30d() : "—",
-                        "gestionar",          s.getGestionar() != null ? s.getGestionar() : "—"
-                )))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        var opt = storeRepository.findByStoreCode(storeCode);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        var s = opt.get();
+        var detail = Map.ofEntries(
+                Map.entry("id",             s.getId() != null ? String.valueOf(s.getId()) : ""),
+                Map.entry("storeCode",      s.getStoreCode() != null ? s.getStoreCode() : ""),
+                Map.entry("brandId",        s.getBrandId() != null ? s.getBrandId() : "—"),
+                Map.entry("storeName",      s.getStoreName() != null ? s.getStoreName() : ""),
+                Map.entry("phoneNumber",    s.getPhoneNumber() != null ? s.getPhoneNumber() : "—"),
+                Map.entry("channel",        s.getChannel() != null ? s.getChannel() : "—"),
+                Map.entry("aging",          s.getAging() != null ? String.valueOf(s.getAging()) : "0"),
+                Map.entry("agingStage",     s.getAgingStage() != null ? s.getAgingStage() : "—"),
+                Map.entry("currentStatus",  s.getCurrentStatus() != null ? s.getCurrentStatus() : "—"),
+                Map.entry("hadHandoff",     Boolean.TRUE.equals(s.getHadHandoff()) ? "true" : "false"),
+                Map.entry("connectionPct",  s.getConnectionPercentage() != null ? s.getConnectionPercentage().toPlainString() : "—"),
+                Map.entry("onboardingDate", s.getOnboardingDate() != null ? s.getOnboardingDate().toString() : "—"),
+                Map.entry("lastFollowUp",   s.getLastFollowUp() != null ? s.getLastFollowUp().toString() : "—"),
+                Map.entry("followUpLast30d",s.getFollowUpLast30d() != null ? s.getFollowUpLast30d() : "—"),
+                Map.entry("gestionar",      s.getGestionar() != null ? s.getGestionar() : "—")
+        );
+        return ResponseEntity.ok(detail);
     }
 
     @GetMapping("/managements/today")
