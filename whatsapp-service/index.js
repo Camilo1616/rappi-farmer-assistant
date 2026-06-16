@@ -12,15 +12,13 @@ const AUTH_DIR  = process.env.AUTH_DIR || join(__dirname, 'auth_info')
 const PORT      = process.env.PORT || 3000
 const API_KEY   = process.env.API_KEY || ''
 
+// Timeout máximo para que un cliente se inicialice antes de forzar reset
+const INIT_TIMEOUT_MS = 120_000
+
 if (!existsSync(AUTH_DIR)) mkdirSync(AUTH_DIR, { recursive: true })
 
-// ── Sesiones múltiples (una por farmer) ──────────────────────────────────────
-// sessionId: string como "u42" (prefijo + userId del backend)
-// Cada sesión tiene su propio cliente whatsapp-web.js, QR y estado de conexión.
+const sessions = new Map()  // sessionId -> { client, qrBase64, connected, initializing, initStartedAt }
 
-const sessions = new Map()  // sessionId -> { client, qrBase64, connected, initializing }
-
-// Restaurar sesiones guardadas en disco al arrancar
 function restorePersistedSessions() {
   if (!existsSync(AUTH_DIR)) return
   try {
@@ -29,7 +27,7 @@ function restorePersistedSessions() {
       const full = join(AUTH_DIR, entry)
       if (statSync(full).isDirectory() && !sessions.has(entry)) {
         console.log(`[WA] Restaurando sesión guardada: ${entry}`)
-        sessions.set(entry, { client: null, qrBase64: null, connected: false, initializing: false })
+        sessions.set(entry, { client: null, qrBase64: null, connected: false, initializing: false, initStartedAt: null })
         initSession(entry)
       }
     }
@@ -40,17 +38,43 @@ function restorePersistedSessions() {
 
 function getSession(sessionId) {
   if (!sessions.has(sessionId)) {
-    sessions.set(sessionId, { client: null, qrBase64: null, connected: false, initializing: false })
+    sessions.set(sessionId, { client: null, qrBase64: null, connected: false, initializing: false, initStartedAt: null })
     initSession(sessionId)
   }
   return sessions.get(sessionId)
 }
 
+function forceReset(sessionId) {
+  const s = sessions.get(sessionId)
+  if (!s) return
+  try { s.client?.destroy().catch(() => {}) } catch {}
+  s.client        = null
+  s.qrBase64      = null
+  s.connected     = false
+  s.initializing  = false
+  s.initStartedAt = null
+}
+
 function initSession(sessionId) {
   const s = sessions.get(sessionId)
-  if (s.initializing || s.connected) return
-  s.initializing = true
-  s.client = null  // asegura instancia fresca
+  if (!s) return
+
+  // Si ya está inicializando, verificar si el timeout expiró
+  if (s.initializing) {
+    const elapsed = s.initStartedAt ? Date.now() - s.initStartedAt : INIT_TIMEOUT_MS + 1
+    if (elapsed < INIT_TIMEOUT_MS) {
+      console.log(`[WA:${sessionId}] Ya inicializando (${Math.round(elapsed/1000)}s), esperando...`)
+      return
+    }
+    console.warn(`[WA:${sessionId}] Timeout de inicialización (${INIT_TIMEOUT_MS/1000}s), forzando reset`)
+    forceReset(sessionId)
+  }
+
+  if (s.connected) return
+
+  s.initializing  = true
+  s.initStartedAt = Date.now()
+  s.client        = null
 
   const sessionDir = join(AUTH_DIR, sessionId)
   if (!existsSync(sessionDir)) mkdirSync(sessionDir, { recursive: true })
@@ -79,6 +103,7 @@ function initSession(sessionId) {
     console.log(`[WA:${sessionId}] QR generado`)
     s.qrBase64  = await QRCode.toDataURL(qr)
     s.connected = false
+    s.initStartedAt = Date.now() // resetear el timeout al recibir QR nuevo
   })
 
   client.on('ready', () => {
@@ -86,6 +111,7 @@ function initSession(sessionId) {
     s.connected    = true
     s.qrBase64     = null
     s.initializing = false
+    s.initStartedAt = null
   })
 
   client.on('authenticated', () => {
@@ -96,6 +122,15 @@ function initSession(sessionId) {
     console.error(`[WA:${sessionId}] Fallo de autenticación:`, msg)
     s.connected    = false
     s.initializing = false
+    s.initStartedAt = null
+    // Reintentar tras 5 segundos
+    setTimeout(() => {
+      if (sessions.has(sessionId) && !sessions.get(sessionId).connected) {
+        console.log(`[WA:${sessionId}] Reintentando tras auth_failure...`)
+        forceReset(sessionId)
+        initSession(sessionId)
+      }
+    }, 5000)
   })
 
   client.on('disconnected', (reason) => {
@@ -103,8 +138,8 @@ function initSession(sessionId) {
     s.connected    = false
     s.qrBase64     = null
     s.initializing = false
+    s.initStartedAt = null
     s.client       = null
-    // Reiniciar con un cliente nuevo en 10 segundos
     setTimeout(() => {
       if (sessions.has(sessionId)) {
         console.log(`[WA:${sessionId}] Reiniciando cliente tras desconexión...`)
@@ -115,7 +150,8 @@ function initSession(sessionId) {
 
   client.initialize().catch(e => {
     console.error(`[WA:${sessionId}] Error al inicializar:`, e.message)
-    s.initializing = false
+    s.initializing  = false
+    s.initStartedAt = null
   })
 
   s.client = client
@@ -126,7 +162,6 @@ function initSession(sessionId) {
 const app = express()
 app.use(express.json())
 
-// Middleware de autenticación por API key
 app.use((req, res, next) => {
   if (!API_KEY) return next()
   const key = req.headers['x-api-key'] || req.query.apiKey
@@ -134,32 +169,29 @@ app.use((req, res, next) => {
   next()
 })
 
-// Extrae el sessionId del query string o usa "default"
 function resolveSession(req) {
   return (req.query.session || req.body?.session || 'default').replace(/[^a-zA-Z0-9_-]/g, '_')
 }
 
 app.get('/health', (req, res) => res.json({ ok: true }))
 
-// Lista todas las sesiones activas (para debugging del backend)
 app.get('/sessions', (req, res) => {
   const list = [...sessions.entries()].map(([id, s]) => ({
     id,
     connected:    s.connected,
     hasQr:        !!s.qrBase64,
     initializing: s.initializing,
+    initElapsedSec: s.initStartedAt ? Math.round((Date.now() - s.initStartedAt) / 1000) : null,
   }))
   res.json(list)
 })
 
-// Estado de la sesión del farmer
 app.get('/status', (req, res) => {
   const sessionId = resolveSession(req)
   const s = getSession(sessionId)
-  res.json({ connected: s.connected, hasQr: !!s.qrBase64, qr: s.qrBase64, sessionId })
+  res.json({ connected: s.connected, hasQr: !!s.qrBase64, qr: s.qrBase64, sessionId, initializing: s.initializing })
 })
 
-// Enviar mensaje en nombre del farmer
 app.post('/send', async (req, res) => {
   const { phone, message } = req.body
   const sessionId = resolveSession(req)
@@ -184,23 +216,18 @@ app.post('/send', async (req, res) => {
   }
 })
 
-// Forzar reconexión para una sesión específica
+// Forzar reconexión — siempre destruye el cliente viejo y crea uno nuevo
 app.post('/reconnect', (req, res) => {
   const sessionId = resolveSession(req)
-  if (sessions.has(sessionId)) {
-    const s = sessions.get(sessionId)
-    s.connected    = false
-    s.qrBase64     = null
-    s.initializing = false
-    s.client?.initialize().catch(() => {})
-  } else {
-    getSession(sessionId)  // crea e inicializa
+  if (!sessions.has(sessionId)) {
+    sessions.set(sessionId, { client: null, qrBase64: null, connected: false, initializing: false, initStartedAt: null })
   }
+  forceReset(sessionId)
+  initSession(sessionId)
   res.json({ message: `Reconectando sesión ${sessionId}...`, sessionId })
 })
 
 app.listen(PORT, () => {
   console.log(`[WA] Servicio multi-sesión escuchando en puerto ${PORT}`)
-  // Restaurar sesiones guardadas para que reconecten sin pedir QR
   restorePersistedSessions()
 })
