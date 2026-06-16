@@ -293,14 +293,13 @@ const TIPS = [
   'Soy tu copiloto 🚀',
 ]
 
-function RobotSVG({ hovered, open, blink }) {
+function RobotSVG({ hovered, open, blink, walkPhase = 0 }) {
   const eyeRy      = blink ? 0.5 : 6.5
   const eyeColor   = hovered ? '#F59E0B' : '#C4B5FD'
   const antennaClr = hovered ? '#F59E0B' : '#A78BFA'
 
-  // skin, shirt, pants
   const SKIN   = '#FBBF8C'
-  const SKIN_S = '#F59E5A'   // sombra piel
+  const SKIN_S = '#F59E5A'
   const SHIRT  = hovered ? '#7C3AED' : '#6D28D9'
   const SHIRT_S= hovered ? '#5B21B6' : '#4C1D95'
   const PANTS  = '#1E3A5F'
@@ -308,15 +307,34 @@ function RobotSVG({ hovered, open, blink }) {
   const SHOE   = '#111827'
   const SHOE_H = '#374151'
 
-  // Brazos: hover = celebrando arriba, open = wave, idle = caídos
-  const lEbX = hovered ? 8  : open ? 6  : 16
-  const lEbY = hovered ? 72 : open ? 80 : 96
-  const lHdX = hovered ? 4  : open ? 2  : 12
-  const lHdY = hovered ? 55 : open ? 65 : 108
-  const rEbX = hovered ? 92 : open ? 94 : 84
-  const rEbY = hovered ? 72 : open ? 80 : 96
-  const rHdX = hovered ? 96 : open ? 98 : 88
-  const rHdY = hovered ? 55 : open ? 65 : 108
+  // Oscilación de caminata
+  const sw = Math.sin(walkPhase)       // -1 a 1, ciclo de paso
+  const swAbs = Math.abs(sw)
+
+  // Brazos
+  let lEbX, lEbY, lHdX, lHdY, rEbX, rEbY, rHdX, rHdY
+  if (hovered) {
+    lEbX=8;  lEbY=72; lHdX=4;  lHdY=55
+    rEbX=92; rEbY=72; rHdX=96; rHdY=55
+  } else if (open) {
+    lEbX=6;  lEbY=80; lHdX=2;  lHdY=65
+    rEbX=94; rEbY=80; rHdX=98; rHdY=65
+  } else {
+    // caminata: brazo izq atrás cuando pierna izq adelante (natural)
+    const aSwing = sw * 14
+    lEbX = 16 - aSwing * 0.4; lEbY = 92 + swAbs * 3
+    lHdX = 12 - aSwing;       lHdY = 106 - swAbs * 2
+    rEbX = 84 + aSwing * 0.4; rEbY = 92 + swAbs * 3
+    rHdX = 88 + aSwing;       rHdY = 106 - swAbs * 2
+  }
+
+  // Piernas caminata
+  // pierna izq adelante cuando sw > 0
+  const lKX = 36 + sw * 9;   const lKY = 129 - swAbs * 5
+  const lFX = 34 + sw * 13;  const lFY = 141 - Math.max(0,  sw) * 9
+  // pierna der opuesta
+  const rKX = 64 - sw * 9;   const rKY = 129 - swAbs * 5
+  const rFX = 66 - sw * 13;  const rFY = 141 - Math.max(0, -sw) * 9
 
   const mouthD = hovered
     ? 'M36 52 Q50 63 64 52'
@@ -433,32 +451,42 @@ function RobotSVG({ hovered, open, blink }) {
       <rect x="44" y="112.5" width="12" height="6" rx="2" fill="#B45309"/>
       <rect x="47" y="113.5" width="6" height="4"  rx="1.5" fill="#F59E0B"/>
 
-      {/* ── PANTALÓN ── */}
-      {/* Parte superior pantalón */}
-      <rect x="24" y="117" width="52" height="6" rx="0" fill="url(#pantsG)"/>
-      {/* Costura central */}
+      {/* ── PANTALÓN — parte superior ── */}
+      <rect x="24" y="117" width="52" height="6" fill="url(#pantsG)"/>
       <line x1="50" y1="117" x2="50" y2="123" stroke={PANTS_S} strokeWidth="1"/>
 
-      {/* Pierna izq pantalón */}
-      <path d="M24 123 L24 138 Q24 141 28 141 L44 141 Q47 141 47 138 L50 123 Z" fill={PANTS}/>
-      <line x1="36" y1="123" x2="34" y2="141" stroke={PANTS_S} strokeWidth="0.8" strokeOpacity="0.6"/>
-
-      {/* Pierna der pantalón */}
-      <path d="M76 123 L76 138 Q76 141 72 141 L56 141 Q53 141 53 138 L50 123 Z" fill={PANTS}/>
-      <line x1="64" y1="123" x2="66" y2="141" stroke={PANTS_S} strokeWidth="0.8" strokeOpacity="0.6"/>
-
-      {/* ── ZAPATOS ── */}
+      {/* Pierna izq — muslo */}
+      <line x1="37" y1="123" x2={lKX} y2={lKY}
+        stroke={PANTS_S} strokeWidth="14" strokeLinecap="round"/>
+      <line x1="37" y1="123" x2={lKX} y2={lKY}
+        stroke={PANTS}   strokeWidth="10" strokeLinecap="round"/>
+      {/* Pierna izq — pantorrilla */}
+      <line x1={lKX} y1={lKY} x2={lFX} y2={lFY}
+        stroke={PANTS_S} strokeWidth="12" strokeLinecap="round"/>
+      <line x1={lKX} y1={lKY} x2={lFX} y2={lFY}
+        stroke={PANTS}   strokeWidth="8"  strokeLinecap="round"/>
       {/* Zapato izq */}
-      <ellipse cx="34" cy="142" rx="12" ry="5" fill={SHOE}/>
-      <ellipse cx="31" cy="141" rx="8"  ry="3" fill={SHOE_H} fillOpacity="0.4"/>
+      <ellipse cx={lFX - 2} cy={lFY + 1} rx="11" ry="4.5" fill={SHOE}/>
+      <ellipse cx={lFX - 4} cy={lFY}     rx="7"  ry="2.8" fill={SHOE_H} fillOpacity="0.4"/>
+
+      {/* Pierna der — muslo */}
+      <line x1="63" y1="123" x2={rKX} y2={rKY}
+        stroke={PANTS_S} strokeWidth="14" strokeLinecap="round"/>
+      <line x1="63" y1="123" x2={rKX} y2={rKY}
+        stroke={PANTS}   strokeWidth="10" strokeLinecap="round"/>
+      {/* Pierna der — pantorrilla */}
+      <line x1={rKX} y1={rKY} x2={rFX} y2={rFY}
+        stroke={PANTS_S} strokeWidth="12" strokeLinecap="round"/>
+      <line x1={rKX} y1={rKY} x2={rFX} y2={rFY}
+        stroke={PANTS}   strokeWidth="8"  strokeLinecap="round"/>
       {/* Zapato der */}
-      <ellipse cx="66" cy="142" rx="12" ry="5" fill={SHOE}/>
-      <ellipse cx="63" cy="141" rx="8"  ry="3" fill={SHOE_H} fillOpacity="0.4"/>
+      <ellipse cx={rFX + 2} cy={rFY + 1} rx="11" ry="4.5" fill={SHOE}/>
+      <ellipse cx={rFX}     cy={rFY}     rx="7"  ry="2.8" fill={SHOE_H} fillOpacity="0.4"/>
     </svg>
   )
 }
 
-function RobotButton({ open, dragging, onMouseDown, onClick }) {
+function RobotButton({ open, dragging, onMouseDown, onClick, walkPhase, walkDir }) {
   const [hovered, setHovered] = useState(false)
   const [tipIdx,  setTipIdx]  = useState(0)
   const [blink,   setBlink]   = useState(false)
@@ -539,15 +567,10 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
 
       {/* Robot SVG completo */}
       <div style={{
-        transform: hovered
-          ? 'scale(1.08) translateY(-4px)'
-          : open
-          ? 'scale(1.04)'
-          : 'scale(1)',
-        transition: 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1)',
-        animation: !hovered && !open ? 'robotFloat 3s ease-in-out infinite' : 'none',
+        transform: `scaleX(${walkDir < 0 ? -1 : 1}) ${hovered ? 'scale(1.08) translateY(-4px)' : open ? 'scale(1.04)' : 'scale(1)'}`,
+        transition: hovered || open ? 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1)' : 'none',
       }}>
-        <RobotSVG hovered={hovered} open={open} blink={blink} />
+        <RobotSVG hovered={hovered} open={open} blink={blink} walkPhase={walkPhase} />
       </div>
     </div>
   )
@@ -570,11 +593,39 @@ export default function AiAssistant() {
   const [ctxMenu,     setCtxMenu]    = useState({ visible: false, x: 0, y: 0, storeCode: null, data: null, loading: false })
   const [managedCodes, setManagedCodes] = useState(new Set())
   const [rateLimit,   setRateLimit]    = useState({ active: false, secondsLeft: 0 })
+  const [walkPhase,   setWalkPhase]    = useState(0)
+  const [walkDir,     setWalkDir]      = useState(1)
   const rateLimitTimer = useRef(null)
+  const walkRef    = useRef({ dir: 1, phase: 0 })
+  const rafRef     = useRef(null)
   const dragStart  = useRef(null)
   const chatEndRef = useRef(null)
 
-  useEffect(() => { setPos({ x: 24, y: window.innerHeight * 0.28 }) }, [])
+  useEffect(() => { setPos({ x: 24, y: window.innerHeight * 0.65 }) }, [])
+
+  // Caminata autónoma — pausa al arrastrar o al abrir el panel
+  useEffect(() => {
+    if (open || dragging) { cancelAnimationFrame(rafRef.current); return }
+    let lastTs = null
+    const tick = ts => {
+      if (lastTs === null) { lastTs = ts; rafRef.current = requestAnimationFrame(tick); return }
+      const dt = Math.min(ts - lastTs, 50)
+      lastTs = ts
+      walkRef.current.phase += 0.0055 * dt   // velocidad de paso
+      const speed = 0.05 * dt                // px por frame
+      setPos(prev => {
+        let nx = prev.x + walkRef.current.dir * speed
+        const maxX = window.innerWidth - 120
+        if (nx >= maxX) { nx = maxX; walkRef.current.dir = -1; setWalkDir(-1) }
+        if (nx <= 0)    { nx = 0;    walkRef.current.dir =  1; setWalkDir( 1) }
+        return { ...prev, x: nx }
+      })
+      setWalkPhase(walkRef.current.phase)
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [open, dragging])
 
   // Drag
   const onMouseDown = e => {
@@ -710,6 +761,8 @@ export default function AiAssistant() {
           dragging={dragging}
           onMouseDown={onMouseDown}
           onClick={!dragging ? toggleOpen : undefined}
+          walkPhase={walkPhase}
+          walkDir={walkDir}
         />
 
         {/* Panel */}
