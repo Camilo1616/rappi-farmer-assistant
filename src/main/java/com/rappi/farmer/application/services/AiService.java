@@ -277,30 +277,32 @@ public class AiService {
     // ── Mini chat ─────────────────────────────────────────────────────────────
 
     /**
-     * Chat conversacional sobre la cartera. Mantiene historial de la sesión.
+     * Chat conversacional sobre la cartera. Ve toda la cartera en formato compacto.
      */
     public String chat(List<Store> stores, List<AiController.ChatMessage> history, String userMessage) {
-        String context = buildStoreContext(stores, 4);
+        String context = buildChatContext(stores);
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
-                Gestionas la activación y retención de restaurantes en Rappi.
+                Gestionas la activación y retención de restaurantes aliados.
 
                 GLOSARIO:
-                - HO (Handoff): activación en Rappi Aliados. Sin HO el restaurante no recibe pedidos.
-                - AVA MTD %: conexión mensual con Rappi Aliados. Meta: ≥60%.
+                - HO: Handoff = activación en Rappi Aliados. Sin HO el restaurante NO puede recibir pedidos.
+                - AVA%: conexión mensual con Rappi Aliados. Meta mínima: 60%.
                 - IS: visita física en tienda programada hoy — máxima urgencia.
-                - Aging: días en el programa. Ventana crítica: 1-14 días.
-                - FU30d: seguimiento en últimos 30 días (SI/NO).
+                - Aging: días en el programa desde onboarding. Ventana crítica: 1-14 días.
+                - FU30d: si hubo seguimiento en los últimos 30 días (SI/NO).
+                - Churn: tienda en riesgo de abandonar la plataforma.
+                - Prevention W1/W2/W3: niveles de alerta temprana de churn (W1=menor, W3=mayor).
 
-                FORMATO OBLIGATORIO:
-                - Usa markdown válido siempre.
-                - Para listas de tiendas: tablas markdown con columnas: | Tienda | Código | Aging | HO | AVA% | Acción |
-                - Para listas simples: viñetas con guión.
-                - Énfasis con **negrita**. Máximo 350 palabras. Directo y accionable.
-                - NUNCA texto plano cuando hay datos tabulares.
+                REGLAS DE RESPUESTA:
+                - Responde SOLO con la información real de la CARTERA que se te proporciona.
+                - Si preguntan por una tienda específica, búscala por código o nombre.
+                - Para listas de tiendas usa tabla markdown: | Código | Nombre | Aging | HO | AVA% | Estado | Acción |
+                - Para resúmenes numéricos usa los totales del encabezado de la cartera.
+                - Máximo 400 palabras. Directo y accionable.
+                - Énfasis con **negrita** en datos clave.
 
-                Cartera segmentada por urgencia:
                 """ + context;
 
         List<Map<String, String>> messages = new ArrayList<>();
@@ -313,7 +315,82 @@ public class AiService {
         }
         messages.add(Map.of("role", "user", "content", userMessage));
 
-        return callGroqMessages(messages, 0.7, 1500);
+        return callGroqMessages(messages, 0.5, 1800);
+    }
+
+    /**
+     * Contexto completo para el chat: todas las tiendas críticas en formato compacto.
+     * A diferencia del contexto de recomendación (5/segmento), aquí se muestran todas
+     * para que el AM pueda preguntar sobre cualquier tienda, churn, AVA, etc.
+     */
+    private String buildChatContext(List<Store> stores) {
+        LocalDate today = LocalDate.now();
+
+        List<Store> isStores = new ArrayList<>();
+        List<Store> seg17    = new ArrayList<>();
+        List<Store> seg814   = new ArrayList<>();
+        List<Store> churn    = new ArrayList<>();
+        List<Store> avaLow   = new ArrayList<>(); // AVA < 60%
+        List<Store> resto    = new ArrayList<>();
+
+        for (Store s : stores) {
+            int aging = resolveAging(s);
+            double ava = s.getConnectionPercentage() != null ? s.getConnectionPercentage().doubleValue() : 100;
+            String status = s.getCurrentStatus() != null ? s.getCurrentStatus().toLowerCase() : "";
+            String gestionar = s.getGestionar() != null ? s.getGestionar().toUpperCase() : "";
+            boolean isInStore = gestionar.equals("IS") || gestionar.contains("IN STORE") || gestionar.contains("INSTORE");
+
+            if (isInStore && aging <= 14)  { isStores.add(s); continue; }
+            if (aging >= 1 && aging <= 7)  { seg17.add(s);   continue; }
+            if (aging >= 8 && aging <= 14) { seg814.add(s);  continue; }
+            if (status.contains("churn"))  { churn.add(s);   continue; }
+            if (ava < 60 && ava > 0)       { avaLow.add(s);  continue; }
+            resto.add(s);
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== CARTERA COMPLETA ===\n");
+        sb.append(String.format("Total: %d | IS: %d | 1-7d: %d | 8-14d: %d | Churn: %d | AVA<60%%: %d | Estables: %d\n\n",
+                stores.size(), isStores.size(), seg17.size(), seg814.size(),
+                churn.size(), avaLow.size(), resto.size()));
+
+        appendChatSegment(sb, "IS — VISITA HOY", isStores, today, 20);
+        appendChatSegment(sb, "ONBOARDING 1-7 DÍAS", seg17, today, 20);
+        appendChatSegment(sb, "ONBOARDING 8-14 DÍAS", seg814, today, 20);
+        appendChatSegment(sb, "CHURN ACTIVO", churn, today, 30);
+        appendChatSegment(sb, "AVA < 60%", avaLow, today, 20);
+
+        if (!resto.isEmpty()) {
+            sb.append("\n[ESTABLES: ").append(resto.size()).append(" tiendas — sin urgencia inmediata]\n");
+        }
+
+        return sb.toString();
+    }
+
+    /** Formato compacto para chat: Código|Nombre|Aging|HO|AVA%|Estado|Gestionar */
+    private void appendChatSegment(StringBuilder sb, String title, List<Store> stores,
+                                   LocalDate today, int maxRows) {
+        if (stores.isEmpty()) return;
+        sb.append("--- ").append(title).append(" (").append(stores.size()).append(") ---\n");
+        sb.append("Código|Nombre|Aging|HO|AVA%|Estado|FU30d|Gestionar\n");
+        stores.stream()
+            .sorted((a, b) -> Integer.compare(urgencyScore(b), urgencyScore(a)))
+            .limit(maxRows)
+            .forEach(s -> {
+                int aging = resolveAging(s);
+                double ava = s.getConnectionPercentage() != null ? s.getConnectionPercentage().doubleValue() : -1;
+                sb.append(s.getStoreCode() != null ? s.getStoreCode() : "-").append("|")
+                  .append(s.getStoreName() != null ? s.getStoreName() : "-").append("|")
+                  .append(aging < 999 ? aging + "d" : "-").append("|")
+                  .append(Boolean.TRUE.equals(s.getHadHandoff()) ? "SI" : "NO").append("|")
+                  .append(ava >= 0 ? String.format("%.0f%%", ava) : "-").append("|")
+                  .append(s.getCurrentStatus() != null ? s.getCurrentStatus() : "-").append("|")
+                  .append(s.getFollowUpLast30d() != null ? s.getFollowUpLast30d() : "-").append("|")
+                  .append(s.getGestionar() != null ? s.getGestionar() : "-").append("\n");
+            });
+        if (stores.size() > maxRows)
+            sb.append("  ... y ").append(stores.size() - maxRows).append(" más en este segmento\n");
+        sb.append("\n");
     }
 
     /**

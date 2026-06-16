@@ -526,13 +526,32 @@ export default function AiAssistant() {
             {tab === 'chat' && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '10px 12px', gap: 8, overflow: 'hidden' }}>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'center', paddingBottom: 2 }}>
-                  💡 Clic derecho en filas de tabla para ver detalle de tienda
+                  💡 Clic derecho en filas de tabla · Ve toda tu cartera: churn, AVA, IS y más
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 7, padding: '2px 1px' }}>
                   {chatHistory.length === 0 && (
-                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12, margin: 'auto', padding: 16 }}>
-                      Pregunta sobre tu cartera:<br />
-                      <span style={{ color: '#7C3AED', fontStyle: 'italic' }}>"¿Qué tiendas atacar primero?"</span>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: 11, padding: '8px 4px' }}>
+                      <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 12 }}>💬 Pregunta lo que necesites:</div>
+                      {[
+                        '¿Cuántas tiendas tengo en churn?',
+                        '¿Qué tiendas tienen AVA menor al 40%?',
+                        'Muéstrame las tiendas de 1 a 7 días sin HO',
+                        '¿Cuáles son mis IS de hoy?',
+                        'Dame las tiendas con más días sin seguimiento',
+                      ].map(q => (
+                        <div
+                          key={q}
+                          onClick={() => setChatInput(q)}
+                          style={{
+                            cursor: 'pointer', padding: '5px 8px', borderRadius: 6, marginBottom: 4,
+                            background: 'var(--bg-input)', border: '1px solid var(--border)',
+                            color: '#7C3AED', fontStyle: 'italic', fontSize: 11,
+                            transition: 'background 0.1s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,58,237,0.08)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                        >{q}</div>
+                      ))}
                     </div>
                   )}
                   {chatHistory.map((m, i) => (
