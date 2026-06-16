@@ -48,18 +48,13 @@ function Md({ children, onRowCtx }) {
 
 /* ── Helpers visuales ───────────────────────────────────────────────────── */
 const TIPO_OPTS = [
-  { value: 'WHATSAPP',   label: '💬 WhatsApp' },
-  { value: 'LLAMADA',    label: '📞 Llamada'  },
-  { value: 'ACTIVACION', label: '🚀 Activación' },
-  { value: 'SEGUIMIENTO',label: '🔁 Seguimiento' },
-  { value: 'SAC',        label: '🎧 SAC'      },
+  { value: 'WHATSAPP', label: '💬 WhatsApp' },
+  { value: 'LLAMADA',  label: '📞 Llamada'  },
+  { value: 'SAC',      label: '📧 Correo'   },
 ]
 const RESULTADO_OPTS = [
-  { value: 'EFECTIVA',             label: '✅ Efectiva',           color: '#22C55E' },
-  { value: 'NO_CONTACTO',          label: '📵 No contacto',        color: '#94A3B8' },
-  { value: 'NO_RESPONDE',          label: '🔇 No responde',        color: '#F59E0B' },
-  { value: 'PROBLEMA_TECNICO',     label: '🔧 Prob. técnico',      color: '#EF4444' },
-  { value: 'REQUIERE_SEGUIMIENTO', label: '🔁 Req. seguimiento',   color: '#8B5CF6' },
+  { value: 'EFECTIVA',    label: '✅ Efectiva',    color: '#22C55E' },
+  { value: 'NO_CONTACTO', label: '📵 No contacto', color: '#94A3B8' },
 ]
 
 function InfoRow({ label, value, accent }) {
@@ -249,7 +244,7 @@ function StoreContextMenu({ menu, onClose }) {
             <textarea
               value={comentario}
               onChange={e => setComentario(e.target.value)}
-              placeholder="Comentario (opcional)..."
+              placeholder="Comentario obligatorio..."
               rows={2}
               style={{
                 width: '100%', boxSizing: 'border-box',
@@ -267,14 +262,14 @@ function StoreContextMenu({ menu, onClose }) {
 
             <button
               onClick={handleSave}
-              disabled={!resultado || saving}
+              disabled={!resultado || !comentario.trim() || saving}
               style={{
                 width: '100%', padding: '7px 0', borderRadius: 8, border: 'none',
-                background: !resultado || saving
+                background: !resultado || !comentario.trim() || saving
                   ? 'var(--bg-input,#e5e7eb)'
                   : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
-                color: !resultado || saving ? 'var(--text-secondary,#888)' : '#fff',
-                fontWeight: 800, fontSize: 12, cursor: !resultado || saving ? 'default' : 'pointer',
+                color: !resultado || !comentario.trim() || saving ? 'var(--text-secondary,#888)' : '#fff',
+                fontWeight: 800, fontSize: 12, cursor: !resultado || !comentario.trim() || saving ? 'default' : 'pointer',
                 transition: 'all 0.15s',
               }}
             >
