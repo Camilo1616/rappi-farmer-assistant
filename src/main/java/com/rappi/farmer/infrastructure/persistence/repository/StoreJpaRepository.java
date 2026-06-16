@@ -179,7 +179,7 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         @org.springframework.data.repository.query.Param("maxDays") int maxDays);
 
     /**
-     * ACTIVE 7 días: aging = 7 (según la fecha de cargue del Excel),
+     * ACTIVE 7 días: exactamente 7 días desde onboarding_date (calculado dinámicamente),
      * HO exitoso (had_handoff = true), al menos una gestión EFECTIVA
      * (cualquier canal) y SIN ventas registradas (orders_count = 0 o sin métricas).
      */
@@ -187,8 +187,9 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         "SELECT s.* FROM stores s " +
         "WHERE s.active = true " +
         "AND s.user_id IN :farmerIds " +
-        "AND s.aging = 7 " +
         "AND s.had_handoff = true " +
+        "AND s.onboarding_date IS NOT NULL " +
+        "AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) = 7 " +
         "AND EXISTS ( " +
         "  SELECT 1 FROM managements m " +
         "  WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA' " +
