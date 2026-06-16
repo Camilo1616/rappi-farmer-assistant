@@ -3,32 +3,33 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import api from '../services/api'
 
-const MD_STYLES = {
-  table: { width:'100%', borderCollapse:'collapse', fontSize:12, marginBottom:8 },
-  th:    { textAlign:'left', padding:'6px 8px', borderBottom:'2px solid var(--border)', color:'var(--text-secondary)', fontWeight:700, fontSize:11, textTransform:'uppercase', whiteSpace:'nowrap' },
-  td:    { padding:'6px 8px', borderBottom:'1px solid var(--border)', color:'var(--text-primary)', fontSize:12 },
-  p:     { margin:'0 0 6px 0', lineHeight:1.55 },
-  ul:    { margin:'0 0 6px 0', paddingLeft:18 },
-  ol:    { margin:'0 0 6px 0', paddingLeft:18 },
-  li:    { marginBottom:3 },
-  strong:{ fontWeight:700 },
-  code:  { background:'var(--bg-input)', borderRadius:4, padding:'1px 5px', fontSize:11, fontFamily:'monospace' },
-}
-
-function Md({ children, dark }) {
+function Md({ children }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        table: ({node,...p}) => <div style={{overflowX:'auto'}}><table style={MD_STYLES.table} {...p}/></div>,
-        th:    ({node,...p}) => <th style={MD_STYLES.th} {...p}/>,
-        td:    ({node,...p}) => <td style={{...MD_STYLES.td, color: dark ? '#fff' : 'var(--text-primary)'}} {...p}/>,
-        p:     ({node,...p}) => <p style={MD_STYLES.p} {...p}/>,
-        ul:    ({node,...p}) => <ul style={MD_STYLES.ul} {...p}/>,
-        ol:    ({node,...p}) => <ol style={MD_STYLES.ol} {...p}/>,
-        li:    ({node,...p}) => <li style={MD_STYLES.li} {...p}/>,
-        strong:({node,...p}) => <strong style={MD_STYLES.strong} {...p}/>,
-        code:  ({node,...p}) => <code style={MD_STYLES.code} {...p}/>,
+        table: ({ children: c }) => (
+          <div style={{ overflowX:'auto', marginBottom:8 }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>{c}</table>
+          </div>
+        ),
+        thead: ({ children: c }) => <thead>{c}</thead>,
+        tbody: ({ children: c }) => <tbody>{c}</tbody>,
+        tr:    ({ children: c }) => <tr>{c}</tr>,
+        th:    ({ children: c }) => (
+          <th style={{ textAlign:'left', padding:'6px 8px', borderBottom:'2px solid rgba(124,58,237,0.35)', color:'#7C3AED', fontWeight:700, fontSize:11, textTransform:'uppercase', whiteSpace:'nowrap' }}>{c}</th>
+        ),
+        td:    ({ children: c }) => (
+          <td style={{ padding:'6px 8px', borderBottom:'1px solid rgba(128,128,128,0.2)', fontSize:12, color:'var(--text-primary,#111)', verticalAlign:'top' }}>{c}</td>
+        ),
+        p:      ({ children: c }) => <p style={{ margin:'0 0 6px 0', lineHeight:1.55 }}>{c}</p>,
+        ul:     ({ children: c }) => <ul style={{ margin:'0 0 6px 0', paddingLeft:18 }}>{c}</ul>,
+        ol:     ({ children: c }) => <ol style={{ margin:'0 0 6px 0', paddingLeft:18 }}>{c}</ol>,
+        li:     ({ children: c }) => <li style={{ marginBottom:3 }}>{c}</li>,
+        strong: ({ children: c }) => <strong style={{ fontWeight:700 }}>{c}</strong>,
+        code:   ({ children: c }) => <code style={{ background:'rgba(0,0,0,0.06)', borderRadius:4, padding:'1px 5px', fontSize:11, fontFamily:'monospace' }}>{c}</code>,
+        h3:     ({ children: c }) => <h3 style={{ fontSize:13, fontWeight:700, margin:'8px 0 4px 0', color:'var(--text-primary,#111)' }}>{c}</h3>,
+        h4:     ({ children: c }) => <h4 style={{ fontSize:12, fontWeight:700, margin:'6px 0 3px 0' }}>{c}</h4>,
       }}
     >
       {children}
