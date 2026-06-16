@@ -486,7 +486,9 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
     setAiDone(false)
     const results = []
     try {
-      for (const store of selectedStores) {
+      for (let i = 0; i < selectedStores.length; i++) {
+        const store = selectedStores[i]
+        if (i > 0) await new Promise(res => setTimeout(res, 2000))
         const r = await generateWhatsappMessage(
           store.storeName || 'Restaurante',
           store.aging    ?? 0,
