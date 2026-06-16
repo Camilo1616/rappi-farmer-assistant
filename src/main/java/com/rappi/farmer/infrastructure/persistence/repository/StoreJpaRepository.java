@@ -270,6 +270,7 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         "AND s.had_handoff = false " +
         "AND s.last_follow_up IS NULL " +
         "AND UPPER(s.follow_up_last_30d) = 'NO' " +
+        "AND s.upload_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) " +
         "ORDER BY s.store_name ASC", nativeQuery = true)
     List<StoreEntity> findGestionarIsByFarmerIds(
         @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);

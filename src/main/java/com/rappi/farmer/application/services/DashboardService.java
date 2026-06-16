@@ -99,10 +99,13 @@ public class DashboardService {
                     && store.getChannel().toLowerCase().contains("self");
             boolean isIS = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("inside");
+            boolean uploadReciente = store.getUploadDate() != null
+                    && !store.getUploadDate().isBefore(today.minusDays(7));
             boolean isGestionarIS = isIS
                     && store.getHadHandoff() != null && !store.getHadHandoff()
                     && store.getLastFollowUp() == null
-                    && "NO".equalsIgnoreCase(store.getFollowUpLast30d());
+                    && "NO".equalsIgnoreCase(store.getFollowUpLast30d())
+                    && uploadReciente;
             if (isGestionarIS) insideSales.add(dto);
 
             if (isSelf) {
