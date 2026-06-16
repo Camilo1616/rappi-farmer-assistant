@@ -1,5 +1,40 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import api from '../services/api'
+
+const MD_STYLES = {
+  table: { width:'100%', borderCollapse:'collapse', fontSize:12, marginBottom:8 },
+  th:    { textAlign:'left', padding:'6px 8px', borderBottom:'2px solid var(--border)', color:'var(--text-secondary)', fontWeight:700, fontSize:11, textTransform:'uppercase', whiteSpace:'nowrap' },
+  td:    { padding:'6px 8px', borderBottom:'1px solid var(--border)', color:'var(--text-primary)', fontSize:12 },
+  p:     { margin:'0 0 6px 0', lineHeight:1.55 },
+  ul:    { margin:'0 0 6px 0', paddingLeft:18 },
+  ol:    { margin:'0 0 6px 0', paddingLeft:18 },
+  li:    { marginBottom:3 },
+  strong:{ fontWeight:700 },
+  code:  { background:'var(--bg-input)', borderRadius:4, padding:'1px 5px', fontSize:11, fontFamily:'monospace' },
+}
+
+function Md({ children, dark }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        table: ({node,...p}) => <div style={{overflowX:'auto'}}><table style={MD_STYLES.table} {...p}/></div>,
+        th:    ({node,...p}) => <th style={MD_STYLES.th} {...p}/>,
+        td:    ({node,...p}) => <td style={{...MD_STYLES.td, color: dark ? '#fff' : 'var(--text-primary)'}} {...p}/>,
+        p:     ({node,...p}) => <p style={MD_STYLES.p} {...p}/>,
+        ul:    ({node,...p}) => <ul style={MD_STYLES.ul} {...p}/>,
+        ol:    ({node,...p}) => <ol style={MD_STYLES.ol} {...p}/>,
+        li:    ({node,...p}) => <li style={MD_STYLES.li} {...p}/>,
+        strong:({node,...p}) => <strong style={MD_STYLES.strong} {...p}/>,
+        code:  ({node,...p}) => <code style={MD_STYLES.code} {...p}/>,
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  )
+}
 
 export default function AiAssistant() {
   const [open,         setOpen]         = useState(false)
@@ -215,13 +250,16 @@ export default function AiAssistant() {
                 {chatHistory.map((m, i) => (
                   <div key={i} style={{ display:'flex', justifyContent: m.role==='user' ? 'flex-end' : 'flex-start' }}>
                     <div style={{
-                      maxWidth:'82%', padding:'9px 13px', borderRadius:12,
+                      maxWidth:'92%', padding:'9px 13px', borderRadius:12,
                       background: m.role==='user' ? 'linear-gradient(135deg,#7C3AED,#6D28D9)' : 'var(--bg-input)',
                       color: m.role==='user' ? '#fff' : 'var(--text-primary)',
                       fontSize:13, lineHeight:1.55,
                       border: m.role==='assistant' ? '1px solid var(--border)' : 'none',
-                      whiteSpace:'pre-wrap',
-                    }}>{m.content}</div>
+                    }}>
+                      {m.role === 'assistant'
+                        ? <Md>{m.content}</Md>
+                        : m.content}
+                    </div>
                   </div>
                 ))}
                 {chatLoading && (
