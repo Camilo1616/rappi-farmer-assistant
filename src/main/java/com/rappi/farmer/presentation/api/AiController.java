@@ -1,11 +1,15 @@
 package com.rappi.farmer.presentation.api;
 
+import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.application.services.AiService;
+import com.rappi.farmer.domain.entities.Store;
+import com.rappi.farmer.domain.repositories.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -15,6 +19,8 @@ import java.util.Map;
 public class AiController {
 
     private final AiService aiService;
+    private final StoreRepository storeRepository;
+    private final SessionContext sessionContext;
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Boolean>> status() {
@@ -64,6 +70,46 @@ public class AiController {
                     .body(Map.of("error", "Error al generar resumen: " + e.getMessage()));
         }
     }
+
+    /** Recomendación diaria: la IA lee la cartera y prioriza tiendas con justificación. */
+    @GetMapping("/recommend")
+    public ResponseEntity<?> recommend() {
+        if (!aiService.isAvailable()) {
+            return ResponseEntity.status(503).body(Map.of("error", "IA no disponible — configura GROQ_API_KEY"));
+        }
+        Long userId = sessionContext.getCurrentUserId();
+        List<Store> stores = storeRepository.findActiveByUser(userId);
+        if (stores.isEmpty()) {
+            return ResponseEntity.ok(Map.of("message", "Sin tiendas activas hoy.", "priorities", List.of()));
+        }
+        try {
+            Map<String, Object> result = aiService.generateRecommendation(stores);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error generando recomendación IA: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** Mini chat: el farmer pregunta sobre su cartera y la IA responde. */
+    @PostMapping("/chat")
+    public ResponseEntity<?> chat(@RequestBody ChatRequest request) {
+        if (!aiService.isAvailable()) {
+            return ResponseEntity.status(503).body(Map.of("error", "IA no disponible"));
+        }
+        Long userId = sessionContext.getCurrentUserId();
+        List<Store> stores = storeRepository.findActiveByUser(userId);
+        try {
+            String reply = aiService.chat(stores, request.history(), request.message());
+            return ResponseEntity.ok(Map.of("reply", reply));
+        } catch (Exception e) {
+            log.error("Error en chat IA: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    public record ChatMessage(String role, String content) {}
+    public record ChatRequest(List<ChatMessage> history, String message) {}
 
     public record GenerateMessageRequest(
             String storeName,

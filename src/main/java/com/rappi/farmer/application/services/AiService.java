@@ -1,11 +1,15 @@
 package com.rappi.farmer.application.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rappi.farmer.domain.entities.Store;
+import com.rappi.farmer.presentation.api.AiController;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -178,6 +182,124 @@ public class AiService {
                 """;
     }
 
+    // ── Recomendación diaria de cartera ──────────────────────────────────────
+
+    /**
+     * Lee la cartera del farmer y devuelve un mensaje motivacional + lista priorizada de tiendas
+     * con justificación para cada una. Formato de respuesta: JSON con "message" y "priorities".
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> generateRecommendation(List<Store> stores) {
+        String context = buildStoreContext(stores, 60);
+
+        String systemPrompt = """
+                Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
+                Analizas la cartera de restaurantes y priorizas las acciones del día.
+                Respondes SIEMPRE en JSON válido, sin texto adicional, sin markdown, sin comillas extra.
+                """;
+
+        String userPrompt = """
+                Analiza esta cartera de restaurantes y devuelve un JSON con exactamente esta estructura:
+                {
+                  "message": "Mensaje motivacional y estratégico de 2-3 oraciones para el AM. Menciona cuántas tiendas necesitan atención urgente y por qué.",
+                  "priorities": [
+                    {
+                      "storeCode": "PE...",
+                      "storeName": "Nombre",
+                      "priority": "ALTA|MEDIA|BAJA",
+                      "reason": "Por qué es prioridad (1 frase corta)",
+                      "action": "Acción concreta a tomar hoy (1 frase)"
+                    }
+                  ]
+                }
+
+                Reglas de priorización:
+                - ALTA: sin órdenes L4W=0, churn activo, AVA < 30%, día 7 de onboarding sin activación
+                - MEDIA: AVA entre 30-60%, días 8-14 sin seguimiento, sin login reciente
+                - BAJA: tiendas saludables que solo necesitan check-in
+
+                Devuelve máximo 25 tiendas en "priorities", las más críticas primero.
+                Cartera actual:
+                """ + context;
+
+        String raw = callGroq(systemPrompt, userPrompt, 0.4, 2000);
+
+        try {
+            // Limpiar posible markdown code block
+            String json = raw.trim();
+            if (json.startsWith("```")) {
+                json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
+            }
+            return new ObjectMapper().readValue(json, Map.class);
+        } catch (Exception e) {
+            log.warn("No se pudo parsear JSON de IA, devolviendo raw: {}", e.getMessage());
+            return Map.of("message", raw, "priorities", List.of());
+        }
+    }
+
+    // ── Mini chat ─────────────────────────────────────────────────────────────
+
+    /**
+     * Chat conversacional sobre la cartera. Mantiene historial de la sesión.
+     */
+    public String chat(List<Store> stores, List<AiController.ChatMessage> history, String userMessage) {
+        String context = buildStoreContext(stores, 50);
+
+        String systemPrompt = """
+                Eres el asistente estratégico de un Account Manager de Rappi Colombia.
+                Tienes acceso a su cartera de restaurantes activa (se incluye abajo).
+                Respondes preguntas sobre tiendas, priorizaciones y estrategias del día.
+                Sé directo, usa datos reales de la cartera, máximo 300 palabras por respuesta.
+                Puedes usar listas o tablas simples cuando ayude a la claridad.
+                Contexto de la cartera:
+                """ + context;
+
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", systemPrompt));
+
+        if (history != null) {
+            for (AiController.ChatMessage m : history) {
+                messages.add(Map.of("role", m.role(), "content", m.content()));
+            }
+        }
+        messages.add(Map.of("role", "user", "content", userMessage));
+
+        return callGroqMessages(messages, 0.7, 600);
+    }
+
+    /** Construye un resumen comprimido de la cartera para mandar a la IA. */
+    private String buildStoreContext(List<Store> stores, int maxStores) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Total tiendas activas: ").append(stores.size()).append("\n\n");
+        sb.append("Código | Nombre | Canal | Aging | HO | AVA% | Estado | FollowUp30d\n");
+        sb.append("-------------------------------------------------------------------\n");
+
+        stores.stream()
+            .sorted((a, b) -> {
+                // Sin handoff primero, luego por AVA más baja
+                int hoA = Boolean.TRUE.equals(a.getHadHandoff()) ? 1 : 0;
+                int hoB = Boolean.TRUE.equals(b.getHadHandoff()) ? 1 : 0;
+                if (hoA != hoB) return Integer.compare(hoA, hoB);
+                double avaA = a.getConnectionPercentage() != null ? a.getConnectionPercentage().doubleValue() : 100;
+                double avaB = b.getConnectionPercentage() != null ? b.getConnectionPercentage().doubleValue() : 100;
+                return Double.compare(avaA, avaB);
+            })
+            .limit(maxStores)
+            .forEach(s -> {
+                sb.append(s.getStoreCode()).append(" | ")
+                  .append(s.getStoreName()).append(" | ")
+                  .append(s.getChannel() != null ? s.getChannel() : "-").append(" | ")
+                  .append(s.getAging() != null ? s.getAging() + "d" : "-").append(" | ")
+                  .append(Boolean.TRUE.equals(s.getHadHandoff()) ? "SI" : "NO").append(" | ")
+                  .append(s.getConnectionPercentage() != null
+                      ? s.getConnectionPercentage().toPlainString() + "%" : "-").append(" | ")
+                  .append(s.getCurrentStatus() != null ? s.getCurrentStatus() : "-").append(" | ")
+                  .append(s.getFollowUpLast30d() != null ? s.getFollowUpLast30d() : "-").append("\n");
+            });
+
+        return sb.toString();
+    }
+
     // ── Resumen diario ────────────────────────────────────────────────────────
 
     public String generateDailySummary(int efectivas, int noContacto, int whatsappEnviados,
@@ -203,6 +325,31 @@ public class AiService {
     }
 
     // ── HTTP a Groq ───────────────────────────────────────────────────────────
+
+    private String callGroqMessages(List<Map<String, String>> messages, double temperature, int maxTokens) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("IA no disponible: configura GROQ_API_KEY");
+        }
+        Map<String, Object> body = Map.of(
+                "model", MODEL, "temperature", temperature,
+                "max_tokens", maxTokens, "messages", messages);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    GROQ_URL, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
+            var choices = (List<?>) response.getBody().get("choices");
+            var message = (Map<?, ?>) ((Map<?, ?>) choices.get(0)).get("message");
+            return ((String) message.get("content")).trim();
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("Error Groq API {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("Error IA " + e.getStatusCode());
+        } catch (Exception e) {
+            log.error("Error inesperado llamando Groq: {}", e.getMessage());
+            throw new RuntimeException("Error IA: " + e.getMessage());
+        }
+    }
 
     private String callGroq(String systemPrompt, String userPrompt, double temperature, int maxTokens) {
         if (apiKey == null || apiKey.isBlank()) {

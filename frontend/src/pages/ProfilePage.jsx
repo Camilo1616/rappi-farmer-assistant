@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import api from '../services/api'
 import { getProfile, updateNickname, uploadAvatar, getFarmers, promote, demote, assignCountry, removeCountry,
          getPerformance, changePassword, getNotes, createNote, updateNote, deleteNote,
          getCalendarStatus, connectCalendar, disconnectCalendar, syncCalendar } from '../services/profileService'
@@ -38,6 +39,15 @@ export default function ProfilePage() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
   const avatarRef = useRef()
 
+  // ── IA ────────────────────────────────────────────────────────────────────
+  const [aiRec,        setAiRec]        = useState(null)   // { message, priorities[] }
+  const [aiLoading,    setAiLoading]    = useState(false)
+  const [aiError,      setAiError]      = useState(null)
+  const [chatHistory,  setChatHistory]  = useState([])     // [{role, content}]
+  const [chatInput,    setChatInput]    = useState('')
+  const [chatLoading,  setChatLoading]  = useState(false)
+  const chatEndRef = useRef(null)
+
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
@@ -71,6 +81,38 @@ export default function ProfilePage() {
     getNotes().then(r => setNotes(r.data)).catch(() => {})
     getCalendarStatus().then(r => setCalConnected(r.data.connected)).catch(() => {})
   }, [])
+
+  const loadAiRecommendation = useCallback(async () => {
+    setAiLoading(true); setAiError(null)
+    try {
+      const { data } = await api.get('/ai/recommend', { timeout: 30000 })
+      setAiRec(data)
+    } catch (e) {
+      setAiError(e.response?.data?.error || 'Error al cargar recomendación IA')
+    } finally { setAiLoading(false) }
+  }, [])
+
+  const sendChat = useCallback(async () => {
+    if (!chatInput.trim() || chatLoading) return
+    const userMsg = { role: 'user', content: chatInput.trim() }
+    const newHistory = [...chatHistory, userMsg]
+    setChatHistory(newHistory)
+    setChatInput('')
+    setChatLoading(true)
+    try {
+      const { data } = await api.post('/ai/chat', {
+        history: newHistory.slice(-8), // últimos 8 mensajes para no quemar tokens
+        message: userMsg.content
+      }, { timeout: 30000 })
+      setChatHistory(h => [...h, { role: 'assistant', content: data.reply }])
+    } catch (e) {
+      setChatHistory(h => [...h, { role: 'assistant', content: '⚠️ ' + (e.response?.data?.error || 'Error al responder') }])
+    } finally { setChatLoading(false) }
+  }, [chatInput, chatHistory, chatLoading])
+
+  useEffect(() => {
+    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
+  }, [chatHistory])
 
   const flash = (text, type = 'ok') => {
     setMsg({ text, type })
@@ -498,6 +540,170 @@ export default function ProfilePage() {
             disabled={pwdSaving || !pwdCurrent || !pwdNew || !pwdConfirm}>
             {pwdSaving ? 'Guardando...' : 'Actualizar contraseña'}
           </button>
+        </div>
+      </section>
+
+      {/* ── Asistente IA ── */}
+      <section className={styles.card}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+          <h2 className={styles.cardTitle} style={{ margin:0 }}>🤖 Asistente IA — Recomendados hoy</h2>
+          <button onClick={loadAiRecommendation} disabled={aiLoading} style={{
+            padding:'7px 16px', borderRadius:8, border:'none',
+            background: aiLoading ? 'var(--bg-input)' : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
+            color: aiLoading ? 'var(--text-secondary)' : '#fff',
+            fontWeight:700, fontSize:12, cursor: aiLoading ? 'default' : 'pointer'
+          }}>
+            {aiLoading ? '⏳ Analizando...' : aiRec ? '🔄 Actualizar' : '✨ Analizar mi cartera'}
+          </button>
+        </div>
+
+        {aiError && (
+          <div style={{ padding:'12px 16px', borderRadius:8, background:'rgba(239,68,68,0.08)',
+            color:'#EF4444', fontSize:13, marginBottom:12 }}>{aiError}</div>
+        )}
+
+        {!aiRec && !aiLoading && !aiError && (
+          <p style={{ color:'var(--text-secondary)', fontSize:13, textAlign:'center', padding:'24px 0' }}>
+            Haz clic en "Analizar mi cartera" para que la IA revise tus tiendas y te diga qué atacar hoy.
+          </p>
+        )}
+
+        {aiRec && (
+          <>
+            <div style={{
+              padding:'14px 18px', borderRadius:10,
+              background:'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(109,40,217,0.04))',
+              border:'1px solid rgba(124,58,237,0.18)',
+              color:'var(--text-primary)', fontSize:14, lineHeight:1.6, marginBottom:18
+            }}>
+              {aiRec.message}
+            </div>
+
+            {aiRec.priorities?.length > 0 && (
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+                  <thead>
+                    <tr style={{ borderBottom:'2px solid var(--border)' }}>
+                      {['Tienda','Canal','Prioridad','Por qué','Acción hoy'].map(h => (
+                        <th key={h} style={{ textAlign:'left', padding:'8px 10px',
+                          color:'var(--text-secondary)', fontWeight:700, fontSize:11,
+                          textTransform:'uppercase', letterSpacing:'0.4px', whiteSpace:'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiRec.priorities.map((p, i) => (
+                      <tr key={p.storeCode ?? i} style={{
+                        borderBottom:'1px solid var(--border)',
+                        background: i % 2 === 0 ? 'transparent' : 'var(--bg-input)'
+                      }}>
+                        <td style={{ padding:'9px 10px', fontWeight:600, color:'var(--text-primary)' }}>
+                          <div>{p.storeName}</div>
+                          <div style={{ fontSize:11, color:'var(--text-secondary)', fontWeight:400 }}>{p.storeCode}</div>
+                        </td>
+                        <td style={{ padding:'9px 10px', color:'var(--text-secondary)', fontSize:12 }}>
+                          {p.channel ?? '—'}
+                        </td>
+                        <td style={{ padding:'9px 10px' }}>
+                          <span style={{
+                            display:'inline-block', padding:'3px 10px', borderRadius:99,
+                            fontSize:11, fontWeight:700,
+                            background: p.priority === 'ALTA' ? 'rgba(239,68,68,0.12)' :
+                                        p.priority === 'MEDIA' ? 'rgba(249,115,22,0.12)' : 'rgba(34,197,94,0.12)',
+                            color: p.priority === 'ALTA' ? '#EF4444' :
+                                   p.priority === 'MEDIA' ? '#F97316' : '#22C55E'
+                          }}>{p.priority}</span>
+                        </td>
+                        <td style={{ padding:'9px 10px', color:'var(--text-secondary)', fontSize:12, maxWidth:220 }}>
+                          {p.reason}
+                        </td>
+                        <td style={{ padding:'9px 10px', color:'var(--text-primary)', fontSize:12, maxWidth:200 }}>
+                          {p.action}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* ── Mini chat con IA ── */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle} style={{ marginBottom:12 }}>💬 Chat con tu asistente</h2>
+        <p style={{ color:'var(--text-secondary)', fontSize:12, marginBottom:16, marginTop:0 }}>
+          Pregunta sobre tu cartera: "¿qué tiendas atacar hoy?", "tiendas sin AVA", "cuáles llevan más de 7 días sin gestión"...
+        </p>
+
+        <div style={{
+          height:340, overflowY:'auto', display:'flex', flexDirection:'column', gap:10,
+          padding:'12px 4px', marginBottom:12,
+          borderRadius:10, background:'var(--bg-input)', border:'1px solid var(--border)'
+        }}>
+          {chatHistory.length === 0 && (
+            <div style={{ textAlign:'center', color:'var(--text-secondary)', fontSize:13, margin:'auto' }}>
+              Empieza preguntando algo sobre tu cartera 👆
+            </div>
+          )}
+          {chatHistory.map((m, i) => (
+            <div key={i} style={{
+              display:'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+              padding:'0 10px'
+            }}>
+              <div style={{
+                maxWidth:'78%', padding:'10px 14px', borderRadius:12,
+                background: m.role === 'user'
+                  ? 'linear-gradient(135deg,#7C3AED,#6D28D9)'
+                  : 'var(--bg-card)',
+                color: m.role === 'user' ? '#fff' : 'var(--text-primary)',
+                fontSize:13, lineHeight:1.6,
+                border: m.role === 'assistant' ? '1px solid var(--border)' : 'none',
+                whiteSpace:'pre-wrap'
+              }}>
+                {m.content}
+              </div>
+            </div>
+          ))}
+          {chatLoading && (
+            <div style={{ padding:'0 10px' }}>
+              <div style={{
+                display:'inline-block', padding:'10px 16px', borderRadius:12,
+                background:'var(--bg-card)', border:'1px solid var(--border)',
+                color:'var(--text-secondary)', fontSize:13
+              }}>⏳ Pensando...</div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        <div style={{ display:'flex', gap:8 }}>
+          <input
+            value={chatInput}
+            onChange={e => setChatInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChat()}
+            placeholder="Escribe tu pregunta..."
+            style={{
+              flex:1, padding:'10px 14px', borderRadius:8,
+              border:'1.5px solid var(--border)',
+              background:'var(--bg-input)', color:'var(--text-primary)',
+              fontSize:13, outline:'none'
+            }}
+          />
+          <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} style={{
+            padding:'10px 20px', borderRadius:8, border:'none',
+            background: chatLoading || !chatInput.trim()
+              ? 'var(--bg-input)' : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
+            color: chatLoading || !chatInput.trim() ? 'var(--text-secondary)' : '#fff',
+            fontWeight:700, fontSize:13, cursor: chatLoading || !chatInput.trim() ? 'default' : 'pointer'
+          }}>Enviar</button>
+          {chatHistory.length > 0 && (
+            <button onClick={() => setChatHistory([])} style={{
+              padding:'10px 14px', borderRadius:8, border:'1.5px solid var(--border)',
+              background:'transparent', color:'var(--text-secondary)', fontSize:12, cursor:'pointer'
+            }}>Limpiar</button>
+          )}
         </div>
       </section>
 
