@@ -60,15 +60,15 @@ const NAV_ITEMS = [
 ]
 
 const SECTIONS = [
-  { key: 'recommended',        title: 'Recomendado hoy',      icon: '⭐', color: '#FF441F' },
-  { key: 'onboardingCritical', title: 'Onboarding Crítico',   icon: '🚨', color: '#EF4444' },
-  { key: 'aliados',            title: 'Aliados AVA 8–14',     icon: '🔗', color: '#F97316' },
-  { key: 'churnRisk',          title: 'Riesgo Churn',         icon: '⚠️', color: '#EF4444' },
-  { key: 'ava',                title: 'AVA Bajando',          icon: '📉', color: '#F59E0B' },
-  { key: 'healthy',            title: 'Saludables',           icon: '✅', color: '#22C55E' },
-  { key: 'selfOnboarding',     title: 'Self-Onboarding',      icon: '🛒', color: '#8B5CF6' },
-  { key: 'insideSales',        title: 'Gestionar IS',         icon: '📋', color: '#0EA5E9' },
-  { key: 'recontactosW2',      title: 'Recontactos W2',       icon: '🔁', color: '#A855F7' },
+  { key: 'recommended',        title: 'Recomendado hoy',    short: 'Recomendado', icon: '⭐', color: '#FF441F' },
+  { key: 'onboardingCritical', title: 'Onboarding Crítico', short: 'Onboarding',  icon: '🚨', color: '#EF4444' },
+  { key: 'aliados',            title: 'Aliados AVA 8–14',   short: 'Aliados',     icon: '🔗', color: '#F97316' },
+  { key: 'churnRisk',          title: 'Riesgo Churn',       short: 'Churn',       icon: '⚠️', color: '#EF4444' },
+  { key: 'ava',                title: 'AVA Bajando',        short: 'AVA',         icon: '📉', color: '#F59E0B' },
+  { key: 'healthy',            title: 'Saludables',         short: 'Saludables',  icon: '✅', color: '#22C55E' },
+  { key: 'selfOnboarding',     title: 'Self-Onboarding',    short: 'Self',        icon: '🛒', color: '#8B5CF6' },
+  { key: 'insideSales',        title: 'Gestionar IS',       short: 'IS',          icon: '📋', color: '#0EA5E9' },
+  { key: 'recontactosW2',      title: 'Recontactos W2',     short: 'W2',          icon: '🔁', color: '#A855F7' },
 ]
 
 const STATUS_ORDER = ['SIN_LEER','LEIDA','EN_PROCESO','COMPLETADO']
@@ -653,23 +653,26 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
         <MetricCard label="Saludables"        value={healthyCount} color="green"  icon="✅" trend="meta" />
       </div>
 
-      {/* Tabs horizontales */}
-      <div className={styles.tabBar}>
+      {/* Tabs — grid 5×2 compacto para caber en portátiles */}
+      <div className={styles.tabGrid}>
         {SECTIONS.map(s => {
           const count = dash?.[s.key]?.length ?? 0
           const isActive = activeTab === s.key
           return (
             <button
               key={s.key}
-              className={`${styles.tab} ${isActive ? styles.tabActive : ''}`}
-              style={isActive ? { borderBottomColor: s.color, color: s.color } : {}}
+              className={`${styles.tabCard} ${isActive ? styles.tabCardActive : ''}`}
+              style={isActive ? { borderColor: s.color + '88', background: s.color + '12' } : {}}
+              title={s.title}
               onClick={() => { setActiveTab(s.key); setChurnFilter('Todos'); setAvaFilter('Todos') }}
             >
-              <span>{s.icon}</span>
-              <span>{s.title}</span>
+              <span className={styles.tabCardIcon}>{s.icon}</span>
+              <span className={styles.tabCardLabel} style={isActive ? { color: s.color } : {}}>
+                {s.short}
+              </span>
               {count > 0 && (
-                <span className={styles.tabCount}
-                  style={isActive ? { background: s.color + '22', color: s.color } : {}}>
+                <span className={styles.tabCardCount}
+                  style={isActive ? { background: s.color + '30', color: s.color } : {}}>
                   {count}
                 </span>
               )}
