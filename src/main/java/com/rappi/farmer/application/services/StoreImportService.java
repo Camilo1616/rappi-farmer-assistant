@@ -180,7 +180,8 @@ public class StoreImportService {
                 true, row.getConnectionPercentage(), row.getCurrentStatus(),
                 row.getHadHandoff(), handoffActivatedAt, farmerId, row.getAging(),
                 row.getAgingStage(), row.getLastLoginDate(),
-                row.getGestionar(), row.getUploadDate(), null, row.getCredentialsDate());
+                row.getGestionar(), row.getUploadDate(), null, row.getCredentialsDate(),
+                row.getLastFollowUp(), row.getFollowUpLast30d());
         return s;
     }
 
