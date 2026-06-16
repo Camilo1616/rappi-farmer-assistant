@@ -335,12 +335,13 @@ public class AiService {
         List<Store> resto    = new ArrayList<>();
 
         for (Store s : stores) {
-            int aging = s.getAging() != null ? s.getAging() : 999;
+            int aging = resolveAging(s);
             double ava = s.getConnectionPercentage() != null ? s.getConnectionPercentage().doubleValue() : 100;
             String status = s.getCurrentStatus() != null ? s.getCurrentStatus().toLowerCase() : "";
             String gestionar = s.getGestionar() != null ? s.getGestionar().toUpperCase() : "";
 
-            if (gestionar.contains("IS") && aging <= 14) { isStores.add(s); continue; }
+            boolean isInStore = gestionar.equals("IS") || gestionar.contains("IN STORE") || gestionar.contains("INSTORE");
+            if (isInStore && aging <= 14) { isStores.add(s); continue; }
             if (aging >= 1  && aging <= 7)                { seg17.add(s);   continue; }
             if (aging >= 8  && aging <= 14)               { seg814.add(s);  continue; }
             if (status.contains("churn"))                 { churn.add(s);   continue; }
@@ -393,7 +394,7 @@ public class AiService {
                 sb.append(s.getStoreCode()).append(" | ")
                   .append(s.getStoreName() != null ? s.getStoreName() : "-").append(" | ")
                   .append(s.getChannel() != null ? s.getChannel() : "-").append(" | ")
-                  .append(s.getAging() != null ? s.getAging() + "d" : "-").append(" | ")
+                  .append(resolveAging(s) < 999 ? resolveAging(s) + "d" : "-").append(" | ")
                   .append(Boolean.TRUE.equals(s.getHadHandoff()) ? "HO=SI" : "HO=NO").append(" | ")
                   .append(s.getHandoffActivatedAt() != null ? s.getHandoffActivatedAt() : "sin-HO").append(" | ")
                   .append(s.getConnectionPercentage() != null
@@ -413,15 +414,24 @@ public class AiService {
         recCache.set(null);
     }
 
+    /** Calcula el aging real: usa el campo stored; si es null lo deriva de onboarding_date. */
+    private int resolveAging(Store s) {
+        if (s.getAging() != null) return s.getAging();
+        if (s.getOnboardingDate() != null)
+            return (int) java.time.temporal.ChronoUnit.DAYS.between(s.getOnboardingDate(), LocalDate.now());
+        return 999;
+    }
+
     /** Puntaje de urgencia descendente por ventana crítica. */
     private int urgencyScore(Store s) {
-        int aging = s.getAging() != null ? s.getAging() : 999;
+        int aging = resolveAging(s);
         boolean noHo = !Boolean.TRUE.equals(s.getHadHandoff());
         double ava = s.getConnectionPercentage() != null ? s.getConnectionPercentage().doubleValue() : 100;
         String status = s.getCurrentStatus() != null ? s.getCurrentStatus().toLowerCase() : "";
         String gestionar = s.getGestionar() != null ? s.getGestionar().toUpperCase() : "";
 
-        if (gestionar.contains("IS") && aging <= 14)    return 110; // IS reciente = máxima urgencia
+        boolean isInStore = gestionar.equals("IS") || gestionar.contains("IN STORE") || gestionar.contains("INSTORE");
+        if (isInStore && aging <= 14)                   return 110; // IS reciente = máxima urgencia
         if (aging <= 7  && noHo)                        return 100; // onboarding 1-7 sin HO
         if (aging <= 7  && !noHo)                       return 95;  // onboarding 1-7 con HO (check AVA)
         if (aging >= 8  && aging <= 14 && noHo)         return 90;  // ventana aliados sin HO
