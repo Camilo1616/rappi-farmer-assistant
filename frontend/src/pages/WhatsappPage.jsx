@@ -455,24 +455,36 @@ function StepConnection({ status, qr, onRefresh, onStart, loading, starting }) {
 
 
 /* ── Mensaje ── */
-function StepMessage({ templates, template, onTemplate, message, onChange, selectedStores = [], onAiMessages }) {
+function StepMessage({ message, onChange, selectedStores = [], onAiMessages, onModeChange }) {
+  const [mode,       setMode]       = useState('manual')  // 'manual' | 'ai'
   const [aiLoading,  setAiLoading]  = useState(false)
-  const [aiProgress, setAiProgress] = useState(0)   // cuántas tiendas ya procesó
+  const [aiProgress, setAiProgress] = useState(0)
   const [aiError,    setAiError]    = useState(null)
   const [aiDone,     setAiDone]     = useState(false)
+  const textareaRef = useRef(null)
 
   const preview = (message || '').replace(/\{store_name\}/g, 'Restaurante Ejemplo')
 
-  const buildSituation = (s) => {
-    const parts = []
-    if (s.aging != null)              parts.push(`Día ${s.aging} de onboarding`)
-    if (s.agingStage)                 parts.push(`etapa: ${s.agingStage}`)
-    if (s.currentStatus)              parts.push(`estado: ${s.currentStatus}`)
-    if (s.connectionPercentage != null) parts.push(`conexión Rappi Aliados: ${s.connectionPercentage}%`)
-    if (s.lastLoginDate)              parts.push(`último acceso: ${s.lastLoginDate}`)
-    if (s.hadHandoff != null)         parts.push(s.hadHandoff ? 'hizo handoff' : 'sin handoff')
-    if (s.channel)                    parts.push(`canal: ${s.channel}`)
-    return parts.join(', ') || 'seguimiento general'
+  const handleModeChange = (m) => {
+    setMode(m)
+    setAiDone(false)
+    setAiError(null)
+    onModeChange(m)
+    if (m === 'ai') onAiMessages([])
+  }
+
+  const insertVariable = () => {
+    const el = textareaRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end   = el.selectionEnd
+    const val   = message || ''
+    const newVal = val.slice(0, start) + '{store_name}' + val.slice(end)
+    onChange(newVal)
+    setTimeout(() => {
+      el.focus()
+      el.setSelectionRange(start + 12, start + 12)
+    }, 0)
   }
 
   const handleAiGenerate = async () => {
@@ -498,7 +510,7 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
           store.avaLabel     || null,
           store.connectionPercentage != null ? Number(store.connectionPercentage) : null,
           store.currentStatus || null,
-          message || ''
+          ''
         )
         results.push({ storeId: store.id, storeName: store.storeName, message: r.data.message })
         setAiProgress(results.length)
@@ -518,40 +530,75 @@ function StepMessage({ templates, template, onTemplate, message, onChange, selec
         <span className={styles.stepNum}>3</span>
         <div>
           <div className={styles.stepTitle}>Mensaje</div>
-          <div className={styles.stepSub}>Usa <code>{'{store_name}'}</code> como variable</div>
+          <div className={styles.stepSub}>Elige cómo quieres crear el mensaje</div>
         </div>
+      </div>
+
+      {/* Selector de modo */}
+      <div className={styles.modeToggle}>
         <button
-          className={styles.aiBtnSmall}
-          onClick={handleAiGenerate}
-          disabled={aiLoading || !selectedStores.length}
-          title={selectedStores.length ? `Generar IA para ${selectedStores.length} tiendas` : 'Selecciona tiendas primero'}
+          className={`${styles.modeBtn} ${mode === 'manual' ? styles.modeBtnActive : ''}`}
+          onClick={() => handleModeChange('manual')}
         >
-          {aiLoading
-            ? `✨ Generando ${aiProgress}/${selectedStores.length}...`
-            : selectedStores.length > 0
-              ? `✨ IA para ${selectedStores.length} tienda${selectedStores.length > 1 ? 's' : ''}`
-              : '✨ IA personalizada'}
+          ✏️ Escribir mensaje
+        </button>
+        <button
+          className={`${styles.modeBtn} ${mode === 'ai' ? styles.modeBtnActive : ''}`}
+          onClick={() => handleModeChange('ai')}
+          disabled={!selectedStores.length}
+          title={!selectedStores.length ? 'Selecciona tiendas primero' : ''}
+        >
+          ✨ Generar con IA
         </button>
       </div>
-      {aiError && <div className={styles.aiError}>{aiError}</div>}
-      {aiDone && <div className={styles.aiSuccess}>Mensajes generados — revisa el panel de abajo antes de enviar</div>}
-      {templates.length > 0 && (
-        <div className={styles.templateGrid}>
-          {templates.map(t => (
-            <button key={t.id}
-              className={`${styles.templateBtn} ${template === t.id ? styles.templateBtnSel : ''}`}
-              onClick={() => onTemplate(t)}>{t.name}</button>
-          ))}
+
+      {/* Modo manual */}
+      {mode === 'manual' && (
+        <div className={styles.messageWrap}>
+          <div className={styles.varHint}>
+            Variable opcional:
+            <button className={styles.varChip} onClick={insertVariable} title="Inserta el nombre de la tienda">
+              {'{store_name}'}
+            </button>
+            <span className={styles.varHintSub}>— se reemplaza por el nombre real de cada tienda</span>
+          </div>
+          <textarea
+            ref={textareaRef}
+            className={styles.textarea}
+            rows={6}
+            value={message}
+            onChange={e => onChange(e.target.value)}
+            placeholder="Escribe tu mensaje aquí..."
+          />
+          {message && (
+            <div className={styles.previewBox}>
+              <div className={styles.previewLabel}>Vista previa</div>
+              <div className={styles.previewBubble}>{preview}</div>
+            </div>
+          )}
         </div>
       )}
-      <div className={styles.messageWrap}>
-        <textarea className={styles.textarea} rows={6} value={message}
-          onChange={e => onChange(e.target.value)} placeholder="Escribe tu mensaje base..." />
-        <div className={styles.previewBox}>
-          <div className={styles.previewLabel}>Vista previa</div>
-          <div className={styles.previewBubble}>{preview || '...'}</div>
+
+      {/* Modo IA */}
+      {mode === 'ai' && (
+        <div className={styles.aiPanel}>
+          <p className={styles.aiDesc}>
+            La IA genera un mensaje personalizado para cada tienda según su situación actual
+            (días de onboarding, AVA, estado de churn, etc.)
+          </p>
+          {aiError && <div className={styles.aiError}>{aiError}</div>}
+          {aiDone && <div className={styles.aiSuccess}>✅ {aiProgress} mensajes generados — revisa el panel de abajo antes de enviar</div>}
+          <button
+            className={styles.aiBtnBig}
+            onClick={handleAiGenerate}
+            disabled={aiLoading || !selectedStores.length}
+          >
+            {aiLoading
+              ? `⏳ Generando ${aiProgress}/${selectedStores.length}...`
+              : `✨ Generar IA para ${selectedStores.length} tienda${selectedStores.length !== 1 ? 's' : ''}`}
+          </button>
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -752,13 +799,13 @@ export default function WhatsappPage() {
             />
           </div>
 
-          <StepMessage templates={templates} template={selTemplate}
-            onTemplate={t => { setSelTemplate(t.id); setMessage(t.content) }}
+          <StepMessage
             message={message} onChange={setMessage}
             selectedStores={Object.values(dashStores).flat()
               .filter(s => selected.has(s.id))
               .filter((s, i, arr) => arr.findIndex(x => x.id === s.id) === i)}
-            onAiMessages={msgs => { setAiMessages(msgs) }} />
+            onAiMessages={msgs => setAiMessages(msgs)}
+            onModeChange={m => { if (m === 'manual') setAiMessages([]) }} />
 
           {/* ── Panel revisión mensajes IA ── */}
           {aiMessages.length > 0 && (
@@ -826,8 +873,8 @@ export default function WhatsappPage() {
             </div>
             <div className={styles.summaryRow}>
               <span>Mensaje</span>
-              <strong style={{ color: message.trim() ? '#22C55E' : '#6B7280' }}>
-                {message.trim() ? 'Listo' : 'Pendiente'}
+              <strong style={{ color: (message.trim() || aiMessages.length > 0) ? '#22C55E' : '#6B7280' }}>
+                {aiMessages.length > 0 ? `IA (${aiMessages.length})` : message.trim() ? 'Listo' : 'Pendiente'}
               </strong>
             </div>
             <div className={styles.summaryRow}>
@@ -835,7 +882,7 @@ export default function WhatsappPage() {
               <strong>{selected.size > 0 ? `~${Math.round(selected.size * 17.5 / 60)} min` : '—'}</strong>
             </div>
             {!status.connected && <div className={styles.warnBox}>⚠️ Conecta WhatsApp Web primero</div>}
-            {!message.trim() && !aiMessages.length && <div className={styles.warnBox}>Escribe el mensaje a enviar</div>}
+            {!message.trim() && !aiMessages.length && <div className={styles.warnBox}>Crea el mensaje a enviar</div>}
             {aiMessages.length > 0 ? (
               <button className={styles.btnSendAi} onClick={handleSendAi} disabled={!status.connected || sending}>
                 {sending
