@@ -83,7 +83,14 @@
       "Bash(Select-Object FullName)",
       "Skill(claude-api)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\src\" -Recurse -File | Where-Object {$_.Extension -in @\\(\".java\", \".js\", \".ts\", \".jsx\", \".tsx\"\\)} | Select-Object -First 30 | Select-Object FullName)",
-      "Bash(grep -v \"//\\\\|import\")"
+      "Bash(grep -v \"//\\\\|import\")",
+      "Bash(cat Dockerfile)",
+      "Bash(cat railway.toml)",
+      "Bash(grep -n \"ddl-auto\\\\|follow_up_last_30d\" src/main/resources/application*.properties)",
+      "Bash(grep -rn \"ddl-auto\\\\|follow_up_last_30d\" src/main/resources/)",
+      "Bash(grep -v \"//\\\\|import\\\\|export\")",
+      "Bash(./mvnw -DskipTests clean dependency:list install -Pproduction -q)",
+      "Bash(./mvnw -DskipTests clean install -Pproduction -q)"
     ]
   }
 }

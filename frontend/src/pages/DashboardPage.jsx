@@ -68,7 +68,6 @@ const SECTIONS = [
   { key: 'healthy',            title: 'Saludables',         short: 'Saludables',  icon: '✅', color: '#22C55E' },
   { key: 'selfOnboarding',     title: 'Self-Onboarding',    short: 'Self',        icon: '🛒', color: '#8B5CF6' },
   { key: 'insideSales',        title: 'Gestionar IS',       short: 'IS',          icon: '📋', color: '#0EA5E9' },
-  { key: 'recontactosW2',      title: 'Recontactos W2',     short: 'W2',          icon: '🔁', color: '#A855F7' },
 ]
 
 const STATUS_ORDER = ['SIN_LEER','LEIDA','EN_PROCESO','COMPLETADO']
