@@ -376,7 +376,7 @@ export default function AiAssistant() {
     setChatInput('')
     setChatLoading(true)
     try {
-      const { data } = await api.post('/ai/chat', { history: newHistory.slice(-4), message: userMsg.content }, { timeout: 30000 })
+      const { data } = await api.post('/ai/chat', { history: newHistory.slice(-2), message: userMsg.content }, { timeout: 30000 })
       setChatHistory(h => [...h, { role: 'assistant', content: data.reply }])
     } catch (e) {
       const msg = e.response?.status === 429
@@ -386,7 +386,7 @@ export default function AiAssistant() {
     } finally {
       setChatLoading(false)
       setChatCooldown(true)
-      cooldownRef.current = setTimeout(() => setChatCooldown(false), 3500)
+      cooldownRef.current = setTimeout(() => setChatCooldown(false), 8000)
     }
   }, [chatInput, chatHistory, chatLoading])
 

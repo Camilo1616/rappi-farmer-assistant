@@ -1,5 +1,6 @@
 package com.rappi.farmer.infrastructure.config;
 
+import com.rappi.farmer.domain.repositories.UserRepository;
 import com.rappi.farmer.infrastructure.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +11,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -62,6 +65,21 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Evita que Spring Boot auto-genere un UserDetailsService en memoria (y su warning en logs).
+     * El JwtAuthFilter no lo usa — este bean solo suprime el auto-configure de Spring Security.
+     */
+    @Bean
+    public UserDetailsService userDetailsService(UserRepository userRepository) {
+        return email -> userRepository.findByEmail(email)
+                .map(u -> org.springframework.security.core.userdetails.User
+                        .withUsername(u.getEmail())
+                        .password(u.getPassword() != null ? u.getPassword() : "")
+                        .roles(u.getRole() != null ? u.getRole() : "FARMER_MASS")
+                        .build())
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
     }
 
     @Bean

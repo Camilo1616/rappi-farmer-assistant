@@ -316,7 +316,7 @@ public class AiService {
         }
         messages.add(Map.of("role", "user", "content", userMessage));
 
-        return callGroqMessages(messages, 0.5, 900);
+        return callGroqMessages(messages, 0.5, 600);
     }
 
     /**
@@ -355,11 +355,11 @@ public class AiService {
                 stores.size(), isStores.size(), seg17.size(), seg814.size(),
                 churn.size(), avaLow.size(), resto.size()));
 
-        appendChatSegment(sb, "IS — VISITA HOY", isStores, today, 5);
-        appendChatSegment(sb, "ONBOARDING 1-7 DÍAS", seg17, today, 6);
-        appendChatSegment(sb, "ONBOARDING 8-14 DÍAS", seg814, today, 6);
-        appendChatSegment(sb, "CHURN ACTIVO", churn, today, 8);
-        appendChatSegment(sb, "AVA < 60%", avaLow, today, 6);
+        appendChatSegment(sb, "IS", isStores, today, 3);
+        appendChatSegment(sb, "1-7d", seg17, today, 4);
+        appendChatSegment(sb, "8-14d", seg814, today, 4);
+        appendChatSegment(sb, "Churn", churn, today, 5);
+        appendChatSegment(sb, "AVA<60%", avaLow, today, 4);
 
         if (!resto.isEmpty()) {
             sb.append("\n[ESTABLES: ").append(resto.size()).append(" tiendas — sin urgencia inmediata]\n");
