@@ -293,207 +293,81 @@ const TIPS = [
   'Soy tu copiloto 🚀',
 ]
 
-function RobotSVG({ hovered, open, blink, walkPhase = 0 }) {
-  const eyeRy      = blink ? 0.5 : 6.5
-  const eyeColor   = hovered ? '#F59E0B' : '#C4B5FD'
-  const antennaClr = hovered ? '#F59E0B' : '#A78BFA'
-
-  const SKIN   = '#FBBF8C'
-  const SKIN_S = '#F59E5A'
-  const SHIRT  = hovered ? '#7C3AED' : '#6D28D9'
-  const SHIRT_S= hovered ? '#5B21B6' : '#4C1D95'
-  const PANTS  = '#1E3A5F'
-  const PANTS_S= '#152B47'
-  const SHOE   = '#111827'
-  const SHOE_H = '#374151'
-
-  // ── Ciclo de marcha (vista frontal) ──────────────────────────────
-  // liftL: qué tan levantada está la pierna izquierda (0=abajo, 1=arriba)
-  // liftR: opuesto
-  const liftL = Math.max(0,  Math.sin(walkPhase))  // 0–1
-  const liftR = Math.max(0, -Math.sin(walkPhase))  // 0–1
-
-  // Pierna izq: rodilla sube y se abre, pie sube y toca el suelo
-  const lKX = 37 + liftL * 4;   const lKY = 127 - liftL * 14
-  const lFX = 35 + liftL * 6;   const lFY = 141 - liftL * 20
-  // Pierna der: opuesta
-  const rKX = 63 - liftR * 4;   const rKY = 127 - liftR * 14
-  const rFX = 65 - liftR * 6;   const rFY = 141 - liftR * 20
-
-  // Leve rebote del cuerpo (sube en cada paso)
-  const bodyBob = -(liftL + liftR) * 2.5
-
-  // ── Brazos ────────────────────────────────────────────────────────
-  let lEbX, lEbY, lHdX, lHdY, rEbX, rEbY, rHdX, rHdY
-  if (hovered) {
-    // Arriba celebrando
-    lEbX=8;  lEbY=68; lHdX=5;  lHdY=50
-    rEbX=92; rEbY=68; rHdX=95; rHdY=50
-  } else if (open) {
-    // Wave
-    lEbX=6;  lEbY=78; lHdX=2;  lHdY=62
-    rEbX=94; rEbY=78; rHdX=98; rHdY=62
-  } else {
-    // Brazo opuesto a pierna: izq baja cuando pierna izq sube
-    const aL = liftL * 12   // cuánto sube el brazo der (y baja el izq)
-    const aR = liftR * 12
-    lEbX = 16;  lEbY = 90 + aR * 0.3
-    lHdX = 11;  lHdY = 106 + aR - aL * 0.5
-    rEbX = 84;  rEbY = 90 + aL * 0.3
-    rHdX = 89;  rHdY = 106 + aL - aR * 0.5
-  }
+function RobotSVG({ hovered, open, blink }) {
+  const eyeRy = blink ? 0.5 : 6.5
+  const SKIN  = '#FBBF8C'
+  const SKIN_D= '#F59E5A'
+  const HAIR  = '#2C1A0E'
+  const EYE   = '#1A0A00'
 
   const mouthD = hovered
-    ? 'M36 52 Q50 63 64 52'
-    : open ? 'M36 52 Q50 58 64 52'
-    : 'M38 52 Q50 57 62 52'
+    ? 'M33 80 Q50 94 67 80'
+    : open
+    ? 'M35 80 Q50 89 65 80'
+    : 'M37 80 Q50 87 63 80'
 
   return (
-    <svg width="100" height="148" viewBox={`0 ${-bodyBob} 100 148`} fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={hovered ? '#8B5CF6' : '#7C3AED'}/>
-          <stop offset="100%" stopColor="#4C1D95"/>
-        </linearGradient>
-        <linearGradient id="shirtG" x1="50" y1="68" x2="50" y2="114" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={SHIRT}/>
-          <stop offset="100%" stopColor={SHIRT_S}/>
-        </linearGradient>
-        <linearGradient id="pantsG" x1="50" y1="112" x2="50" y2="140" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={PANTS}/>
-          <stop offset="100%" stopColor={PANTS_S}/>
-        </linearGradient>
-        <filter id="glow2">
-          <feGaussianBlur stdDeviation="1.8" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
+    <svg width="84" height="98" viewBox="0 0 100 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Sombra */}
+      <ellipse cx="50" cy="109" rx="28" ry="3" fill="#0002"/>
 
-      {/* Sombra piso */}
-      <ellipse cx="50" cy="146" rx="22" ry="3.5" fill="#0003"/>
+      {/* Cabello trasero */}
+      <ellipse cx="50" cy="36" rx="37" ry="30" fill={HAIR}/>
 
-      {/* ── ANTENA ── */}
-      <line x1="50" y1="11" x2="50" y2="3" stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="50" cy="2.5" r="3.5" fill={antennaClr} filter="url(#glow2)" style={{transition:'fill 0.2s'}}>
-        {hovered && <animate attributeName="r" values="3.5;5.2;3.5" dur="0.45s" repeatCount="indefinite"/>}
-      </circle>
+      {/* Cara */}
+      <ellipse cx="50" cy="60" rx="36" ry="44" fill={SKIN}/>
 
-      {/* ── CABEZA ROBOT ── */}
-      <rect x="15" y="11" width="70" height="52" rx="14" fill="url(#hg2)" stroke="#A78BFA" strokeWidth="1.5"/>
-      <rect x="19" y="15" width="30" height="13" rx="6" fill="#fff" fillOpacity="0.08"/>
+      {/* Cabello frente */}
+      <path d="M14 40 Q15 14 50 11 Q85 14 86 40 Q80 22 50 18 Q20 22 14 40Z" fill={HAIR}/>
+
       {/* Oreja izq */}
-      <rect x="7"  y="23" width="9" height="16" rx="4.5" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1"/>
-      <rect x="9"  y="27" width="5" height="8"  rx="2.5" fill="#A78BFA" fillOpacity="0.4"/>
+      <ellipse cx="14" cy="58" rx="7" ry="11" fill={SKIN} stroke={SKIN_D} strokeWidth="1"/>
+      <ellipse cx="14" cy="58" rx="4" ry="7" fill={SKIN_D} fillOpacity="0.35"/>
       {/* Oreja der */}
-      <rect x="84" y="23" width="9" height="16" rx="4.5" fill="#5B21B6" stroke="#A78BFA" strokeWidth="1"/>
-      <rect x="86" y="27" width="5" height="8"  rx="2.5" fill="#A78BFA" fillOpacity="0.4"/>
+      <ellipse cx="86" cy="58" rx="7" ry="11" fill={SKIN} stroke={SKIN_D} strokeWidth="1"/>
+      <ellipse cx="86" cy="58" rx="4" ry="7" fill={SKIN_D} fillOpacity="0.35"/>
+
+      {/* Cejas */}
+      <path d="M26 43 Q36 37 46 43" stroke={HAIR} strokeWidth="3.5" strokeLinecap="round" fill="none"
+        style={{ transition: 'transform 0.2s' }} transform={hovered ? 'translate(0,-2)' : undefined}/>
+      <path d="M54 43 Q64 37 74 43" stroke={HAIR} strokeWidth="3.5" strokeLinecap="round" fill="none"
+        style={{ transition: 'transform 0.2s' }} transform={hovered ? 'translate(0,-2)' : undefined}/>
+
       {/* Ojo izq */}
-      <ellipse cx="34" cy="34" rx="8.5" ry={eyeRy} fill="#1E0A3C" style={{transition:'ry 0.1s'}}/>
-      <ellipse cx="34" cy="34" rx="6.5" ry={Math.max(eyeRy-2,0)} fill={eyeColor} style={{transition:'all 0.1s'}}/>
-      <circle  cx="37" cy="31" r="2"    fill="#fff" fillOpacity="0.75"/>
+      <ellipse cx="36" cy="54" rx="9.5" ry={eyeRy} fill="white" style={{ transition: 'ry 0.1s' }}/>
+      <ellipse cx="36" cy="54" rx="6.5" ry={Math.max(eyeRy - 2, 0)} fill={EYE} style={{ transition: 'all 0.1s' }}/>
+      <circle cx="39" cy="51" r="2" fill="white" fillOpacity="0.8"/>
       {/* Ojo der */}
-      <ellipse cx="66" cy="34" rx="8.5" ry={eyeRy} fill="#1E0A3C" style={{transition:'ry 0.1s'}}/>
-      <ellipse cx="66" cy="34" rx="6.5" ry={Math.max(eyeRy-2,0)} fill={eyeColor} style={{transition:'all 0.1s'}}/>
-      <circle  cx="69" cy="31" r="2"    fill="#fff" fillOpacity="0.75"/>
-      {/* Boca */}
-      <path d={mouthD} stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round" style={{transition:'d 0.25s'}}/>
-      {hovered && <rect x="44" y="53" width="12" height="4" rx="2" fill="#fff" fillOpacity="0.35"/>}
+      <ellipse cx="64" cy="54" rx="9.5" ry={eyeRy} fill="white" style={{ transition: 'ry 0.1s' }}/>
+      <ellipse cx="64" cy="54" rx="6.5" ry={Math.max(eyeRy - 2, 0)} fill={EYE} style={{ transition: 'all 0.1s' }}/>
+      <circle cx="67" cy="51" r="2" fill="white" fillOpacity="0.8"/>
 
-      {/* ── CUELLO — piel ── */}
-      <rect x="43" y="63" width="14" height="10" rx="5" fill={SKIN}/>
-      <rect x="43" y="68" width="14" height="5"  rx="2" fill={SKIN_S} fillOpacity="0.4"/>
+      {/* Mejillas sonrojadas */}
+      <ellipse cx="22" cy="66" rx="10" ry="7" fill="#FFB3B3" fillOpacity="0.4"/>
+      <ellipse cx="78" cy="66" rx="10" ry="7" fill="#FFB3B3" fillOpacity="0.4"/>
 
-      {/* ── CAMISA — torso ── */}
-      {/* Manga izq (camisa) */}
-      <path d={`M27 72 L${lEbX+4} ${lEbY} L${lEbX} ${lEbY} L24 72 Z`}
-        fill={SHIRT_S} style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {/* Manga der (camisa) */}
-      <path d={`M73 72 L${rEbX-4} ${rEbY} L${rEbX} ${rEbY} L76 72 Z`}
-        fill={SHIRT_S} style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {/* Torso */}
-      <rect x="24" y="68" width="52" height="46" rx="10" fill="url(#shirtG)"/>
-      {/* Cuello camisa (V-neck) */}
-      <path d="M42 68 L50 78 L58 68" fill={SHIRT_S} fillOpacity="0.5"/>
-      {/* Pliegue camisa */}
-      <line x1="50" y1="78" x2="50" y2="114" stroke={SHIRT_S} strokeWidth="1.2" strokeOpacity="0.35"/>
-      {/* Bolsillo izq */}
-      <rect x="29" y="80" width="13" height="11" rx="3" fill={SHIRT_S} fillOpacity="0.35" stroke="#A78BFA" strokeWidth="0.6"/>
-      {/* Botón */}
-      <circle cx="35.5" cy="97" r="2"  fill={SHIRT_S} stroke="#A78BFA" strokeWidth="0.5"/>
-      <circle cx="35.5" cy="105" r="2" fill={SHIRT_S} stroke="#A78BFA" strokeWidth="0.5"/>
+      {/* Nariz */}
+      <ellipse cx="50" cy="67" rx="5" ry="4" fill={SKIN_D} fillOpacity="0.5"/>
+      <circle cx="47" cy="68.5" r="2" fill={SKIN_D} fillOpacity="0.55"/>
+      <circle cx="53" cy="68.5" r="2" fill={SKIN_D} fillOpacity="0.55"/>
 
-      {/* ── BRAZOS — piel ── */}
-      {/* Upper arm izq */}
-      <line x1="26" y1="74" x2={lEbX} y2={lEbY}
-        stroke={SKIN_S} strokeWidth="12" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <line x1="26" y1="74" x2={lEbX} y2={lEbY}
-        stroke={SKIN}  strokeWidth="8"  strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {/* Forearm izq */}
-      <line x1={lEbX} y1={lEbY} x2={lHdX} y2={lHdY}
-        stroke={SKIN_S} strokeWidth="10" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <line x1={lEbX} y1={lEbY} x2={lHdX} y2={lHdY}
-        stroke={SKIN}   strokeWidth="6"  strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {/* Mano izq */}
-      <circle cx={lHdX} cy={lHdY} r="6.5" fill={SKIN}  style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <circle cx={lHdX} cy={lHdY} r="6.5" fill={SKIN_S} fillOpacity="0.3" style={{transition:'all 0.3s'}}/>
-      {hovered && <text x={lHdX} y={lHdY+4} textAnchor="middle" fontSize="8" style={{userSelect:'none'}}>✌️</text>}
+      {/* Bigote — ala izquierda */}
+      <path d="M50 75 C46 71 38 69 31 73 C37 77 46 78 50 75Z" fill={HAIR}/>
+      {/* Bigote — ala derecha */}
+      <path d="M50 75 C54 71 62 69 69 73 C63 77 54 78 50 75Z" fill={HAIR}/>
 
-      {/* Upper arm der */}
-      <line x1="74" y1="74" x2={rEbX} y2={rEbY}
-        stroke={SKIN_S} strokeWidth="12" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <line x1="74" y1="74" x2={rEbX} y2={rEbY}
-        stroke={SKIN}  strokeWidth="8"  strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {/* Forearm der */}
-      <line x1={rEbX} y1={rEbY} x2={rHdX} y2={rHdY}
-        stroke={SKIN_S} strokeWidth="10" strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <line x1={rEbX} y1={rEbY} x2={rHdX} y2={rHdY}
-        stroke={SKIN}   strokeWidth="6"  strokeLinecap="round" style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      {/* Mano der */}
-      <circle cx={rHdX} cy={rHdY} r="6.5" fill={SKIN}   style={{transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)'}}/>
-      <circle cx={rHdX} cy={rHdY} r="6.5" fill={SKIN_S} fillOpacity="0.3" style={{transition:'all 0.3s'}}/>
-      {hovered && <text x={rHdX} y={rHdY+4} textAnchor="middle" fontSize="8" style={{userSelect:'none'}}>🤙</text>}
-
-      {/* ── CINTURÓN ── */}
-      <rect x="24" y="112" width="52" height="7" rx="3.5" fill="#92400E"/>
-      <rect x="44" y="112.5" width="12" height="6" rx="2" fill="#B45309"/>
-      <rect x="47" y="113.5" width="6" height="4"  rx="1.5" fill="#F59E0B"/>
-
-      {/* ── PANTALÓN — parte superior ── */}
-      <rect x="24" y="117" width="52" height="6" fill="url(#pantsG)"/>
-      <line x1="50" y1="117" x2="50" y2="123" stroke={PANTS_S} strokeWidth="1"/>
-
-      {/* Pierna izq — muslo */}
-      <line x1="37" y1="123" x2={lKX} y2={lKY}
-        stroke={PANTS_S} strokeWidth="14" strokeLinecap="round"/>
-      <line x1="37" y1="123" x2={lKX} y2={lKY}
-        stroke={PANTS}   strokeWidth="10" strokeLinecap="round"/>
-      {/* Pierna izq — pantorrilla */}
-      <line x1={lKX} y1={lKY} x2={lFX} y2={lFY}
-        stroke={PANTS_S} strokeWidth="12" strokeLinecap="round"/>
-      <line x1={lKX} y1={lKY} x2={lFX} y2={lFY}
-        stroke={PANTS}   strokeWidth="8"  strokeLinecap="round"/>
-      {/* Zapato izq */}
-      <ellipse cx={lFX - 2} cy={lFY + 1} rx="11" ry="4.5" fill={SHOE}/>
-      <ellipse cx={lFX - 4} cy={lFY}     rx="7"  ry="2.8" fill={SHOE_H} fillOpacity="0.4"/>
-
-      {/* Pierna der — muslo */}
-      <line x1="63" y1="123" x2={rKX} y2={rKY}
-        stroke={PANTS_S} strokeWidth="14" strokeLinecap="round"/>
-      <line x1="63" y1="123" x2={rKX} y2={rKY}
-        stroke={PANTS}   strokeWidth="10" strokeLinecap="round"/>
-      {/* Pierna der — pantorrilla */}
-      <line x1={rKX} y1={rKY} x2={rFX} y2={rFY}
-        stroke={PANTS_S} strokeWidth="12" strokeLinecap="round"/>
-      <line x1={rKX} y1={rKY} x2={rFX} y2={rFY}
-        stroke={PANTS}   strokeWidth="8"  strokeLinecap="round"/>
-      {/* Zapato der */}
-      <ellipse cx={rFX + 2} cy={rFY + 1} rx="11" ry="4.5" fill={SHOE}/>
-      <ellipse cx={rFX}     cy={rFY}     rx="7"  ry="2.8" fill={SHOE_H} fillOpacity="0.4"/>
+      {/* Sonrisa */}
+      <path d={mouthD} stroke="#8B4513" strokeWidth="2.5" strokeLinecap="round" fill="none"
+        style={{ transition: 'd 0.25s' }}/>
+      {/* Dientes al sonreír */}
+      {hovered && (
+        <path d="M39 81 Q50 91 61 81 L61 85 Q50 93 39 85Z" fill="white" fillOpacity="0.9"/>
+      )}
     </svg>
   )
 }
 
-function RobotButton({ open, dragging, onMouseDown, onClick, walkPhase, walkDir }) {
+function RobotButton({ open, dragging, onMouseDown, onClick }) {
   const [hovered, setHovered] = useState(false)
   const [tipIdx,  setTipIdx]  = useState(0)
   const [blink,   setBlink]   = useState(false)
@@ -572,12 +446,12 @@ function RobotButton({ open, dragging, onMouseDown, onClick, walkPhase, walkDir 
         }} />
       )}
 
-      {/* Robot SVG completo */}
+      {/* Cara muñeco */}
       <div style={{
-        transform: `scaleX(${walkDir < 0 ? -1 : 1}) ${hovered ? 'scale(1.08) translateY(-4px)' : open ? 'scale(1.04)' : 'scale(1)'}`,
-        transition: hovered || open ? 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1)' : 'none',
+        transform: hovered ? 'scale(1.08) translateY(-4px)' : open ? 'scale(1.04)' : 'scale(1)',
+        transition: 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
-        <RobotSVG hovered={hovered} open={open} blink={blink} walkPhase={walkPhase} />
+        <RobotSVG hovered={hovered} open={open} blink={blink} />
       </div>
     </div>
   )
@@ -600,47 +474,13 @@ export default function AiAssistant() {
   const [ctxMenu,     setCtxMenu]    = useState({ visible: false, x: 0, y: 0, storeCode: null, data: null, loading: false })
   const [managedCodes, setManagedCodes] = useState(new Set())
   const [rateLimit,   setRateLimit]    = useState({ active: false, secondsLeft: 0 })
-  const [walkPhase,   setWalkPhase]    = useState(0)
-  const [walkDir,     setWalkDir]      = useState(1)
   const rateLimitTimer = useRef(null)
-  const walkRef    = useRef({ dir: 1, phase: 0, dy: 0.45 })
-  const rafRef     = useRef(null)
   const dragStart  = useRef(null)
   const chatEndRef = useRef(null)
 
   useEffect(() => {
-    setPos({ x: 40, y: window.innerHeight * 0.6 })
-    // dirección diagonal inicial
-    walkRef.current.dy = 0.45
+    setPos({ x: window.innerWidth - 130, y: window.innerHeight - 200 })
   }, [])
-
-  // Caminata diagonal — rebota en los 4 bordes, cubre toda la pantalla
-  useEffect(() => {
-    if (open || dragging) { cancelAnimationFrame(rafRef.current); return }
-    let lastTs = null
-    const tick = ts => {
-      if (lastTs === null) { lastTs = ts; rafRef.current = requestAnimationFrame(tick); return }
-      const dt = Math.min(ts - lastTs, 50)
-      lastTs = ts
-      walkRef.current.phase += 0.006 * dt
-      const speed = 0.048 * dt
-      setPos(prev => {
-        let nx = prev.x + walkRef.current.dir * speed
-        let ny = prev.y + walkRef.current.dy  * speed
-        const maxX = window.innerWidth  - 110
-        const maxY = window.innerHeight - 175
-        if (nx >= maxX) { nx = maxX; walkRef.current.dir = -1; setWalkDir(-1) }
-        if (nx <= 0)    { nx = 0;    walkRef.current.dir =  1; setWalkDir( 1) }
-        if (ny >= maxY) { ny = maxY; walkRef.current.dy  = -Math.abs(walkRef.current.dy) }
-        if (ny <= 0)    { ny = 0;    walkRef.current.dy  =  Math.abs(walkRef.current.dy) }
-        return { x: nx, y: ny }
-      })
-      setWalkPhase(walkRef.current.phase)
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [open, dragging])
 
   // Drag
   const onMouseDown = e => {
@@ -776,14 +616,12 @@ export default function AiAssistant() {
           dragging={dragging}
           onMouseDown={onMouseDown}
           onClick={!dragging ? toggleOpen : undefined}
-          walkPhase={walkPhase}
-          walkDir={walkDir}
         />
 
         {/* Panel */}
         {open && (
           <div style={{
-            position: 'absolute', top: 188, left: 0,
+            position: 'absolute', top: 128, left: 0,
             width: PANEL_W, height: PANEL_H,
             background: 'var(--bg-card)',
             border: '1.5px solid #7C3AED55',
