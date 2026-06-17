@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -81,24 +83,29 @@ public class AiController {
             return ResponseEntity.status(503).body(Map.of("error", "IA no disponible — configura GROQ_API_KEY"));
         }
         Long userId = sessionContext.getCurrentUserId();
-        LocalDate today = LocalDate.now();
+        ZoneId colombia = ZoneId.of("America/Bogota");
+        LocalDate today = LocalDate.now(colombia);
+        ZonedDateTime nowCo = ZonedDateTime.now(colombia);
 
         // 1. Buscar recomendación guardada hoy
         Optional<DailyAiRecommendationEntity> saved = recRepository.findByUserIdAndRecDate(userId, today);
 
-        // Invalidar recomendación si:
-        // - fue generada ayer (datos viejos), O
-        // - son las 12:00 PM o más y la rec es de antes del mediodía (turno mañana vs tarde)
+        // Invalidar recomendación si fue generada en otro día Colombia o antes del mediodía Colombia
         if (saved.isPresent()) {
             LocalDateTime createdAt = saved.get().getCreatedAt();
-            LocalDateTime now       = LocalDateTime.now();
-            LocalDateTime noon      = today.atTime(12, 0);
-            boolean staleYesterday  = createdAt != null && createdAt.toLocalDate().isBefore(today);
-            boolean staleBeforeNoon = createdAt != null && now.isAfter(noon) && createdAt.isBefore(noon);
-            if (staleYesterday || staleBeforeNoon) {
-                log.info("Rec de userId={} invalidada — ayer:{} antesNoon:{} createdAt:{}", userId, staleYesterday, staleBeforeNoon, createdAt);
-                recRepository.delete(saved.get());
-                saved = Optional.empty();
+            if (createdAt != null) {
+                // Convertir createdAt (UTC en DB) a hora Colombia
+                ZonedDateTime createdCo = createdAt.atZone(ZoneId.of("UTC")).withZoneSameInstant(colombia);
+                LocalDate createdDate   = createdCo.toLocalDate();
+                ZonedDateTime noon      = today.atTime(12, 0).atZone(colombia);
+                boolean staleYesterday  = createdDate.isBefore(today);
+                boolean staleBeforeNoon = nowCo.isAfter(noon) && createdCo.isBefore(noon);
+                if (staleYesterday || staleBeforeNoon) {
+                    log.info("Rec userId={} invalidada — createdCo={} today={} staleYest={} staleNoon={}",
+                            userId, createdCo, today, staleYesterday, staleBeforeNoon);
+                    recRepository.delete(saved.get());
+                    saved = Optional.empty();
+                }
             }
         }
 
@@ -136,10 +143,10 @@ public class AiController {
                 // Guardar en BD para el resto del día
                 DailyAiRecommendationEntity entity = new DailyAiRecommendationEntity();
                 entity.setUserId(userId);
-                entity.setRecDate(today);
+                entity.setRecDate(today); // today ya está en hora Colombia
                 entity.setMessage(message);
                 entity.setPrioritiesJson(objectMapper.writeValueAsString(priorities));
-                entity.setCreatedAt(LocalDateTime.now());
+                entity.setCreatedAt(ZonedDateTime.now(ZoneId.of("UTC")).toLocalDateTime());
                 recRepository.save(entity);
                 log.info("Recomendación del día generada y guardada para userId={}, {} tiendas", userId, priorities.size());
             } catch (RateLimitException rle) {
