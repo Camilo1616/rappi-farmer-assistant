@@ -86,6 +86,17 @@ public class AiController {
         // 1. Buscar recomendación guardada hoy
         Optional<DailyAiRecommendationEntity> saved = recRepository.findByUserIdAndRecDate(userId, today);
 
+        // Si la recomendación guardada fue creada ayer (recDate=hoy pero createdAt=ayer),
+        // significa que se generó con datos del día anterior — invalidar y regenerar.
+        if (saved.isPresent()) {
+            LocalDateTime createdAt = saved.get().getCreatedAt();
+            if (createdAt != null && createdAt.toLocalDate().isBefore(today)) {
+                log.info("Rec de userId={} fue generada con datos de ayer ({}) — regenerando", userId, createdAt.toLocalDate());
+                recRepository.delete(saved.get());
+                saved = Optional.empty();
+            }
+        }
+
         String message;
         List<Map<String, Object>> priorities;
 

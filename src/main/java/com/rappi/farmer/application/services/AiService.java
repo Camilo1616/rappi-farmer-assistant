@@ -207,20 +207,33 @@ public class AiService {
             log.debug("Recomendación desde caché para userId={}", userId);
             return cached.data();
         }
+        // Fecha de la última carga del Excel (uploadDate más reciente entre las tiendas activas)
+        LocalDate lastUpload = stores.stream()
+                .map(Store::getUploadDate)
+                .filter(d -> d != null)
+                .max(LocalDate::compareTo)
+                .orElse(LocalDate.now());
+        LocalDate today = LocalDate.now();
+
         String context = buildStoreContext(stores, 5); // máx 5 por segmento → ~25 tiendas total
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
                 Analizas la cartera de restaurantes y priorizas las acciones del día.
                 Respondes SIEMPRE en JSON válido, sin texto adicional, sin markdown, sin comillas extra.
+                NUNCA menciones si la cartera es "del día anterior" ni comentes sobre la fecha de carga de datos.
+                Los datos son los vigentes que el AM cargó esta mañana — tratar siempre como datos de HOY.
                 """;
 
-        String userPrompt = """
+        String userPrompt = String.format("""
+                HOY ES: %s
+                ÚLTIMA CARGA DEL EXCEL: %s (estos son los datos vigentes de la cartera — NO comentar sobre la fecha de carga)
+
                 Eres el asistente de un Account Manager (AM) de Rappi Colombia que gestiona la activación y retención de restaurantes aliados.
 
                 GLOSARIO IMPORTANTE:
                 - HO (Handoff): activación del restaurante en la app Rappi Aliados. Sin HO el restaurante NO puede recibir pedidos.
-                - AVA MTD %: porcentaje de conexión mensual con Rappi Aliados. Meta mínima: 60%.
+                - AVA MTD %%: porcentaje de conexión mensual con Rappi Aliados. Meta mínima: 60%%.
                 - IS: estado "In Store" — el AM visitó o va a visitar la tienda físicamente hoy. Máxima urgencia.
                 - Aging: días desde que el restaurante entró al programa. Ventana crítica: días 1-14.
                 - FU30d: si el restaurante tuvo algún seguimiento en los últimos 30 días (SI/NO).
@@ -230,16 +243,16 @@ public class AiService {
                 REGLAS DE PRIORIZACIÓN:
                 1. IS (días 1-14): ACCIÓN HOY — visita en tienda programada, coordinar activación en sitio.
                 2. Aging 1-7 días HO=NO: ALTA urgencia — contactar para activar Rappi Aliados inmediatamente.
-                3. Aging 1-7 días HO=SI: verificar que ya esté recibiendo pedidos y AVA > 0%.
+                3. Aging 1-7 días HO=SI: verificar que ya esté recibiendo pedidos y AVA > 0%%.
                 4. Aging 8-14 días HO=NO: ALTA urgencia — se perdió la ventana ideal, recuperar activación.
-                5. Aging 8-14 días AVA < 60%: ALTA — reforzar uso de app Rappi Aliados.
+                5. Aging 8-14 días AVA < 60%%: ALTA — reforzar uso de app Rappi Aliados.
                 6. Churn activo: retención urgente, preguntar por problemas y ofrecer solución concreta.
-                7. AVA < 40% fuera de ventana: MEDIA — monitoreo de conexión.
+                7. AVA < 40%% fuera de ventana: MEDIA — monitoreo de conexión.
                 8. FU30d=NO con >7 días sin contacto: MEDIA — check-in mínimo.
 
                 Devuelve ÚNICAMENTE este JSON válido (sin markdown, sin texto extra):
                 {
-                  "message": "Resumen estratégico del día para el AM: cuántas tiendas en ventana crítica, cuántas IS, y el foco principal de hoy. 2-3 oraciones directas.",
+                  "message": "Resumen estratégico para HOY (%s): cuántas tiendas en ventana crítica, cuántas IS, y el foco principal. 2-3 oraciones directas y motivadoras. NO mencionar fecha de carga ni día anterior.",
                   "priorities": [
                     {
                       "storeCode": "PE...",
@@ -253,11 +266,10 @@ public class AiService {
 
                 ⚠️ CRÍTICO: SOLO incluye tiendas que aparezcan EXACTAMENTE en la CARTERA SEGMENTADA de abajo.
                 NO inventes códigos PE. NO incluyas tiendas que no estén en la lista.
-                Si una tienda no aparece en la lista, no existe en esta cartera.
                 Máximo 15 tiendas en "priorities", ordenadas de más a menos urgente.
 
                 CARTERA SEGMENTADA:
-                """ + context;
+                """, today, lastUpload, today) + context;
 
         String raw = callGroq(systemPrompt, userPrompt, 0.3, 2200);
 
