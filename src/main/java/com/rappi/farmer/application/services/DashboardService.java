@@ -98,8 +98,14 @@ public class DashboardService {
             boolean isSelf = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("self");
             // IS = canal exacto "Inside Sales" + HO=NO (o nulo) + lastFollowUp nulo + followUpLast30d=NO + cargada ≤7 días
-            boolean isGestionarIS = store.getChannel() != null
-                    && store.getChannel().equalsIgnoreCase("Inside Sales")
+            boolean isInsideSalesChannel = store.getChannel() != null
+                    && store.getChannel().equalsIgnoreCase("Inside Sales");
+            if (isInsideSalesChannel && !log.isDebugEnabled()) {
+                log.info("IS-DEBUG [{}] hadHandoff={} lastFollowUp={} followUpLast30d='{}' uploadDate={}",
+                        store.getStoreName(), store.getHadHandoff(), store.getLastFollowUp(),
+                        store.getFollowUpLast30d(), store.getUploadDate());
+            }
+            boolean isGestionarIS = isInsideSalesChannel
                     && !Boolean.TRUE.equals(store.getHadHandoff())
                     && store.getLastFollowUp() == null
                     && "NO".equalsIgnoreCase(store.getFollowUpLast30d())
