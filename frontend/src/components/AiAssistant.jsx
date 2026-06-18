@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import api from '../services/api'
-import bigoteRappi from '../assets/images.png'
+import rappiMascot from '../assets/rappi-mascot.jpeg'
 
 /* ── Markdown renderer ──────────────────────────────────────────────────── */
 function Md({ children, onRowCtx }) {
@@ -294,33 +294,20 @@ const TIPS = [
   'Soy tu copiloto 🚀',
 ]
 
-function RobotSVG({ hovered, open, blink, look }) {
-  const eyeRy = blink ? 0.4 : 7
-  const EYE   = '#1A0A00'
-  const RAPPI = '#FF441F'
-
-  const lx = look ? look.dx : 0
-  const ly = look ? look.dy : 0
-
+function RobotSVG({ hovered }) {
   return (
-    <svg width="84" height="70" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-
-      {/* Ojo izq — esclerótica */}
-      <ellipse cx="28" cy="22" rx="13" ry={eyeRy} fill="white" style={{ transition: 'ry 0.08s' }}/>
-      <ellipse cx={28 + lx} cy={22 + ly} rx="9" ry={Math.max(eyeRy - 2.5, 0)} fill={EYE} style={{ transition: 'all 0.12s' }}/>
-      <circle cx={31 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
-      <circle cx={29 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
-
-      {/* Ojo der — esclerótica */}
-      <ellipse cx="72" cy="22" rx="13" ry={eyeRy} fill="white" style={{ transition: 'ry 0.08s' }}/>
-      <ellipse cx={72 + lx} cy={22 + ly} rx="9" ry={Math.max(eyeRy - 2.5, 0)} fill={EYE} style={{ transition: 'all 0.12s' }}/>
-      <circle cx={75 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
-      <circle cx={73 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
-
-      {/* Bigote real del logo Rappi — multiply elimina el fondo blanco */}
-      <image href={bigoteRappi} x="2" y="40" width="96" height="36" style={{ mixBlendMode: 'multiply' }}/>
-
-    </svg>
+    <img
+      src={rappiMascot}
+      alt="Rappi"
+      style={{
+        width: 90,
+        height: 90,
+        objectFit: 'contain',
+        mixBlendMode: 'multiply',
+        filter: hovered ? 'drop-shadow(0 0 8px #FF441F88)' : 'none',
+        transition: 'filter 0.25s',
+      }}
+    />
   )
 }
 
@@ -437,7 +424,7 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
         transform: hovered ? 'scale(1.08) translateY(-4px)' : open ? 'scale(1.04)' : 'scale(1)',
         transition: 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
-        <RobotSVG hovered={hovered} open={open} blink={blink} look={look} />
+        <RobotSVG hovered={hovered} />
       </div>
     </div>
   )
