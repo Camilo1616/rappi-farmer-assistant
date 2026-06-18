@@ -71,10 +71,12 @@ public class WhatsappController {
 
         if (!pendingSetup) {
             phoneAgeWeeks = (int) java.time.temporal.ChronoUnit.WEEKS.between(registeredAt, java.time.LocalDate.now());
-            if (phoneAgeWeeks < 1)      { waLimit = 0; }
-            else if (phoneAgeWeeks < 2) { waLimit = 10; }
-            else if (phoneAgeWeeks < 4) { waLimit = 20; }
-            else                        { waLimit = 40; }
+            long phoneAgeDays = java.time.temporal.ChronoUnit.DAYS.between(registeredAt, java.time.LocalDate.now());
+            if      (phoneAgeDays < 7)  { waLimit = 0; }
+            else if (phoneAgeDays < 15) { waLimit = 10; }
+            else if (phoneAgeDays < 31) { waLimit = 25; }
+            else if (phoneAgeDays < 91) { waLimit = 50; }
+            else                        { waLimit = 100; }
         }
 
         int remaining = Math.max(0, waLimit - (int) sentToday);

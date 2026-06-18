@@ -9,63 +9,86 @@ import { generateWhatsappMessage } from '../services/aiService'
 import axios from 'axios'
 import styles from './WhatsappPage.module.css'
 
-const WA_AGE_OPTIONS = [
-  { label: 'Menos de 1 semana',  weeks: 0,  limit: 0,  color: '#EF4444', desc: 'Bloqueado — número muy nuevo, WhatsApp lo suspende' },
-  { label: '1 a 2 semanas',      weeks: 1,  limit: 10, color: '#F97316', desc: 'Máx 10 envíos/día' },
-  { label: '2 a 4 semanas',      weeks: 3,  limit: 20, color: '#F59E0B', desc: 'Máx 20 envíos/día' },
-  { label: 'Más de 1 mes',       weeks: 5,  limit: 40, color: '#22C55E', desc: 'Máx 40 envíos/día — normal' },
-]
+function limitForDays(days) {
+  if (days < 7)  return 0
+  if (days < 15) return 10
+  if (days < 31) return 25
+  if (days < 91) return 50
+  return 100
+}
 
 function WaPhoneSetupModal({ onSave }) {
-  const [selected, setSelected] = useState(null)
-  const [saving,   setSaving]   = useState(false)
+  const [days,   setDays]   = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error,  setError]  = useState('')
+
+  const parsed = parseInt(days, 10)
+  const valid  = !isNaN(parsed) && parsed >= 0 && parsed <= 3650
+  const limit  = valid ? limitForDays(parsed) : null
+
+  const limitLabel = limit === null ? null
+    : limit === 0   ? '🚫 Bloqueado — número muy nuevo'
+    : limit === 10  ? `✅ Límite: ${limit}/día`
+    : limit === 25  ? `✅ Límite: ${limit}/día`
+    : limit === 50  ? `✅ Límite: ${limit}/día`
+    : `✅ Límite: ${limit}/día — máximo`
+
+  const limitColor = limit === 0 ? '#EF4444' : limit <= 25 ? '#F59E0B' : '#22C55E'
 
   const handleSave = async () => {
-    if (selected === null) return
-    setSaving(true)
+    if (!valid) return
+    setSaving(true); setError('')
     try {
-      await axios.post('/api/auth/wa-phone-age', { weeksAgo: String(selected.weeks) })
-      onSave(selected)
-    } catch {}
-    finally { setSaving(false) }
+      await axios.post('/api/auth/wa-phone-age', { daysAgo: String(parsed) })
+      onSave({ days: parsed, limit })
+    } catch (e) {
+      setError(e.response?.data?.message || 'Error al guardar')
+    } finally { setSaving(false) }
   }
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999,
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
     }}>
       <div style={{
-        background: '#1F2937', borderRadius: 16, padding: 28, maxWidth: 420, width: '100%',
+        background: '#1F2937', borderRadius: 16, padding: 28, maxWidth: 400, width: '100%',
         border: '1.5px solid #374151', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
         <div style={{ fontSize: '1.8rem', textAlign: 'center', marginBottom: 8 }}>📱</div>
         <h3 style={{ color: '#F9FAFB', fontWeight: 700, fontSize: '1.1rem', textAlign: 'center', margin: '0 0 6px' }}>
-          ¿Cuánto tiempo lleva tu número de WhatsApp?
+          ¿Cuántos días llevas usando tu SIM de WhatsApp Business?
         </h3>
-        <p style={{ color: '#9CA3AF', fontSize: '0.83rem', textAlign: 'center', margin: '0 0 20px' }}>
-          WhatsApp bloquea números nuevos si envían mensajes masivos.<br/>
-          Ajustamos el límite diario para proteger tu cuenta.
+        <p style={{ color: '#9CA3AF', fontSize: '0.82rem', textAlign: 'center', margin: '0 0 20px', lineHeight: 1.5 }}>
+          Este dato <strong style={{ color: '#F9FAFB' }}>no se puede editar después</strong>.<br/>
+          Responde con certeza — usamos esto para calcular tu límite diario y proteger tu número.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {WA_AGE_OPTIONS.map(opt => (
-            <button key={opt.weeks} onClick={() => setSelected(opt)} style={{
-              background: selected?.weeks === opt.weeks ? opt.color + '22' : '#111827',
-              border: `1.5px solid ${selected?.weeks === opt.weeks ? opt.color : '#374151'}`,
-              borderRadius: 10, padding: '10px 14px', cursor: 'pointer', textAlign: 'left',
-              transition: 'all 0.15s',
-            }}>
-              <div style={{ color: '#F9FAFB', fontWeight: 600, fontSize: '0.9rem' }}>{opt.label}</div>
-              <div style={{ color: opt.color, fontSize: '0.78rem', marginTop: 2 }}>{opt.desc}</div>
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: '#9CA3AF', fontSize: '0.82rem' }}>Número de días</label>
+          <input
+            type="number" min="0" max="3650"
+            value={days} onChange={e => setDays(e.target.value)}
+            placeholder="Ej: 45"
+            autoFocus
+            style={{
+              background: '#111827', border: '1.5px solid #374151', borderRadius: 8,
+              padding: '10px 14px', color: '#F9FAFB', fontSize: '1.1rem', width: '100%',
+              outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+          {limitLabel && (
+            <div style={{ color: limitColor, fontSize: '0.85rem', fontWeight: 600, marginTop: 4 }}>
+              {limitLabel}
+            </div>
+          )}
         </div>
-        <button onClick={handleSave} disabled={!selected || saving} style={{
+        {error && <div style={{ color: '#FCA5A5', fontSize: 12, marginTop: 8 }}>⚠ {error}</div>}
+        <button onClick={handleSave} disabled={!valid || saving} style={{
           marginTop: 18, width: '100%', padding: '11px 0', borderRadius: 10, border: 'none',
-          background: selected ? '#7C3AED' : '#374151', color: '#fff', fontWeight: 700,
-          fontSize: '0.95rem', cursor: selected ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1,
+          background: valid ? '#7C3AED' : '#374151', color: '#fff', fontWeight: 700,
+          fontSize: '0.95rem', cursor: valid ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1,
         }}>
-          {saving ? 'Guardando...' : 'Confirmar'}
+          {saving ? 'Guardando...' : 'Confirmar — no podré cambiar esto'}
         </button>
       </div>
     </div>
@@ -821,21 +844,19 @@ export default function WhatsappPage() {
   const canSend = status.connected && selected.size > 0 && message.trim() && !sending
 
   const waLimitBanner = () => {
-    const weeks = status.phoneAgeWeeks ?? 0
-    const limit = status.waLimit ?? 40
+    const limit = status.waLimit ?? 100
     if (status.pendingSetup) return null
-    if (limit >= 40) return null
+    if (limit >= 100) return null
+    const days = (status.phoneAgeWeeks ?? 0) * 7
     if (limit === 0) return (
-      <div style={{ background: '#EF444420', border: '1px solid #EF4444', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#FCA5A5' }}>
-        🚫 <strong>WhatsApp bloqueado</strong> — Tu número tiene menos de 1 semana. Úsalo en conversaciones normales unos días antes de envíos masivos.
-        <button onClick={() => setShowPhoneSetup(true)} style={{ marginLeft: 12, fontSize: 11, color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Actualizar antigüedad</button>
+      <div style={{ background: '#EF444415', border: '1px solid #EF4444', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#FCA5A5' }}>
+        🚫 <strong>WhatsApp bloqueado</strong> — Tu SIM tiene menos de 7 días. Úsala en conversaciones normales hasta cumplir la semana.
       </div>
     )
-    const color = limit === 10 ? '#F97316' : '#F59E0B'
+    const color = limit <= 10 ? '#F97316' : limit <= 25 ? '#F59E0B' : '#3B82F6'
     return (
-      <div style={{ background: color + '20', border: `1px solid ${color}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color }}>
-        ⚠️ <strong>Número con {weeks < 2 ? '1–2' : '2–4'} semanas</strong> — Límite: <strong>{limit} envíos/día</strong> para evitar bloqueos. Quedan {status.remaining} hoy.
-        <button onClick={() => setShowPhoneSetup(true)} style={{ marginLeft: 12, fontSize: 11, color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Actualizar</button>
+      <div style={{ background: color + '15', border: `1px solid ${color}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color }}>
+        ⚠️ <strong>SIM con ~{days} días</strong> — Límite: <strong>{limit} envíos/día</strong>. Quedan <strong>{status.remaining}</strong> hoy. El límite sube automáticamente con el tiempo.
       </div>
     )
   }
@@ -845,7 +866,7 @@ export default function WhatsappPage() {
       {showPhoneSetup && (
         <WaPhoneSetupModal onSave={opt => {
           setShowPhoneSetup(false)
-          setStatus(prev => ({ ...prev, waLimit: opt.limit, phoneAgeWeeks: opt.weeks, pendingSetup: false, remaining: opt.limit }))
+          setStatus(prev => ({ ...prev, waLimit: opt.limit, phoneAgeWeeks: Math.floor(opt.days / 7), pendingSetup: false, remaining: opt.limit }))
         }} />
       )}
       <div className={styles.pageHeader}>

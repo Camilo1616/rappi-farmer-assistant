@@ -159,6 +159,10 @@ public class UserService {
         log.info("Farmer {} actualizado — país:{} líder:{}", user.getEmail(), countryCode, newLiderId);
     }
 
+    public java.util.Optional<User> findUserById(Long id) {
+        return userRepository.findById(id);
+    }
+
     public Long findIdByEmail(String email) {
         return userRepository.findByEmail(email)
                 .map(User::getId)

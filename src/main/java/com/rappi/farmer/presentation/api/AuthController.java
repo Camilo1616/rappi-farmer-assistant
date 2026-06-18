@@ -130,16 +130,21 @@ public class AuthController {
 
     @PostMapping("/wa-phone-age")
     public ResponseEntity<?> setWaPhoneAge(@RequestBody Map<String, String> body) {
-        String weeksStr = body.get("weeksAgo");
-        if (weeksStr == null) return ResponseEntity.badRequest().body(Map.of("message", "weeksAgo requerido"));
+        String daysStr = body.get("daysAgo");
+        if (daysStr == null) return ResponseEntity.badRequest().body(Map.of("message", "daysAgo requerido"));
         try {
-            int weeks = Integer.parseInt(weeksStr);
+            int days = Integer.parseInt(daysStr);
+            if (days < 0 || days > 3650) return ResponseEntity.badRequest().body(Map.of("message", "Valor inválido"));
             Long userId = sessionContext.getCurrentUserId();
-            userService.setWhatsappPhoneRegisteredAt(userId,
-                    java.time.LocalDate.now().minusWeeks(weeks));
-            return ResponseEntity.ok(Map.of("message", "Antigüedad de número guardada"));
+            // Solo se puede guardar una vez — si ya existe, rechazar
+            java.util.Optional<com.rappi.farmer.domain.entities.User> user = userService.findUserById(userId);
+            if (user.isPresent() && user.get().getWhatsappPhoneRegisteredAt() != null) {
+                return ResponseEntity.status(403).body(Map.of("message", "La fecha de SIM ya fue registrada y no es editable"));
+            }
+            userService.setWhatsappPhoneRegisteredAt(userId, java.time.LocalDate.now().minusDays(days));
+            return ResponseEntity.ok(Map.of("message", "Antigüedad de SIM guardada"));
         } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", "weeksAgo debe ser un número"));
+            return ResponseEntity.badRequest().body(Map.of("message", "daysAgo debe ser un número"));
         }
     }
 
