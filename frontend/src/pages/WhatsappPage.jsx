@@ -6,7 +6,7 @@ import {
   sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
 import { generateWhatsappMessage } from '../services/aiService'
-import axios from 'axios'
+import api from '../services/api'
 import styles from './WhatsappPage.module.css'
 
 function limitForDays(days) {
@@ -39,7 +39,7 @@ function WaPhoneSetupModal({ onSave }) {
     if (!valid) return
     setSaving(true); setError('')
     try {
-      await axios.post('/api/auth/wa-phone-age', { daysAgo: String(parsed) })
+      await api.post('/auth/wa-phone-age', { daysAgo: String(parsed) })
       onSave({ days: parsed, limit })
     } catch (e) {
       setError(e.response?.data?.message || 'Error al guardar')
