@@ -317,8 +317,8 @@ function RobotSVG({ hovered, open, blink, look }) {
       <circle cx={75 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
       <circle cx={73 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
 
-      {/* Bigote real del logo Rappi */}
-      <image href={bigoteRappi} x="2" y="40" width="96" height="36"/>
+      {/* Bigote real del logo Rappi — multiply elimina el fondo blanco */}
+      <image href={bigoteRappi} x="2" y="40" width="96" height="36" style={{ mixBlendMode: 'multiply' }}/>
 
     </svg>
   )
