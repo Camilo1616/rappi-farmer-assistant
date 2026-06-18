@@ -29,21 +29,26 @@ public class UserService {
     public record LoginResult(User user, int calendarSyncDays) {}
 
     /** Autentica al usuario. Lanza BusinessException si las credenciales son incorrectas. */
-    @org.springframework.transaction.annotation.Transactional
     public LoginResult login(String email, String rawPassword) {
         if (email == null || !email.toLowerCase().endsWith(RAPPI_DOMAIN)) {
             throw new BusinessException("El correo debe ser @rappi.com");
         }
+        // Leer usuario sin transacción abierta — bcrypt no debe retener una conexión de DB
         User user = userRepository.findByEmail(email.toLowerCase())
                 .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
         if (!encoder.matches(rawPassword, user.getPasswordHash())) {
             throw new BusinessException("Contraseña incorrecta");
         }
         int syncDays = user.getLastLoginAt() == null ? 20 : 14;
-        user.setLastLoginAt(java.time.LocalDateTime.now());
-        userRepository.save(user);
+        updateLastLogin(user);
         log.info("Login exitoso — {} ({}) syncDays:{}", user.getFullName(), user.getUserRole(), syncDays);
         return new LoginResult(user, syncDays);
+    }
+
+    @Transactional
+    protected void updateLastLogin(User user) {
+        user.setLastLoginAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
     }
 
     @Transactional

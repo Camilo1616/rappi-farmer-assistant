@@ -46,6 +46,8 @@ public class StoreImportService {
     public ImportResultDto importFromExcel(File file) throws IOException {
         List<StoreExcelRowDto> rows = excelReaderService.read(file);
         LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Bogota"));
+        // Hash calculado una sola vez fuera del loop — bcrypt es costoso (~200ms c/u)
+        String defaultPwdHash = encoder.encode("rappi2025");
         // Cache local al método — evita consultas repetidas a BD y aislamiento entre importaciones concurrentes
         java.util.Map<String, Long> farmerEmailCache = new java.util.HashMap<>();
 
@@ -298,7 +300,7 @@ public class StoreImportService {
                         .collect(java.util.stream.Collectors.joining(" "));
                 Long liderId = sessionContext.getCurrentUserId();
                 User nuevo = new User(null, nombre, k, "FARMER_MASS",
-                        encoder.encode("rappi2025"), null, "CO", "ACTIVE", liderId, null, null, null, null, null, null, null);
+                        defaultPwdHash, null, "CO", "ACTIVE", liderId, null, null, null, null, null, null, null);
                 User guardado = userRepository.save(nuevo);
                 log.info("Farmer auto-registrado desde Excel: {} ({})", nombre, k);
                 return guardado.getId();
