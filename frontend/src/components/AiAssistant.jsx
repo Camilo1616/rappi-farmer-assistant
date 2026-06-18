@@ -316,21 +316,23 @@ function RobotSVG({ hovered, open, blink, look }) {
       <circle cx={75 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
       <circle cx={73 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
 
-      {/* ── Bigote estilo Rappi ── */}
-      {/* Cuerpo principal: trazo grueso y suave de punta a punta */}
+      {/* ── Bigote estilo Rappi — forma calcada del logo ── */}
       <path
-        d="M 14 34 C 18 52 34 60 50 57 C 66 60 82 52 86 34"
-        stroke={RAPPI} strokeWidth="13" strokeLinecap="round" fill="none"
-      />
-      {/* Punta izquierda curvada hacia arriba */}
-      <path
-        d="M 14 34 C 10 28 8 20 13 16 C 16 14 19 17 18 22"
-        stroke={RAPPI} strokeWidth="9" strokeLinecap="round" fill="none"
-      />
-      {/* Punta derecha curvada hacia arriba */}
-      <path
-        d="M 86 34 C 90 28 92 20 87 16 C 84 14 81 17 82 22"
-        stroke={RAPPI} strokeWidth="9" strokeLinecap="round" fill="none"
+        d="
+          M 5 45
+          C 1 52  2 63  9 68
+          C 17 73 32 75 50 75
+          C 68 75 83 73 91 68
+          C 98 63 99 52 95 45
+          C 92 40 86 41 80 45
+          C 76 48 72 53 63 52
+          C 57 51 53 57 50 60
+          C 47 57 43 51 37 52
+          C 28 53 24 48 20 45
+          C 14 41  8 40  5 45
+          Z
+        "
+        fill={RAPPI}
       />
 
     </svg>
