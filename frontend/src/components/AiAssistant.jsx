@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import api from '../services/api'
+import bigoteRappi from '../assets/images.png'
 
 /* ── Markdown renderer ──────────────────────────────────────────────────── */
 function Md({ children, onRowCtx }) {
@@ -316,24 +317,8 @@ function RobotSVG({ hovered, open, blink, look }) {
       <circle cx={75 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
       <circle cx={73 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
 
-      {/* ── Bigote estilo Rappi — forma calcada del logo ── */}
-      <path
-        d="
-          M 5 45
-          C 1 52  2 63  9 68
-          C 17 73 32 75 50 75
-          C 68 75 83 73 91 68
-          C 98 63 99 52 95 45
-          C 92 40 86 41 80 45
-          C 76 48 72 53 63 52
-          C 57 51 53 57 50 60
-          C 47 57 43 51 37 52
-          C 28 53 24 48 20 45
-          C 14 41  8 40  5 45
-          Z
-        "
-        fill={RAPPI}
-      />
+      {/* Bigote real del logo Rappi */}
+      <image href={bigoteRappi} x="2" y="40" width="96" height="36"/>
 
     </svg>
   )
