@@ -19,6 +19,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +34,7 @@ public class ImportController {
     private final SessionContext sessionContext;
     private final UserRepository userRepository;
     private final com.rappi.farmer.domain.repositories.StoreRepository storeRepository;
+    private final com.rappi.farmer.infrastructure.persistence.repository.DailyAiRecommendationJpaRepository aiRecRepository;
 
     @PostMapping("/excel")
     public ResponseEntity<?> importExcel(
@@ -55,6 +58,14 @@ public class ImportController {
             tempFile = Files.createTempFile("import_", "_" + filename).toFile();
             file.transferTo(tempFile);
             ImportResultDto result = storeImportService.importFromExcel(tempFile);
+            // Invalidar recomendación IA del día — los datos cambiaron con el nuevo Excel
+            Long userId = sessionContext.getCurrentUserId();
+            LocalDate today = LocalDate.now(ZoneId.of("America/Bogota"));
+            aiRecRepository.findByUserIdAndRecDate(userId, today)
+                    .ifPresent(rec -> {
+                        aiRecRepository.delete(rec);
+                        log.info("Recomendación IA invalidada por nuevo Excel — userId={}", userId);
+                    });
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
