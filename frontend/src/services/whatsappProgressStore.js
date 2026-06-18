@@ -1,14 +1,41 @@
-// Store singleton — sobrevive la navegación entre módulos.
-// WhatsappPage lo lee al montarse para reconectar el progreso visual.
+// Store singleton — sobrevive navegación entre módulos.
+// Usa localStorage como respaldo para sobrevivir recargas de página.
+
+const LS_KEY = 'wa_session'
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (!raw) return {}
+    return JSON.parse(raw)
+  } catch { return {} }
+}
+
+function saveToStorage(data) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(data))
+  } catch {}
+}
+
+const saved = loadFromStorage()
 
 const store = {
-  sending: false,
-  progress: null,
+  sending:    saved.sending    ?? false,
+  progress:   saved.progress   ?? null,
+  message:    saved.message    ?? '',
+  aiMessages: saved.aiMessages ?? [],
   listeners: new Set(),
 
   update(patch) {
     Object.assign(store, patch)
-    store.listeners.forEach(fn => fn({ sending: store.sending, progress: store.progress }))
+    // Persistir en localStorage (excluir listeners)
+    saveToStorage({
+      sending:    store.sending,
+      progress:   store.progress,
+      message:    store.message,
+      aiMessages: store.aiMessages,
+    })
+    store.listeners.forEach(fn => fn(store.getSnapshot()))
   },
 
   subscribe(fn) {
@@ -17,7 +44,18 @@ const store = {
   },
 
   getSnapshot() {
-    return { sending: store.sending, progress: store.progress }
+    return {
+      sending:    store.sending,
+      progress:   store.progress,
+      message:    store.message,
+      aiMessages: store.aiMessages,
+    }
+  },
+
+  // Limpia todo al terminar la sesión de envío
+  clear() {
+    store.update({ sending: false, progress: null, message: '', aiMessages: [] })
+    localStorage.removeItem(LS_KEY)
   },
 }
 

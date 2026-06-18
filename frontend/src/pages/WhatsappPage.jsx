@@ -734,7 +734,7 @@ export default function WhatsappPage() {
   const [selected,    setSelected]    = useState(new Set())
   const [templates,   setTemplates]   = useState([])
   const [selTemplate, setSelTemplate] = useState(null)
-  const [message,     setMessage]     = useState('')
+  const [message,     setMessage]     = useState(() => progressStore.getSnapshot().message)
   const [chromLoad,   setChromLoad]   = useState(false)
   const [starting,    setStarting]    = useState(false)
   const [sending,     setSending]     = useState(() => progressStore.getSnapshot().sending)
@@ -742,7 +742,7 @@ export default function WhatsappPage() {
   const [testPhone,   setTestPhone]   = useState('')
   const [testSending, setTestSending] = useState(false)
   const [testResult,  setTestResult]  = useState(null)
-  const [aiMessages,  setAiMessages]  = useState([])   // [{storeId, storeName, message}]
+  const [aiMessages,  setAiMessages]  = useState(() => progressStore.getSnapshot().aiMessages)
   const [sentTodayIds, setSentTodayIds] = useState(new Set())
   const [aiRecommLoading, setAiRecommLoading] = useState(false)
   const [aiRecommMsg,    setAiRecommMsg]    = useState(null) // { type: 'ok'|'error', text }
@@ -769,10 +769,12 @@ export default function WhatsappPage() {
     loadStatus(); loadDash(); loadSentToday()
     getMsgTemplates().then(r => setTemplates(r.data)).catch(() => {})
     const iv = setInterval(loadStatus, 5000)
-    // Reconectar estado de envío si el usuario salió y volvió durante un envío activo
-    const unsub = progressStore.subscribe(({ sending: s, progress: p }) => {
+    // Reconectar estado si el usuario salió y volvió (navegación o recarga)
+    const unsub = progressStore.subscribe(({ sending: s, progress: p, message: m, aiMessages: ai }) => {
       setSending(s)
       setProgress(p)
+      setMessage(m)
+      setAiMessages(ai)
       if (p?.finalizado) { loadStatus(); loadSentToday() }
     })
     return () => { clearInterval(iv); unsub() }
@@ -983,12 +985,12 @@ export default function WhatsappPage() {
           </div>
 
           <StepMessage
-            message={message} onChange={setMessage}
+            message={message} onChange={v => { setMessage(v); progressStore.update({ message: v }) }}
             selectedStores={Object.values(dashStores).flat()
               .filter(s => selected.has(s.id))
               .filter((s, i, arr) => arr.findIndex(x => x.id === s.id) === i)}
-            onAiMessages={msgs => setAiMessages(msgs)}
-            onModeChange={m => { if (m === 'manual') setAiMessages([]) }} />
+            onAiMessages={msgs => { setAiMessages(msgs); progressStore.update({ aiMessages: msgs }) }}
+            onModeChange={m => { if (m === 'manual') { setAiMessages([]); progressStore.update({ aiMessages: [] }) } }} />
 
           {/* ── Panel revisión mensajes IA ── */}
           {aiMessages.length > 0 && (
@@ -999,7 +1001,7 @@ export default function WhatsappPage() {
                   <div className={styles.stepTitle}>Mensajes personalizados por IA</div>
                   <div className={styles.stepSub}>{aiMessages.length} mensajes listos — edita si necesitas ajustar</div>
                 </div>
-                <button className={styles.btnXsDanger} onClick={() => setAiMessages([])}>Limpiar</button>
+                <button className={styles.btnXsDanger} onClick={() => { setAiMessages([]); progressStore.update({ aiMessages: [] }) }}>Limpiar</button>
               </div>
               <div className={styles.aiMsgList}>
                 {aiMessages.map((m, i) => (
@@ -1009,7 +1011,7 @@ export default function WhatsappPage() {
                       className={styles.aiMsgTextarea}
                       rows={3}
                       value={m.message}
-                      onChange={e => setAiMessages(prev => prev.map((x, j) => j === i ? { ...x, message: e.target.value } : x))}
+                      onChange={e => { const updated = aiMessages.map((x, j) => j === i ? { ...x, message: e.target.value } : x); setAiMessages(updated); progressStore.update({ aiMessages: updated }) }}
                     />
                   </div>
                 ))}
@@ -1083,7 +1085,7 @@ export default function WhatsappPage() {
 
           {progress && (
             <SendProgress progress={progress}
-              onClose={() => { progressStore.update({ sending: false, progress: null }); setSelected(new Set()) }} />
+              onClose={() => { progressStore.clear(); setSelected(new Set()) }} />
           )}
         </div>
       </div>
