@@ -5,7 +5,7 @@ import {
   getWhatsappStatus, getWhatsappQr, openChrome,
   sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
-import { generateWhatsappMessage } from '../services/aiService'
+import { generateWhatsappMessage, getAiRecommendations } from '../services/aiService'
 import api from '../services/api'
 import styles from './WhatsappPage.module.css'
 
@@ -236,7 +236,6 @@ function WaHistory() {
 }
 
 const SECTIONS = [
-  { key: 'recommended',        label: 'Recomendado',        icon: '⭐', color: '#FF441F' },
   { key: 'onboardingCritical', label: 'Onboarding',         icon: '🚨', color: '#EF4444' },
   { key: 'aliados',            label: 'Aliados 8–14',       icon: '🔗', color: '#F97316' },
   { key: 'selfOnboarding',     label: 'Self',               icon: '🛒', color: '#8B5CF6' },
@@ -744,6 +743,7 @@ export default function WhatsappPage() {
   const [testResult,  setTestResult]  = useState(null)
   const [aiMessages,  setAiMessages]  = useState([])   // [{storeId, storeName, message}]
   const [sentTodayIds, setSentTodayIds] = useState(new Set())
+  const [aiRecommLoading, setAiRecommLoading] = useState(false)
 
   const loadStatus = async () => {
     try {
@@ -790,6 +790,27 @@ export default function WhatsappPage() {
     ids.forEach(id => next.delete(id))
     return next
   })
+
+  const handleAiRecommend = async () => {
+    setAiRecommLoading(true)
+    try {
+      const res = await getAiRecommendations()
+      const priorities = res.data?.priorities ?? []
+      // Tomar los primeros 30 storeCodes recomendados
+      const topCodes = new Set(priorities.slice(0, 30).map(p => p.storeCode).filter(Boolean))
+      // Buscar esos storeCodes en todas las secciones de dashStores
+      const allStores = Object.values(dashStores).flat()
+      setSelected(prev => {
+        const next = new Set(prev)
+        allStores.forEach(s => { if (topCodes.has(s.storeCode)) next.add(s.id) })
+        return next
+      })
+    } catch {
+      // silencio — la IA puede estar fuera
+    } finally {
+      setAiRecommLoading(false)
+    }
+  }
 
   const handleRefresh = async () => {
     setChromLoad(true)
@@ -893,14 +914,22 @@ export default function WhatsappPage() {
                     : 'Elige las tiendas a las que deseas escribir'}
                 </div>
               </div>
-              {selected.size > 0 && (
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                 <button
-                  className={styles.btnXsDanger}
-                  style={{ marginLeft: 'auto' }}
-                  onClick={() => setSelected(new Set())}>
-                  Limpiar todo
+                  className={styles.btnXs}
+                  style={{ background: '#7C3AED', color: '#fff', border: 'none', opacity: aiRecommLoading ? 0.7 : 1 }}
+                  onClick={handleAiRecommend}
+                  disabled={aiRecommLoading}>
+                  {aiRecommLoading ? 'Analizando...' : '🤖 IA Recomienda 30'}
                 </button>
-              )}
+                {selected.size > 0 && (
+                  <button
+                    className={styles.btnXsDanger}
+                    onClick={() => setSelected(new Set())}>
+                    Limpiar todo
+                  </button>
+                )}
+              </div>
             </div>
             <StoreSelector
               sections={SECTIONS}

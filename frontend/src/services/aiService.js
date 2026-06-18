@@ -7,3 +7,5 @@ export const generateWhatsappMessage = (storeName, agingDays, agingStage, segmen
 
 export const generateDailySummary = (efectivas, noContacto, whatsappEnviados, tiendas, topPrioridades) =>
   api.post('/ai/daily-summary', { efectivas, noContacto, whatsappEnviados, tiendas, topPrioridades })
+
+export const getAiRecommendations = () => api.get('/ai/recommend')
