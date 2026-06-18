@@ -745,6 +745,7 @@ export default function WhatsappPage() {
   const [aiMessages,  setAiMessages]  = useState([])   // [{storeId, storeName, message}]
   const [sentTodayIds, setSentTodayIds] = useState(new Set())
   const [aiRecommLoading, setAiRecommLoading] = useState(false)
+  const [aiRecommMsg,    setAiRecommMsg]    = useState(null) // { type: 'ok'|'error', text }
 
   const loadStatus = async () => {
     try {
@@ -800,20 +801,44 @@ export default function WhatsappPage() {
 
   const handleAiRecommend = async () => {
     setAiRecommLoading(true)
+    setAiRecommMsg(null)
     try {
       const res = await getAiRecommendations()
       const priorities = res.data?.priorities ?? []
-      // Tomar los primeros 30 storeCodes recomendados
-      const topCodes = new Set(priorities.slice(0, 30).map(p => p.storeCode).filter(Boolean))
-      // Buscar esos storeCodes en todas las secciones de dashStores
-      const allStores = Object.values(dashStores).flat()
+
+      if (priorities.length === 0) {
+        setAiRecommMsg({ type: 'error', text: 'La IA no generó recomendaciones — intenta de nuevo en unos segundos.' })
+        return
+      }
+
+      // Normalizar storeCodes a minúsculas para matching robusto
+      const topCodes = new Set(priorities.slice(0, 30).map(p => p.storeCode?.toLowerCase().trim()).filter(Boolean))
+
+      // Buscar en TODAS las secciones del dashboard (incluye saludables, IS, etc.)
+      const allStores = Object.values(dashStores).flat().filter(s => s && typeof s === 'object' && s.id)
+      let added = 0
       setSelected(prev => {
         const next = new Set(prev)
-        allStores.forEach(s => { if (topCodes.has(s.storeCode)) next.add(s.id) })
+        allStores.forEach(s => {
+          if (topCodes.has(s.storeCode?.toLowerCase().trim())) {
+            next.add(s.id)
+            added++
+          }
+        })
         return next
       })
-    } catch {
-      // silencio — la IA puede estar fuera
+
+      // Mensaje de resultado
+      const total = priorities.length
+      if (added === 0) {
+        setAiRecommMsg({ type: 'error', text: `La IA recomendó ${total} tiendas pero ninguna está en las secciones activas del selector. Verifica que cargaste el Excel hoy.` })
+      } else {
+        setAiRecommMsg({ type: 'ok', text: `✓ IA seleccionó ${added} tiendas de ${total} recomendadas` })
+        setTimeout(() => setAiRecommMsg(null), 4000)
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.response?.data?.message || 'Error al consultar la IA — verifica que esté disponible.'
+      setAiRecommMsg({ type: 'error', text: msg })
     } finally {
       setAiRecommLoading(false)
     }
@@ -921,20 +946,27 @@ export default function WhatsappPage() {
                     : 'Elige las tiendas a las que deseas escribir'}
                 </div>
               </div>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button
-                  className={styles.btnXs}
-                  style={{ background: '#7C3AED', color: '#fff', border: 'none', opacity: aiRecommLoading ? 0.7 : 1 }}
-                  onClick={handleAiRecommend}
-                  disabled={aiRecommLoading}>
-                  {aiRecommLoading ? 'Analizando...' : '🤖 IA Recomienda 30'}
-                </button>
-                {selected.size > 0 && (
+              <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button
-                    className={styles.btnXsDanger}
-                    onClick={() => setSelected(new Set())}>
-                    Limpiar todo
+                    className={styles.btnXs}
+                    style={{ background: '#7C3AED', color: '#fff', border: 'none', opacity: aiRecommLoading ? 0.7 : 1 }}
+                    onClick={handleAiRecommend}
+                    disabled={aiRecommLoading}>
+                    {aiRecommLoading ? 'Analizando...' : '🤖 IA Recomienda'}
                   </button>
+                  {selected.size > 0 && (
+                    <button
+                      className={styles.btnXsDanger}
+                      onClick={() => setSelected(new Set())}>
+                      Limpiar todo
+                    </button>
+                  )}
+                </div>
+                {aiRecommMsg && (
+                  <span style={{ fontSize: '0.72rem', color: aiRecommMsg.type === 'ok' ? '#22C55E' : '#EF4444', textAlign: 'right', maxWidth: 260 }}>
+                    {aiRecommMsg.text}
+                  </span>
                 )}
               </div>
             </div>
