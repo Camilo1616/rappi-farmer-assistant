@@ -97,11 +97,9 @@ public class DashboardService {
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
             boolean isSelf = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("self");
-            // IS = columna GESTIONAR del Excel con valor "IS" — indica visita en tienda ese día
-            String gestionar = store.getGestionar() != null ? store.getGestionar().trim().toUpperCase() : "";
-            boolean isGestionarIS = gestionar.equals("IS")
-                    || gestionar.contains("IN STORE")
-                    || gestionar.contains("INSTORE");
+            // IS = canal "INSIDE SALES" — cualquier tienda con ese canal sin importar handoff ni seguimiento
+            boolean isGestionarIS = store.getChannel() != null
+                    && store.getChannel().toLowerCase().contains("inside");
             if (isGestionarIS) insideSales.add(dto);
 
             if (isGestionarIS) {
