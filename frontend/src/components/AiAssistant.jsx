@@ -294,93 +294,40 @@ const TIPS = [
 ]
 
 function RobotSVG({ hovered, open, blink, look }) {
-  const eyeRy  = blink ? 0.4 : 6.5
-  const SKIN   = '#FBBF8C'
-  const SKIN_D = '#F59E5A'
-  const HAIR   = '#2C1A0E'
-  const EYE    = '#1A0A00'
-  const RAPPI  = '#FF441F'
+  const eyeRy = blink ? 0.4 : 7
+  const EYE   = '#1A0A00'
+  const RAPPI = '#FF441F'
 
-  // pupila se desplaza según look {dx, dy}
   const lx = look ? look.dx : 0
   const ly = look ? look.dy : 0
 
-  const mouthD = hovered
-    ? 'M33 80 Q50 94 67 80'
-    : open
-    ? 'M35 80 Q50 89 65 80'
-    : 'M37 80 Q50 87 63 80'
-
   return (
-    <svg width="84" height="98" viewBox="0 0 100 112" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Sombra */}
-      <ellipse cx="50" cy="109" rx="28" ry="3" fill="#0002"/>
-
-      {/* Cabello trasero */}
-      <ellipse cx="50" cy="36" rx="37" ry="30" fill={HAIR}/>
-
-      {/* Cara */}
-      <ellipse cx="50" cy="60" rx="36" ry="44" fill={SKIN}/>
-
-      {/* Cabello frente */}
-      <path d="M14 40 Q15 14 50 11 Q85 14 86 40 Q80 22 50 18 Q20 22 14 40Z" fill={HAIR}/>
-
-      {/* Oreja izq */}
-      <ellipse cx="14" cy="58" rx="7" ry="11" fill={SKIN} stroke={SKIN_D} strokeWidth="1"/>
-      <ellipse cx="14" cy="58" rx="4" ry="7" fill={SKIN_D} fillOpacity="0.35"/>
-      {/* Oreja der */}
-      <ellipse cx="86" cy="58" rx="7" ry="11" fill={SKIN} stroke={SKIN_D} strokeWidth="1"/>
-      <ellipse cx="86" cy="58" rx="4" ry="7" fill={SKIN_D} fillOpacity="0.35"/>
-
-      {/* Cejas */}
-      <path d="M26 43 Q36 37 46 43" stroke={HAIR} strokeWidth="3.5" strokeLinecap="round" fill="none"
-        style={{ transition: 'transform 0.2s' }} transform={hovered ? 'translate(0,-2)' : undefined}/>
-      <path d="M54 43 Q64 37 74 43" stroke={HAIR} strokeWidth="3.5" strokeLinecap="round" fill="none"
-        style={{ transition: 'transform 0.2s' }} transform={hovered ? 'translate(0,-2)' : undefined}/>
+    <svg width="84" height="70" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
 
       {/* Ojo izq — esclerótica */}
-      <ellipse cx="36" cy="54" rx="9.5" ry={eyeRy} fill="white" style={{ transition: 'ry 0.08s' }}/>
-      {/* Ojo izq — iris con movimiento */}
-      <ellipse cx={36 + lx} cy={54 + ly} rx="6.5" ry={Math.max(eyeRy - 2, 0)} fill={EYE} style={{ transition: 'all 0.12s' }}/>
-      <circle cx={39 + lx} cy={51 + ly} r="2" fill="white" fillOpacity="0.85"/>
-      {/* Destello pequeño extra */}
-      <circle cx={37 + lx} cy={53 + ly} r="0.8" fill="white" fillOpacity="0.5"/>
+      <ellipse cx="28" cy="22" rx="13" ry={eyeRy} fill="white" style={{ transition: 'ry 0.08s' }}/>
+      <ellipse cx={28 + lx} cy={22 + ly} rx="9" ry={Math.max(eyeRy - 2.5, 0)} fill={EYE} style={{ transition: 'all 0.12s' }}/>
+      <circle cx={31 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
+      <circle cx={29 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
 
       {/* Ojo der — esclerótica */}
-      <ellipse cx="64" cy="54" rx="9.5" ry={eyeRy} fill="white" style={{ transition: 'ry 0.08s' }}/>
-      {/* Ojo der — iris con movimiento */}
-      <ellipse cx={64 + lx} cy={54 + ly} rx="6.5" ry={Math.max(eyeRy - 2, 0)} fill={EYE} style={{ transition: 'all 0.12s' }}/>
-      <circle cx={67 + lx} cy={51 + ly} r="2" fill="white" fillOpacity="0.85"/>
-      <circle cx={65 + lx} cy={53 + ly} r="0.8" fill="white" fillOpacity="0.5"/>
-
-      {/* Mejillas sonrojadas */}
-      <ellipse cx="22" cy="66" rx="10" ry="7" fill="#FFB3B3" fillOpacity="0.4"/>
-      <ellipse cx="78" cy="66" rx="10" ry="7" fill="#FFB3B3" fillOpacity="0.4"/>
-
-      {/* Nariz */}
-      <ellipse cx="50" cy="67" rx="5" ry="4" fill={SKIN_D} fillOpacity="0.5"/>
-      <circle cx="47" cy="68.5" r="2" fill={SKIN_D} fillOpacity="0.55"/>
-      <circle cx="53" cy="68.5" r="2" fill={SKIN_D} fillOpacity="0.55"/>
+      <ellipse cx="72" cy="22" rx="13" ry={eyeRy} fill="white" style={{ transition: 'ry 0.08s' }}/>
+      <ellipse cx={72 + lx} cy={22 + ly} rx="9" ry={Math.max(eyeRy - 2.5, 0)} fill={EYE} style={{ transition: 'all 0.12s' }}/>
+      <circle cx={75 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
+      <circle cx={73 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
 
       {/* ── Bigote estilo Rappi ── */}
-      {/* Base central del bigote */}
-      <path d="M42 74 Q50 72 58 74" stroke={RAPPI} strokeWidth="3.5" strokeLinecap="round" fill="none"/>
-      {/* Ala izquierda — curva hacia arriba como el logo Rappi */}
-      <path d="M42 74 C37 73 30 70 27 65 C29 64 32 65 34 67 C37 70 40 73 42 74Z" fill={RAPPI}/>
-      {/* Punta izquierda curvada arriba */}
-      <path d="M27 65 C25 63 24 60 26 59 C28 60 28 63 27 65Z" fill={RAPPI}/>
-      {/* Ala derecha — curva hacia arriba */}
-      <path d="M58 74 C63 73 70 70 73 65 C71 64 68 65 66 67 C63 70 60 73 58 74Z" fill={RAPPI}/>
-      {/* Punta derecha curvada arriba */}
-      <path d="M73 65 C75 63 76 60 74 59 C72 60 72 63 73 65Z" fill={RAPPI}/>
+      {/* Centro */}
+      <path d="M38 52 Q50 48 62 52" stroke={RAPPI} strokeWidth="4" strokeLinecap="round" fill="none"/>
+      {/* Ala izquierda */}
+      <path d="M38 52 C32 50 22 46 18 39 C21 37 25 39 28 42 C32 46 36 51 38 52Z" fill={RAPPI}/>
+      {/* Punta izquierda hacia arriba */}
+      <path d="M18 39 C15 36 14 32 17 30 C19 31 20 35 18 39Z" fill={RAPPI}/>
+      {/* Ala derecha */}
+      <path d="M62 52 C68 50 78 46 82 39 C79 37 75 39 72 42 C68 46 64 51 62 52Z" fill={RAPPI}/>
+      {/* Punta derecha hacia arriba */}
+      <path d="M82 39 C85 36 86 32 83 30 C81 31 80 35 82 39Z" fill={RAPPI}/>
 
-      {/* Sonrisa */}
-      <path d={mouthD} stroke="#8B4513" strokeWidth="2.5" strokeLinecap="round" fill="none"
-        style={{ transition: 'd 0.25s' }}/>
-      {/* Dientes al sonreír */}
-      {hovered && (
-        <path d="M39 81 Q50 91 61 81 L61 85 Q50 93 39 85Z" fill="white" fillOpacity="0.9"/>
-      )}
     </svg>
   )
 }
