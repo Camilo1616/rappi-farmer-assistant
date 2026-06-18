@@ -293,12 +293,17 @@ const TIPS = [
   'Soy tu copiloto 🚀',
 ]
 
-function RobotSVG({ hovered, open, blink }) {
-  const eyeRy = blink ? 0.5 : 6.5
-  const SKIN  = '#FBBF8C'
-  const SKIN_D= '#F59E5A'
-  const HAIR  = '#2C1A0E'
-  const EYE   = '#1A0A00'
+function RobotSVG({ hovered, open, blink, look }) {
+  const eyeRy  = blink ? 0.4 : 6.5
+  const SKIN   = '#FBBF8C'
+  const SKIN_D = '#F59E5A'
+  const HAIR   = '#2C1A0E'
+  const EYE    = '#1A0A00'
+  const RAPPI  = '#FF441F'
+
+  // pupila se desplaza según look {dx, dy}
+  const lx = look ? look.dx : 0
+  const ly = look ? look.dy : 0
 
   const mouthD = hovered
     ? 'M33 80 Q50 94 67 80'
@@ -333,14 +338,20 @@ function RobotSVG({ hovered, open, blink }) {
       <path d="M54 43 Q64 37 74 43" stroke={HAIR} strokeWidth="3.5" strokeLinecap="round" fill="none"
         style={{ transition: 'transform 0.2s' }} transform={hovered ? 'translate(0,-2)' : undefined}/>
 
-      {/* Ojo izq */}
-      <ellipse cx="36" cy="54" rx="9.5" ry={eyeRy} fill="white" style={{ transition: 'ry 0.1s' }}/>
-      <ellipse cx="36" cy="54" rx="6.5" ry={Math.max(eyeRy - 2, 0)} fill={EYE} style={{ transition: 'all 0.1s' }}/>
-      <circle cx="39" cy="51" r="2" fill="white" fillOpacity="0.8"/>
-      {/* Ojo der */}
-      <ellipse cx="64" cy="54" rx="9.5" ry={eyeRy} fill="white" style={{ transition: 'ry 0.1s' }}/>
-      <ellipse cx="64" cy="54" rx="6.5" ry={Math.max(eyeRy - 2, 0)} fill={EYE} style={{ transition: 'all 0.1s' }}/>
-      <circle cx="67" cy="51" r="2" fill="white" fillOpacity="0.8"/>
+      {/* Ojo izq — esclerótica */}
+      <ellipse cx="36" cy="54" rx="9.5" ry={eyeRy} fill="white" style={{ transition: 'ry 0.08s' }}/>
+      {/* Ojo izq — iris con movimiento */}
+      <ellipse cx={36 + lx} cy={54 + ly} rx="6.5" ry={Math.max(eyeRy - 2, 0)} fill={EYE} style={{ transition: 'all 0.12s' }}/>
+      <circle cx={39 + lx} cy={51 + ly} r="2" fill="white" fillOpacity="0.85"/>
+      {/* Destello pequeño extra */}
+      <circle cx={37 + lx} cy={53 + ly} r="0.8" fill="white" fillOpacity="0.5"/>
+
+      {/* Ojo der — esclerótica */}
+      <ellipse cx="64" cy="54" rx="9.5" ry={eyeRy} fill="white" style={{ transition: 'ry 0.08s' }}/>
+      {/* Ojo der — iris con movimiento */}
+      <ellipse cx={64 + lx} cy={54 + ly} rx="6.5" ry={Math.max(eyeRy - 2, 0)} fill={EYE} style={{ transition: 'all 0.12s' }}/>
+      <circle cx={67 + lx} cy={51 + ly} r="2" fill="white" fillOpacity="0.85"/>
+      <circle cx={65 + lx} cy={53 + ly} r="0.8" fill="white" fillOpacity="0.5"/>
 
       {/* Mejillas sonrojadas */}
       <ellipse cx="22" cy="66" rx="10" ry="7" fill="#FFB3B3" fillOpacity="0.4"/>
@@ -351,10 +362,17 @@ function RobotSVG({ hovered, open, blink }) {
       <circle cx="47" cy="68.5" r="2" fill={SKIN_D} fillOpacity="0.55"/>
       <circle cx="53" cy="68.5" r="2" fill={SKIN_D} fillOpacity="0.55"/>
 
-      {/* Bigote — ala izquierda */}
-      <path d="M50 75 C46 71 38 69 31 73 C37 77 46 78 50 75Z" fill={HAIR}/>
-      {/* Bigote — ala derecha */}
-      <path d="M50 75 C54 71 62 69 69 73 C63 77 54 78 50 75Z" fill={HAIR}/>
+      {/* ── Bigote estilo Rappi ── */}
+      {/* Base central del bigote */}
+      <path d="M42 74 Q50 72 58 74" stroke={RAPPI} strokeWidth="3.5" strokeLinecap="round" fill="none"/>
+      {/* Ala izquierda — curva hacia arriba como el logo Rappi */}
+      <path d="M42 74 C37 73 30 70 27 65 C29 64 32 65 34 67 C37 70 40 73 42 74Z" fill={RAPPI}/>
+      {/* Punta izquierda curvada arriba */}
+      <path d="M27 65 C25 63 24 60 26 59 C28 60 28 63 27 65Z" fill={RAPPI}/>
+      {/* Ala derecha — curva hacia arriba */}
+      <path d="M58 74 C63 73 70 70 73 65 C71 64 68 65 66 67 C63 70 60 73 58 74Z" fill={RAPPI}/>
+      {/* Punta derecha curvada arriba */}
+      <path d="M73 65 C75 63 76 60 74 59 C72 60 72 63 73 65Z" fill={RAPPI}/>
 
       {/* Sonrisa */}
       <path d={mouthD} stroke="#8B4513" strokeWidth="2.5" strokeLinecap="round" fill="none"
@@ -372,6 +390,7 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
   const [tipIdx,  setTipIdx]  = useState(0)
   const [blink,   setBlink]   = useState(false)
   const [pulse,   setPulse]   = useState(false)
+  const [look,    setLook]    = useState({ dx: 0, dy: 0 })
 
   useEffect(() => {
     if (open) return
@@ -379,9 +398,37 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
     return () => clearInterval(id)
   }, [open])
 
+  // Parpadeo doble rápido estilo "espabilado"
   useEffect(() => {
-    const doBlink = () => { setBlink(true); setTimeout(() => setBlink(false), 120) }
-    const id = setInterval(doBlink, Math.random() * 2500 + 2000)
+    const doBlink = () => {
+      setBlink(true)
+      setTimeout(() => setBlink(false), 90)
+      // doble parpadeo
+      setTimeout(() => setBlink(true), 220)
+      setTimeout(() => setBlink(false), 310)
+    }
+    let id
+    const schedule = () => {
+      id = setTimeout(() => { doBlink(); schedule() }, Math.random() * 2000 + 1200)
+    }
+    schedule()
+    return () => clearTimeout(id)
+  }, [])
+
+  // Ojos que miran a distintos lados aleatoriamente
+  useEffect(() => {
+    const directions = [
+      { dx: 0,  dy: 0  },
+      { dx: 2,  dy: 0  },
+      { dx: -2, dy: 0  },
+      { dx: 0,  dy: 2  },
+      { dx: 0,  dy: -1 },
+      { dx: 2,  dy: 1  },
+      { dx: -2, dy: 1  },
+    ]
+    const id = setInterval(() => {
+      setLook(directions[Math.floor(Math.random() * directions.length)])
+    }, Math.random() * 1500 + 1000)
     return () => clearInterval(id)
   }, [])
 
@@ -451,7 +498,7 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
         transform: hovered ? 'scale(1.08) translateY(-4px)' : open ? 'scale(1.04)' : 'scale(1)',
         transition: 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
-        <RobotSVG hovered={hovered} open={open} blink={blink} />
+        <RobotSVG hovered={hovered} open={open} blink={blink} look={look} />
       </div>
     </div>
   )
