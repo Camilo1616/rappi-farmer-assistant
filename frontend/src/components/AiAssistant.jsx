@@ -316,17 +316,26 @@ function RobotSVG({ hovered, open, blink, look }) {
       <circle cx={75 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
       <circle cx={73 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
 
-      {/* ── Bigote estilo Rappi ── */}
-      {/* Centro */}
-      <path d="M38 52 Q50 48 62 52" stroke={RAPPI} strokeWidth="4" strokeLinecap="round" fill="none"/>
-      {/* Ala izquierda */}
-      <path d="M38 52 C32 50 22 46 18 39 C21 37 25 39 28 42 C32 46 36 51 38 52Z" fill={RAPPI}/>
-      {/* Punta izquierda hacia arriba */}
-      <path d="M18 39 C15 36 14 32 17 30 C19 31 20 35 18 39Z" fill={RAPPI}/>
-      {/* Ala derecha */}
-      <path d="M62 52 C68 50 78 46 82 39 C79 37 75 39 72 42 C68 46 64 51 62 52Z" fill={RAPPI}/>
-      {/* Punta derecha hacia arriba */}
-      <path d="M82 39 C85 36 86 32 83 30 C81 31 80 35 82 39Z" fill={RAPPI}/>
+      {/* ── Bigote estilo Rappi — forma única continua ── */}
+      <path
+        d="
+          M 50 56
+          C 44 56  36 55  28 50
+          C 20 45  12 37  10 30
+          C  8 23  12 18  17 20
+          C 22 22  22 28  20 33
+          C 18 38  22 43  30 47
+          C 36 50  44 52  50 52
+          C 56 52  64 50  70 47
+          C 78 43  82 38  80 33
+          C 78 28  78 22  83 20
+          C 88 18  92 23  90 30
+          C 88 37  80 45  72 50
+          C 64 55  56 56  50 56
+          Z
+        "
+        fill={RAPPI}
+      />
 
     </svg>
   )
