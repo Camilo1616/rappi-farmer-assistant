@@ -97,18 +97,16 @@ public class DashboardService {
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
             boolean isSelf = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("self");
-            boolean isIS = store.getChannel() != null
-                    && store.getChannel().toLowerCase().contains("inside");
-            boolean uploadReciente = store.getUploadDate() != null
-                    && !store.getUploadDate().isBefore(today.minusDays(7));
-            boolean isGestionarIS = isIS
-                    && store.getHadHandoff() != null && !store.getHadHandoff()
-                    && store.getLastFollowUp() == null
-                    && "NO".equalsIgnoreCase(store.getFollowUpLast30d())
-                    && uploadReciente;
+            // IS = columna GESTIONAR del Excel con valor "IS" — indica visita en tienda ese día
+            String gestionar = store.getGestionar() != null ? store.getGestionar().trim().toUpperCase() : "";
+            boolean isGestionarIS = gestionar.equals("IS")
+                    || gestionar.contains("IN STORE")
+                    || gestionar.contains("INSTORE");
             if (isGestionarIS) insideSales.add(dto);
 
-            if (isSelf) {
+            if (isGestionarIS) {
+                // IS ya fue agregado arriba — no duplicar en otros segmentos
+            } else if (isSelf) {
                 selfOnboarding.add(dto);
             } else if (aging >= 1 && aging <= 8 && isOnboardingEligible(store)) {
                 onboardingCritical.add(dto);
