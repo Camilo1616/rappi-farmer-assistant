@@ -97,10 +97,10 @@ public class DashboardService {
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
             boolean isSelf = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("self");
-            // IS = canal exacto "Inside Sales" + HO=NO + lastFollowUp nulo + followUpLast30d=NO + cargada ≤7 días
+            // IS = canal exacto "Inside Sales" + HO=NO (o nulo) + lastFollowUp nulo + followUpLast30d=NO + cargada ≤7 días
             boolean isGestionarIS = store.getChannel() != null
                     && store.getChannel().equalsIgnoreCase("Inside Sales")
-                    && Boolean.FALSE.equals(store.getHadHandoff())
+                    && !Boolean.TRUE.equals(store.getHadHandoff())
                     && store.getLastFollowUp() == null
                     && "NO".equalsIgnoreCase(store.getFollowUpLast30d())
                     && store.getUploadDate() != null
