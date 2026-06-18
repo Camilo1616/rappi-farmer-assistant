@@ -306,7 +306,7 @@ public class StoreImportService {
                         .collect(java.util.stream.Collectors.joining(" "));
                 Long liderId = sessionContext.getCurrentUserId();
                 User nuevo = new User(null, nombre, k, "FARMER_MASS",
-                        defaultFarmerPwdHash, null, "CO", "ACTIVE", liderId, null, null, null, null, null, null, null);
+                        defaultFarmerPwdHash, null, "CO", "ACTIVE", liderId, null, null, null, null, null, null, null, null);
                 User guardado = userRepository.save(nuevo);
                 log.info("Farmer auto-registrado desde Excel: {} ({})", nombre, k);
                 return guardado.getId();

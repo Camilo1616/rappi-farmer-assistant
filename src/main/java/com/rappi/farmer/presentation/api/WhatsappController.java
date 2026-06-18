@@ -29,6 +29,7 @@ public class WhatsappController {
     private final StoreRepository storeRepository;
     private final SessionContext sessionContext;
     private final com.rappi.farmer.application.services.MessageTemplateService messageTemplateService;
+    private final com.rappi.farmer.domain.repositories.UserRepository userRepository;
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -55,17 +56,39 @@ public class WhatsappController {
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
-        Long userId   = currentUserId();
-        boolean connected  = whatsappService.estaConectado(userId);
-        boolean hasQr      = whatsappService.tieneQr(userId);
-        long    sentToday  = whatsappService.enviadosHoy(userId);
-        return ResponseEntity.ok(Map.of(
-                "open",      connected || hasQr,
-                "connected", connected,
-                "hasQr",     hasQr,
-                "sentToday", sentToday,
-                "remaining", Integer.MAX_VALUE
-        ));
+        Long userId       = currentUserId();
+        boolean connected = whatsappService.estaConectado(userId);
+        boolean hasQr     = whatsappService.tieneQr(userId);
+        long    sentToday = whatsappService.enviadosHoy(userId);
+
+        java.time.LocalDate registeredAt = userRepository.findById(userId)
+                .map(u -> u.getWhatsappPhoneRegisteredAt())
+                .orElse(null);
+
+        boolean pendingSetup = registeredAt == null;
+        int phoneAgeWeeks    = 0;
+        int waLimit          = 40;
+
+        if (!pendingSetup) {
+            phoneAgeWeeks = (int) java.time.temporal.ChronoUnit.WEEKS.between(registeredAt, java.time.LocalDate.now());
+            if (phoneAgeWeeks < 1)      { waLimit = 0; }
+            else if (phoneAgeWeeks < 2) { waLimit = 10; }
+            else if (phoneAgeWeeks < 4) { waLimit = 20; }
+            else                        { waLimit = 40; }
+        }
+
+        int remaining = Math.max(0, waLimit - (int) sentToday);
+
+        java.util.Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("open",         connected || hasQr);
+        resp.put("connected",    connected);
+        resp.put("hasQr",        hasQr);
+        resp.put("sentToday",    sentToday);
+        resp.put("remaining",    pendingSetup ? 40 : remaining);
+        resp.put("waLimit",      pendingSetup ? 40 : waLimit);
+        resp.put("phoneAgeWeeks", phoneAgeWeeks);
+        resp.put("pendingSetup", pendingSetup);
+        return ResponseEntity.ok(resp);
     }
 
     @GetMapping("/qr")

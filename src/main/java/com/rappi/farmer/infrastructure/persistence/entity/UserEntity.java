@@ -68,4 +68,8 @@ public class UserEntity {
     /** ACTIVO | INACTIVO | DESACTIVADO */
     @Column(name = "activity_status", length = 20)
     private String activityStatus;
+
+    /** Fecha en que el farmer activó la SIM de WhatsApp — controla el límite diario de envíos */
+    @Column(name = "whatsapp_phone_registered_at")
+    private LocalDate whatsappPhoneRegisteredAt;
 }

@@ -29,6 +29,7 @@ public class User {
     private LocalDate lastImportDate;
     private LocalDateTime lastActivity;
     private String activityStatus;
+    private java.time.LocalDate whatsappPhoneRegisteredAt;
 
     public UserRole getUserRole() {
         try { return UserRole.valueOf(role); } catch (Exception e) { return UserRole.FARMER_MASS; }

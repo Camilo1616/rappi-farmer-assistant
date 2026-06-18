@@ -43,6 +43,7 @@ public class UserRepositoryAdapter implements UserRepository {
         entity.setLastImportDate(user.getLastImportDate());
         entity.setLastActivity(user.getLastActivity());
         entity.setActivityStatus(user.getActivityStatus());
+        entity.setWhatsappPhoneRegisteredAt(user.getWhatsappPhoneRegisteredAt());
 
         return toDomain(jpaRepository.save(entity));
     }
@@ -69,6 +70,7 @@ public class UserRepositoryAdapter implements UserRepository {
                 e.getFarmerCode(), e.getCountryCode(),
                 e.getAccountStatus(), e.getLiderId(),
                 e.getNickname(), e.getAvatarUrl(), e.getCalendarRefreshToken(), e.getLastLoginAt(),
-                e.getLastImportDate(), e.getLastActivity(), e.getActivityStatus());
+                e.getLastImportDate(), e.getLastActivity(), e.getActivityStatus(),
+                e.getWhatsappPhoneRegisteredAt());
     }
 }

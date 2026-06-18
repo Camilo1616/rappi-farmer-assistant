@@ -128,6 +128,21 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/wa-phone-age")
+    public ResponseEntity<?> setWaPhoneAge(@RequestBody Map<String, String> body) {
+        String weeksStr = body.get("weeksAgo");
+        if (weeksStr == null) return ResponseEntity.badRequest().body(Map.of("message", "weeksAgo requerido"));
+        try {
+            int weeks = Integer.parseInt(weeksStr);
+            Long userId = sessionContext.getCurrentUserId();
+            userService.setWhatsappPhoneRegisteredAt(userId,
+                    java.time.LocalDate.now().minusWeeks(weeks));
+            return ResponseEntity.ok(Map.of("message", "Antigüedad de número guardada"));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "weeksAgo debe ser un número"));
+        }
+    }
+
     @PostMapping("/heartbeat")
     public ResponseEntity<?> heartbeat() {
         Long userId = sessionContext.getCurrentUserId();

@@ -6,7 +6,71 @@ import {
   sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
 import { generateWhatsappMessage } from '../services/aiService'
+import axios from 'axios'
 import styles from './WhatsappPage.module.css'
+
+const WA_AGE_OPTIONS = [
+  { label: 'Menos de 1 semana',  weeks: 0,  limit: 0,  color: '#EF4444', desc: 'Bloqueado — número muy nuevo, WhatsApp lo suspende' },
+  { label: '1 a 2 semanas',      weeks: 1,  limit: 10, color: '#F97316', desc: 'Máx 10 envíos/día' },
+  { label: '2 a 4 semanas',      weeks: 3,  limit: 20, color: '#F59E0B', desc: 'Máx 20 envíos/día' },
+  { label: 'Más de 1 mes',       weeks: 5,  limit: 40, color: '#22C55E', desc: 'Máx 40 envíos/día — normal' },
+]
+
+function WaPhoneSetupModal({ onSave }) {
+  const [selected, setSelected] = useState(null)
+  const [saving,   setSaving]   = useState(false)
+
+  const handleSave = async () => {
+    if (selected === null) return
+    setSaving(true)
+    try {
+      await axios.post('/api/auth/wa-phone-age', { weeksAgo: String(selected.weeks) })
+      onSave(selected)
+    } catch {}
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    }}>
+      <div style={{
+        background: '#1F2937', borderRadius: 16, padding: 28, maxWidth: 420, width: '100%',
+        border: '1.5px solid #374151', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+      }}>
+        <div style={{ fontSize: '1.8rem', textAlign: 'center', marginBottom: 8 }}>📱</div>
+        <h3 style={{ color: '#F9FAFB', fontWeight: 700, fontSize: '1.1rem', textAlign: 'center', margin: '0 0 6px' }}>
+          ¿Cuánto tiempo lleva tu número de WhatsApp?
+        </h3>
+        <p style={{ color: '#9CA3AF', fontSize: '0.83rem', textAlign: 'center', margin: '0 0 20px' }}>
+          WhatsApp bloquea números nuevos si envían mensajes masivos.<br/>
+          Ajustamos el límite diario para proteger tu cuenta.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {WA_AGE_OPTIONS.map(opt => (
+            <button key={opt.weeks} onClick={() => setSelected(opt)} style={{
+              background: selected?.weeks === opt.weeks ? opt.color + '22' : '#111827',
+              border: `1.5px solid ${selected?.weeks === opt.weeks ? opt.color : '#374151'}`,
+              borderRadius: 10, padding: '10px 14px', cursor: 'pointer', textAlign: 'left',
+              transition: 'all 0.15s',
+            }}>
+              <div style={{ color: '#F9FAFB', fontWeight: 600, fontSize: '0.9rem' }}>{opt.label}</div>
+              <div style={{ color: opt.color, fontSize: '0.78rem', marginTop: 2 }}>{opt.desc}</div>
+            </button>
+          ))}
+        </div>
+        <button onClick={handleSave} disabled={!selected || saving} style={{
+          marginTop: 18, width: '100%', padding: '11px 0', borderRadius: 10, border: 'none',
+          background: selected ? '#7C3AED' : '#374151', color: '#fff', fontWeight: 700,
+          fontSize: '0.95rem', cursor: selected ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1,
+        }}>
+          {saving ? 'Guardando...' : 'Confirmar'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const STATUS_COLOR = { ENVIADO: '#22C55E', NUMERO_INVALIDO: '#F59E0B', ERROR: '#EF4444' }
 const STATUS_LABEL = { ENVIADO: 'Enviado', NUMERO_INVALIDO: 'N° inválido', ERROR: 'Error' }
@@ -640,8 +704,9 @@ function SendProgress({ progress, onClose }) {
 
 /* ── Página ── */
 export default function WhatsappPage() {
-  const [status,      setStatus]      = useState({ open:false, connected:false, sentToday:0, remaining:MAX_DIARIO })
+  const [status,      setStatus]      = useState({ open:false, connected:false, sentToday:0, remaining:40, waLimit:40, phoneAgeWeeks:0, pendingSetup:false })
   const [qr,          setQr]          = useState(null)
+  const [showPhoneSetup, setShowPhoneSetup] = useState(false)
   const [dashStores,  setDashStores]  = useState({})
   const [selected,    setSelected]    = useState(new Set())
   const [templates,   setTemplates]   = useState([])
@@ -661,6 +726,7 @@ export default function WhatsappPage() {
     try {
       const r = await getWhatsappStatus()
       setStatus(r.data)
+      if (r.data.pendingSetup) setShowPhoneSetup(true)
       if (!r.data.connected) {
         const qrRes = await getWhatsappQr().catch(() => null)
         setQr(qrRes?.data?.qr || null)
@@ -754,12 +820,40 @@ export default function WhatsappPage() {
 
   const canSend = status.connected && selected.size > 0 && message.trim() && !sending
 
+  const waLimitBanner = () => {
+    const weeks = status.phoneAgeWeeks ?? 0
+    const limit = status.waLimit ?? 40
+    if (status.pendingSetup) return null
+    if (limit >= 40) return null
+    if (limit === 0) return (
+      <div style={{ background: '#EF444420', border: '1px solid #EF4444', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#FCA5A5' }}>
+        🚫 <strong>WhatsApp bloqueado</strong> — Tu número tiene menos de 1 semana. Úsalo en conversaciones normales unos días antes de envíos masivos.
+        <button onClick={() => setShowPhoneSetup(true)} style={{ marginLeft: 12, fontSize: 11, color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Actualizar antigüedad</button>
+      </div>
+    )
+    const color = limit === 10 ? '#F97316' : '#F59E0B'
+    return (
+      <div style={{ background: color + '20', border: `1px solid ${color}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color }}>
+        ⚠️ <strong>Número con {weeks < 2 ? '1–2' : '2–4'} semanas</strong> — Límite: <strong>{limit} envíos/día</strong> para evitar bloqueos. Quedan {status.remaining} hoy.
+        <button onClick={() => setShowPhoneSetup(true)} style={{ marginLeft: 12, fontSize: 11, color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Actualizar</button>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.page}>
+      {showPhoneSetup && (
+        <WaPhoneSetupModal onSave={opt => {
+          setShowPhoneSetup(false)
+          setStatus(prev => ({ ...prev, waLimit: opt.limit, phoneAgeWeeks: opt.weeks, pendingSetup: false, remaining: opt.limit }))
+        }} />
+      )}
       <div className={styles.pageHeader}>
         <h1 className={styles.title}>WhatsApp Masivo</h1>
         <p className={styles.sub}>Delay aleatorio 10–25s entre envíos</p>
       </div>
+
+      {waLimitBanner()}
 
       <div className={styles.layout}>
         <div className={styles.leftCol}>
