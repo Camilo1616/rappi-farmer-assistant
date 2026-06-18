@@ -6,6 +6,7 @@ import {
   sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
 import { generateWhatsappMessage, getAiRecommendations } from '../services/aiService'
+import progressStore from '../services/whatsappProgressStore'
 import api from '../services/api'
 import styles from './WhatsappPage.module.css'
 
@@ -736,8 +737,8 @@ export default function WhatsappPage() {
   const [message,     setMessage]     = useState('')
   const [chromLoad,   setChromLoad]   = useState(false)
   const [starting,    setStarting]    = useState(false)
-  const [sending,     setSending]     = useState(false)
-  const [progress,    setProgress]    = useState(null)
+  const [sending,     setSending]     = useState(() => progressStore.getSnapshot().sending)
+  const [progress,    setProgress]    = useState(() => progressStore.getSnapshot().progress)
   const [testPhone,   setTestPhone]   = useState('')
   const [testSending, setTestSending] = useState(false)
   const [testResult,  setTestResult]  = useState(null)
@@ -767,7 +768,13 @@ export default function WhatsappPage() {
     loadStatus(); loadDash(); loadSentToday()
     getMsgTemplates().then(r => setTemplates(r.data)).catch(() => {})
     const iv = setInterval(loadStatus, 5000)
-    return () => clearInterval(iv)
+    // Reconectar estado de envío si el usuario salió y volvió durante un envío activo
+    const unsub = progressStore.subscribe(({ sending: s, progress: p }) => {
+      setSending(s)
+      setProgress(p)
+      if (p?.finalizado) { loadStatus(); loadSentToday() }
+    })
+    return () => { clearInterval(iv); unsub() }
   }, [])
 
   const remaining = status.remaining ?? MAX_DIARIO
@@ -831,24 +838,24 @@ export default function WhatsappPage() {
 
   const handleSend = () => {
     if (!selected.size || !message.trim() || !status.connected) return
-    setSending(true)
-    setProgress({ total: selected.size, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 })
+    const initial = { total: selected.size, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
+    progressStore.update({ sending: true, progress: initial })
     sendMasivo(Array.from(selected), message,
-      data => setProgress(data),
-      data => { setProgress(data); setSending(false); loadStatus(); loadSentToday() },
-      ()   => setSending(false)
+      () => {},
+      () => { loadStatus(); loadSentToday() },
+      () => {}
     )
   }
 
   const handleSendAi = () => {
     if (!aiMessages.length || !status.connected) return
-    setSending(true)
-    setProgress({ total: aiMessages.length, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 })
+    const initial = { total: aiMessages.length, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
+    progressStore.update({ sending: true, progress: initial })
     sendPersonalized(
       aiMessages.map(m => ({ storeId: m.storeId, message: m.message })),
-      data => setProgress(data),
-      data => { setProgress(data); setSending(false); loadStatus(); loadSentToday() },
-      ()   => setSending(false)
+      () => {},
+      () => { loadStatus(); loadSentToday() },
+      () => {}
     )
   }
 
@@ -1044,7 +1051,7 @@ export default function WhatsappPage() {
 
           {progress && (
             <SendProgress progress={progress}
-              onClose={() => { setProgress(null); setSelected(new Set()); setSending(false) }} />
+              onClose={() => { progressStore.update({ sending: false, progress: null }); setSelected(new Set()) }} />
           )}
         </div>
       </div>
