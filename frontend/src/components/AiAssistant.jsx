@@ -316,25 +316,21 @@ function RobotSVG({ hovered, open, blink, look }) {
       <circle cx={75 + lx} cy={18 + ly} r="3" fill="white" fillOpacity="0.85"/>
       <circle cx={73 + lx} cy={21 + ly} r="1.2" fill="white" fillOpacity="0.5"/>
 
-      {/* ── Bigote estilo Rappi — forma única continua ── */}
+      {/* ── Bigote estilo Rappi ── */}
+      {/* Cuerpo principal: trazo grueso y suave de punta a punta */}
       <path
-        d="
-          M 50 56
-          C 44 56  36 55  28 50
-          C 20 45  12 37  10 30
-          C  8 23  12 18  17 20
-          C 22 22  22 28  20 33
-          C 18 38  22 43  30 47
-          C 36 50  44 52  50 52
-          C 56 52  64 50  70 47
-          C 78 43  82 38  80 33
-          C 78 28  78 22  83 20
-          C 88 18  92 23  90 30
-          C 88 37  80 45  72 50
-          C 64 55  56 56  50 56
-          Z
-        "
-        fill={RAPPI}
+        d="M 14 34 C 18 52 34 60 50 57 C 66 60 82 52 86 34"
+        stroke={RAPPI} strokeWidth="13" strokeLinecap="round" fill="none"
+      />
+      {/* Punta izquierda curvada hacia arriba */}
+      <path
+        d="M 14 34 C 10 28 8 20 13 16 C 16 14 19 17 18 22"
+        stroke={RAPPI} strokeWidth="9" strokeLinecap="round" fill="none"
+      />
+      {/* Punta derecha curvada hacia arriba */}
+      <path
+        d="M 86 34 C 90 28 92 20 87 16 C 84 14 81 17 82 22"
+        stroke={RAPPI} strokeWidth="9" strokeLinecap="round" fill="none"
       />
 
     </svg>
