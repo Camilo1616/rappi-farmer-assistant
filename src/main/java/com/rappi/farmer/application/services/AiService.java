@@ -141,7 +141,7 @@ public class AiService {
                     """;
         }
         // AVA crítico (< 30%)
-        if ("Crítico".equals(avaLabel) || (avaPct != null && avaPct < 30)) {
+        if ("Retención".equals(avaLabel) || (avaPct != null && avaPct < 30)) {
             return String.format("""
                     AVA (conexión con Rappi Aliados) está en %.0f%% — muy por debajo del 60%% requerido.
                     Explica de forma simple que mientras más conectado esté el restaurante, más pedidos recibe.

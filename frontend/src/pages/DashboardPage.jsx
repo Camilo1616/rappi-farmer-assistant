@@ -61,13 +61,13 @@ const NAV_ITEMS = [
 ]
 
 const SECTIONS = [
-  { key: 'onboardingCritical', title: 'Onboarding Crítico', short: 'Onboarding',  icon: '🚨', color: '#EF4444' },
-  { key: 'aliados',            title: 'Aliados AVA 8–14',   short: 'Aliados',     icon: '🔗', color: '#F97316' },
-  { key: 'churnRisk',          title: 'Riesgo Churn',       short: 'Churn',       icon: '⚠️', color: '#EF4444' },
-  { key: 'ava',                title: 'AVA Bajando',        short: 'AVA',         icon: '📉', color: '#F59E0B' },
-  { key: 'healthy',            title: 'Saludables',         short: 'Saludables',  icon: '✅', color: '#22C55E' },
-  { key: 'selfOnboarding',     title: 'Self-Onboarding',    short: 'Self',        icon: '🛒', color: '#8B5CF6' },
-  { key: 'insideSales',        title: 'Gestionar IS',       short: 'IS',          icon: '📋', color: '#0EA5E9' },
+  { key: 'onboardingCritical', title: 'Aliados 1-7',    short: 'Aliados 1-7',  icon: '🚨', color: '#EF4444' },
+  { key: 'aliados',            title: 'Tiendas 8-14',   short: 'Tiendas 8-14', icon: '🔗', color: '#F97316' },
+  { key: 'churnRisk',          title: 'Riesgo Churn',   short: 'Churn',        icon: '⚠️', color: '#EF4444' },
+  { key: 'ava',                title: 'AVA Bajando',    short: 'AVA',          icon: '📉', color: '#F59E0B' },
+  { key: 'healthy',            title: 'Saludables',     short: 'Saludables',   icon: '✅', color: '#22C55E' },
+  { key: 'selfOnboarding',     title: 'Self-Onboarding',short: 'Self',         icon: '🛒', color: '#8B5CF6' },
+  { key: 'insideSales',        title: 'Gestión IS',     short: 'Gestión IS',   icon: '📋', color: '#0EA5E9' },
 ]
 
 const STATUS_ORDER = ['SIN_LEER','LEIDA','EN_PROCESO','COMPLETADO']
@@ -572,7 +572,7 @@ export default function DashboardPage() {
 }
 
 const CHURN_FILTERS = ['Todos', 'Churn', 'Prevention W1', 'Prevention W2', 'Prevention W3']
-const AVA_FILTERS   = ['Todos', 'Crítico', 'Bajando']
+const AVA_FILTERS   = ['Todos', 'Retención', 'Bajando']
 
 /* ── Vista principal del dashboard con tabs horizontales ── */
 const SEGMENT_TO_TAB = {

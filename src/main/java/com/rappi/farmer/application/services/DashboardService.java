@@ -257,7 +257,7 @@ public class DashboardService {
         BigDecimal mtd = metric.getAvaMtd();
         if (mtd == null) return null;
         BigDecimal pct = toPercent(mtd);
-        if (pct.compareTo(BigDecimal.ZERO) > 0 && pct.compareTo(BigDecimal.valueOf(15)) <= 0) return "Crítico";
+        if (pct.compareTo(BigDecimal.ZERO) > 0 && pct.compareTo(BigDecimal.valueOf(15)) <= 0) return "Retención";
         if (pct.compareTo(BigDecimal.valueOf(15)) > 0 && pct.compareTo(BigDecimal.valueOf(60)) < 0) return "Bajando";
         return null;
     }
