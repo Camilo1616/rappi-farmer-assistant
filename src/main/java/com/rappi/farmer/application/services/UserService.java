@@ -112,6 +112,11 @@ public class UserService {
         return userRepository.findByRole(UserRole.LIDER.name());
     }
 
+    /** Líderes cuyo countryCode contiene el prefijo de país dado (ej: "MX"). */
+    public List<User> findLidersByCountry(String country) {
+        return userRepository.findLidersByCountryPrefix(country.toUpperCase().trim());
+    }
+
     @Transactional
     public User updateStatus(Long userId, String newStatus) {
         User user = userRepository.findById(userId)

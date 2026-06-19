@@ -5,7 +5,7 @@ import {
   getWhatsappStatus, getWhatsappQr, openChrome,
   sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
-import { generateWhatsappMessage, getAiRecommendations } from '../services/aiService'
+import { generateWhatsappMessage, getAiRecommendations, invalidateAiRecommendation } from '../services/aiService'
 import progressStore from '../services/whatsappProgressStore'
 import api from '../services/api'
 import styles from './WhatsappPage.module.css'
@@ -813,31 +813,36 @@ export default function WhatsappPage() {
         return
       }
 
-      // El backend ya resolvió storeCode → storeId. Usar IDs directamente.
-      const topIds = new Set(priorities.slice(0, 30).map(p => p.storeId).filter(Boolean))
+      // El backend resolvió storeCode → storeId. Usar IDs + fallback por storeCode.
+      const topIds   = new Set(priorities.slice(0, 30).map(p => p.storeId).filter(Boolean))
+      const topCodes = new Set(priorities.slice(0, 30).map(p => p.storeCode?.toLowerCase().trim()).filter(Boolean))
 
-      // Fallback: si alguna prioridad no tiene storeId, intentar matching por storeCode
-      const topCodes = new Set(priorities.slice(0, 30)
-        .filter(p => !p.storeId)
-        .map(p => p.storeCode?.toLowerCase().trim())
-        .filter(Boolean))
-      const needsCodeFallback = topCodes.size > 0
+      // Deduplicar por id (una tienda puede aparecer en varios campos del dashboard)
+      const allStores = [...new Map(
+        Object.values(dashStores).flat()
+          .filter(s => s && typeof s === 'object' && s.id)
+          .map(s => [s.id, s])
+      ).values()]
 
-      const allStores = Object.values(dashStores).flat().filter(s => s && typeof s === 'object' && s.id)
-      let added = 0
+      // Calcular matches ANTES de setSelected (el updater de React puede ejecutarse
+      // en un ciclo posterior, haciendo que leer 'added' afuera dé siempre 0)
+      const toAdd = allStores.filter(s =>
+        topIds.has(s.id) ||
+        topCodes.has(s.storeCode?.toLowerCase().trim())
+      )
+
       setSelected(prev => {
         const next = new Set(prev)
-        allStores.forEach(s => {
-          const byId   = topIds.has(s.id)
-          const byCode = needsCodeFallback && topCodes.has(s.storeCode?.toLowerCase().trim())
-          if (byId || byCode) { next.add(s.id); added++ }
-        })
+        toAdd.forEach(s => next.add(s.id))
         return next
       })
 
       const total = priorities.length
+      const added = toAdd.length
       if (added === 0) {
-        setAiRecommMsg({ type: 'error', text: `La IA recomendó ${total} tiendas pero no se encontraron en tu cartera cargada. Recarga las tiendas e intenta de nuevo.` })
+        setAiRecommMsg({ type: 'error', text: `La IA recomendó ${total} tiendas pero ninguna coincide con tu cartera activa. Haz click en "🤖 IA Recomienda" nuevamente para regenerar.` })
+        // Borrar caché del día para forzar regeneración en el próximo intento
+        invalidateAiRecommendation()
       } else {
         setAiRecommMsg({ type: 'ok', text: `✓ IA seleccionó ${added} tiendas de ${total} recomendadas` })
         setTimeout(() => setAiRecommMsg(null), 4000)

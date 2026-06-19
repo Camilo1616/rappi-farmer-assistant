@@ -9,3 +9,4 @@ export const generateDailySummary = (efectivas, noContacto, whatsappEnviados, ti
   api.post('/ai/daily-summary', { efectivas, noContacto, whatsappEnviados, tiendas, topPrioridades })
 
 export const getAiRecommendations = () => api.get('/ai/recommend')
+export const invalidateAiRecommendation = () => api.delete('/ai/recommend').catch(() => {})

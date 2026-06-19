@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login, register, sendPin, checkEmail, forgotPassword, resetPassword } from '../services/authService'
+import { login, register, sendPin, checkEmail, forgotPassword, resetPassword, getLidersByCountry } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
 import styles from './LoginPage.module.css'
 
@@ -180,75 +180,118 @@ export default function LoginPage() {
   )
 }
 
+const MX_ZONES = [
+  { code: 'MX-CS', label: 'Center South' },
+  { code: 'MX-C',  label: 'Centro' },
+  { code: 'MX-NE', label: 'North East' },
+  { code: 'MX-W',  label: 'West' },
+]
+
 function RegisterModal({ onSuccess, onClose }) {
-  const [step,        setStep]        = useState(1)
-  const [fullName,    setFullName]    = useState('')
-  const [email,       setEmail]       = useState('')
-  const [password,    setPassword]    = useState('')
-  const [confirmPwd,  setConfirmPwd]  = useState('')
-  const [showPwd,     setShowPwd]     = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [country,     setCountry]     = useState('CO')
-  const [pin,         setPin]         = useState('')
-  const [error,       setError]       = useState('')
-  const [loading,     setLoading]     = useState(false)
-  const [resending,   setResending]   = useState(false)
-  const [emailExists, setEmailExists] = useState(false)
+  const [step,          setStep]          = useState(1)
+  const [fullName,      setFullName]      = useState('')
+  const [email,         setEmail]         = useState('')
+  const [password,      setPassword]      = useState('')
+  const [confirmPwd,    setConfirmPwd]    = useState('')
+  const [showPwd,       setShowPwd]       = useState(false)
+  const [showConfirm,   setShowConfirm]   = useState(false)
+  const [country,       setCountry]       = useState('CO')
+  const [pin,           setPin]           = useState('')
+  const [error,         setError]         = useState('')
+  const [loading,       setLoading]       = useState(false)
+  const [resending,     setResending]     = useState(false)
+  const [emailExists,   setEmailExists]   = useState(false)
   const [checkingEmail, setCheckingEmail] = useState(false)
-  const [liderCode,   setLiderCode]   = useState('')
+  const [liderCode,     setLiderCode]     = useState('')
+  // Paso 3 — líder MX
+  const [selectedZones, setSelectedZones] = useState([])
+  // Paso 3 — farmer MX
+  const [lidersList,    setLidersList]    = useState([])
+  const [farmLiderId,   setFarmLiderId]   = useState('')
+  const [loadingLiders, setLoadingLiders] = useState(false)
 
   const COUNTRIES = ['CO','MX','AR','PE','BR','EC','CL','CR','UY','BO','PA','HN']
+  const isLider   = liderCode.trim() !== ''
+  const isMX      = country === 'MX'
+  const totalSteps = isMX ? 3 : 2
+
+  // Cargar líderes de MX cuando el farmer pasa al paso 3
+  useEffect(() => {
+    if (step === 3 && isMX && !isLider) {
+      setLoadingLiders(true)
+      getLidersByCountry('MX')
+        .then(r => setLidersList(r.data))
+        .catch(() => setLidersList([]))
+        .finally(() => setLoadingLiders(false))
+    }
+  }, [step])
 
   const handleEmailChange = async (val) => {
-    setEmail(val)
-    setEmailExists(false)
+    setEmail(val); setEmailExists(false)
     if (val.includes('@') && val.includes('.')) {
       setCheckingEmail(true)
-      try {
-        const r = await checkEmail(val)
-        setEmailExists(r.data.exists)
-      } catch {}
+      try { const r = await checkEmail(val); setEmailExists(r.data.exists) } catch {}
       finally { setCheckingEmail(false) }
     }
   }
 
   const handleSendPin = async (e) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault(); setError('')
     if (!email.toLowerCase().endsWith('@rappi.com')) { setError('Solo se permiten correos corporativos @rappi.com'); return }
     if (password !== confirmPwd) { setError('Las contraseñas no coinciden'); return }
     if (password.length < 6)    { setError('La contraseña debe tener al menos 6 caracteres'); return }
     setLoading(true)
-    try {
-      await sendPin(email)
-      setStep(2)
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al enviar el código')
-    } finally {
-      setLoading(false)
-    }
+    try { await sendPin(email); setStep(2) }
+    catch (err) { setError(err.response?.data?.message || 'Error al enviar el código') }
+    finally { setLoading(false) }
   }
 
   const handleResend = async () => {
     setResending(true); setError('')
-    try { await sendPin(email) }
-    catch (err) { setError('Error al reenviar el código') }
+    try { await sendPin(email) } catch { setError('Error al reenviar el código') }
     finally { setResending(false) }
   }
 
-  const handleVerify = async (e) => {
-    e.preventDefault()
+  // Paso 2: verificar PIN. Si es MX → ir a paso 3. Si no → registrar directamente.
+  const handleVerifyPin = (e) => {
+    e.preventDefault(); setError('')
     if (pin.length !== 6) { setError('El código debe tener 6 dígitos'); return }
+    if (isMX) { setStep(3) } else { handleRegister() }
+  }
+
+  const handleRegister = async (extraData = {}) => {
     setLoading(true); setError('')
     try {
-      const data = await register({ fullName, email, password, countryCode: country, pin, liderCode: liderCode || undefined })
+      const data = await register({
+        fullName, email, password,
+        countryCode: country,
+        pin,
+        liderCode: liderCode || undefined,
+        ...extraData,
+      })
       onSuccess(data)
     } catch (err) {
-      setError(err.response?.data?.message || 'Código incorrecto')
+      setError(err.response?.data?.message || 'Código incorrecto o error al crear la cuenta')
+      if (err.response?.status === 400 && err.response?.data?.message?.toLowerCase().includes('código')) {
+        setStep(2) // volver al PIN si el código es incorrecto
+      }
     } finally {
-      setLoading(false)
+      setLoading(false) }
+  }
+
+  const handleFinishMX = (e) => {
+    e.preventDefault(); setError('')
+    if (isLider) {
+      if (selectedZones.length === 0) { setError('Selecciona al menos una zona de México'); return }
+      handleRegister({ zones: selectedZones.join(',') })
+    } else {
+      if (!farmLiderId) { setError('Selecciona tu líder de zona'); return }
+      handleRegister({ farmLiderId: Number(farmLiderId) })
     }
   }
+
+  const toggleZone = (code) => setSelectedZones(prev =>
+    prev.includes(code) ? prev.filter(z => z !== code) : [...prev, code])
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -257,14 +300,18 @@ function RegisterModal({ onSuccess, onClose }) {
           <div>
             <h3 className={styles.modalTitle}>Crear cuenta</h3>
             <div className={styles.modalSteps}>
-              <span className={`${styles.stepDot} ${step >= 1 ? styles.stepDotActive : ''}`}>1</span>
-              <span className={styles.stepLine} />
-              <span className={`${styles.stepDot} ${step >= 2 ? styles.stepDotActive : ''}`}>2</span>
+              {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s, i) => (
+                <span key={s} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className={`${styles.stepDot} ${step >= s ? styles.stepDotActive : ''}`}>{s}</span>
+                  {i < totalSteps - 1 && <span className={styles.stepLine} />}
+                </span>
+              ))}
             </div>
           </div>
           <button className={styles.modalClose} onClick={onClose}>✕</button>
         </div>
 
+        {/* ── Paso 1: datos personales ── */}
         {step === 1 && (
           <form className={styles.modalForm} onSubmit={handleSendPin}>
             <div className={styles.modalField}>
@@ -288,10 +335,10 @@ function RegisterModal({ onSuccess, onClose }) {
             </div>
             <div className={styles.modalField}>
               <label className={styles.modalLabel}>
-                Código de líder <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem' }}>(opcional)</span>
+                Código de líder <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem' }}>(opcional — déjalo vacío si eres Farmer)</span>
               </label>
               <input className={styles.modalInput} type="password"
-                placeholder="Déjalo vacío si eres Farmer"
+                placeholder="Solo si eres Líder de equipo"
                 value={liderCode} onChange={e => setLiderCode(e.target.value)}
                 autoComplete="off" />
             </div>
@@ -325,8 +372,9 @@ function RegisterModal({ onSuccess, onClose }) {
           </form>
         )}
 
+        {/* ── Paso 2: verificar PIN ── */}
         {step === 2 && (
-          <form className={styles.modalForm} onSubmit={handleVerify}>
+          <form className={styles.modalForm} onSubmit={handleVerifyPin}>
             <div className={styles.pinInfo}>
               <span className={styles.pinIcon}>📬</span>
               <p>Enviamos un código de 6 dígitos a<br /><strong>{email}</strong></p>
@@ -341,10 +389,85 @@ function RegisterModal({ onSuccess, onClose }) {
             </div>
             {error && <div className={styles.modalError}>⚠ {error}</div>}
             <button type="submit" className={styles.modalBtn} disabled={loading || pin.length !== 6}>
-              {loading ? 'Verificando...' : '✅ Verificar y crear cuenta'}
+              {loading ? 'Verificando...' : isMX ? 'Continuar →' : '✅ Crear cuenta'}
             </button>
             <button type="button" className={styles.btnResend} onClick={handleResend} disabled={resending}>
               {resending ? 'Reenviando...' : '¿No recibiste el código? Reenviar'}
+            </button>
+          </form>
+        )}
+
+        {/* ── Paso 3: solo para México ── */}
+        {step === 3 && isMX && (
+          <form className={styles.modalForm} onSubmit={handleFinishMX}>
+            {isLider ? (
+              <>
+                <div className={styles.pinInfo} style={{ textAlign: 'left' }}>
+                  <span style={{ fontSize: '1.5rem' }}>🇲🇽</span>
+                  <p style={{ margin: 0 }}>Selecciona las <strong>zonas de México</strong> que gestionas</p>
+                  <p className={styles.pinSub}>Puedes elegir una o varias</p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {MX_ZONES.map(z => (
+                    <label key={z.code} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                      borderRadius: 10, cursor: 'pointer',
+                      background: selectedZones.includes(z.code) ? 'rgba(255,68,31,0.12)' : 'rgba(255,255,255,0.04)',
+                      border: `1.5px solid ${selectedZones.includes(z.code) ? '#FF441F' : 'rgba(255,255,255,0.1)'}`,
+                      transition: 'all 0.15s',
+                    }}>
+                      <input type="checkbox" checked={selectedZones.includes(z.code)}
+                        onChange={() => toggleZone(z.code)}
+                        style={{ width: 16, height: 16, accentColor: '#FF441F' }} />
+                      <span style={{ color: '#E5E7EB', fontWeight: 500 }}>{z.label}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#9CA3AF' }}>{z.code}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.pinInfo} style={{ textAlign: 'left' }}>
+                  <span style={{ fontSize: '1.5rem' }}>🇲🇽</span>
+                  <p style={{ margin: 0 }}>Selecciona tu <strong>líder de zona</strong> en México</p>
+                  <p className={styles.pinSub}>Tu líder supervisará tu cartera y te asignará bases</p>
+                </div>
+                {loadingLiders ? (
+                  <p style={{ color: '#9CA3AF', textAlign: 'center' }}>Cargando líderes...</p>
+                ) : lidersList.length === 0 ? (
+                  <p style={{ color: '#F59E0B', textAlign: 'center', fontSize: '0.85rem' }}>
+                    No hay líderes registrados en MX aún. Continúa sin asignar líder.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {lidersList.map(l => (
+                      <label key={l.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                        borderRadius: 10, cursor: 'pointer',
+                        background: farmLiderId === String(l.id) ? 'rgba(255,68,31,0.12)' : 'rgba(255,255,255,0.04)',
+                        border: `1.5px solid ${farmLiderId === String(l.id) ? '#FF441F' : 'rgba(255,255,255,0.1)'}`,
+                        transition: 'all 0.15s',
+                      }}>
+                        <input type="radio" name="lider" value={l.id}
+                          checked={farmLiderId === String(l.id)}
+                          onChange={e => setFarmLiderId(e.target.value)}
+                          style={{ accentColor: '#FF441F' }} />
+                        <div>
+                          <div style={{ color: '#E5E7EB', fontWeight: 500 }}>{l.name}</div>
+                          <div style={{ color: '#9CA3AF', fontSize: '0.72rem' }}>{l.zones || 'MX'}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {error && <div className={styles.modalError}>⚠ {error}</div>}
+            <button type="submit" className={styles.modalBtn} disabled={loading}>
+              {loading ? 'Creando cuenta...' : '✅ Crear cuenta'}
+            </button>
+            <button type="button" className={styles.btnResend} onClick={() => { setStep(2); setError('') }}>
+              ← Volver al código
             </button>
           </form>
         )}

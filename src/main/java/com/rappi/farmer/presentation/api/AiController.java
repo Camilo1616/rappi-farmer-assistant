@@ -203,6 +203,17 @@ public class AiController {
         ));
     }
 
+    /** Borra el caché de recomendación del día (fuerza regeneración en el siguiente GET). */
+    @DeleteMapping("/recommend")
+    public ResponseEntity<?> invalidateRecommendation() {
+        Long userId = sessionContext.getCurrentUserId();
+        ZoneId colombia = ZoneId.of("America/Bogota");
+        LocalDate today = LocalDate.now(colombia);
+        recRepository.findByUserIdAndRecDate(userId, today).ifPresent(recRepository::delete);
+        log.info("Recomendación invalidada manualmente para userId={}", userId);
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
     /** Mini chat: el farmer pregunta sobre su cartera y la IA responde. */
     @PostMapping("/chat")
     public ResponseEntity<?> chat(@RequestBody ChatRequest request) {

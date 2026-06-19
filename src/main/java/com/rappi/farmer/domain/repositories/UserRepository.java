@@ -17,4 +17,5 @@ public interface UserRepository {
     boolean existsByFarmerCode(String farmerCode);
     List<User> findByCountryCodeAndRole(String countryCode, String role);
     List<User> findByCalendarRefreshTokenIsNotNull();
+    List<User> findLidersByCountryPrefix(String prefix);
 }

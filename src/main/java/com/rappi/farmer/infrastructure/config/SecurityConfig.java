@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/api/profile/avatar/**",
                                 "/api/calendar/callback",
                                 "/api/auth/google/calendar/callback",
+                                "/api/auth/liders",
                                 "/ws/**"
                         ).permitAll()
                         .anyRequest().authenticated()

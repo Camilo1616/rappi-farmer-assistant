@@ -39,6 +39,8 @@ export const logout = async () => {
   window.location.href = '/login'
 }
 
+export const getLidersByCountry = (country) => api.get(`/auth/liders?country=${country}`)
+
 export const heartbeat = () => api.post('/auth/heartbeat').catch(() => {})
 
 export const getCurrentUser = () => {

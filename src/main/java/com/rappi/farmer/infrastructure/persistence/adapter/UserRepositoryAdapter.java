@@ -63,6 +63,10 @@ public class UserRepositoryAdapter implements UserRepository {
         return jpaRepository.findByCalendarRefreshTokenIsNotNull().stream().map(this::toDomain).toList();
     }
 
+    @Override public List<User> findLidersByCountryPrefix(String prefix) {
+        return jpaRepository.findLidersByCountryPrefix(prefix).stream().map(this::toDomain).toList();
+    }
+
     private User toDomain(UserEntity e) {
         return new User(
                 e.getId(), e.getFullName(), e.getEmail(),

@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -83,9 +84,18 @@ public class AuthController {
             boolean isLider = !liderInviteCode.isBlank()
                     && liderInviteCode.equals(request.liderCode());
             String role = isLider ? "LIDER" : "FARMER_MASS";
+
+            // Para líder MX: usar las zonas seleccionadas como countryCode
+            // Para farmer MX con liderId: mantener el countryCode del país
+            String countryCode = (isLider && request.zones() != null && !request.zones().isBlank())
+                    ? request.zones()
+                    : request.countryCode();
+
+            Long farmLiderId = (!isLider && request.farmLiderId() != null) ? request.farmLiderId() : null;
+
             CreateUserRequest dto = new CreateUserRequest(
                     request.fullName(), request.email(), request.password(),
-                    role, request.countryCode(), null, null);
+                    role, countryCode, farmLiderId, null);
             User user = userService.createUser(dto);
             String token = jwtService.generateToken(user.getEmail(), user.getUserRole().name());
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -164,7 +174,21 @@ public class AuthController {
 
     public record RegisterRequest(
             String fullName, String email, String password,
-            String countryCode, String pin, String liderCode) {}
+            String countryCode, String pin, String liderCode,
+            /** Zonas MX que maneja el líder, ej: "MX-CS,MX-NE" */
+            String zones,
+            /** ID del líder seleccionado por el farmer en MX */
+            Long farmLiderId) {}
+
+    /** Lista pública de líderes por prefijo de país (para farmers que eligen su líder al registrarse). */
+    @GetMapping("/liders")
+    public ResponseEntity<?> getLiders(@RequestParam String country) {
+        List<User> liders = userService.findLidersByCountry(country);
+        var response = liders.stream()
+                .map(u -> java.util.Map.of("id", u.getId(), "name", u.getFullName(), "zones", u.getCountryCode() != null ? u.getCountryCode() : ""))
+                .toList();
+        return ResponseEntity.ok(response);
+    }
 
     public record LoginRequest(
             @NotBlank @Email String email,
