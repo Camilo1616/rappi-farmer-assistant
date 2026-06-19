@@ -61,10 +61,14 @@ public class WhatsappDriver {
     /** Verifica que el servicio está vivo e inicia la sesión del farmer si no existe. */
     public void abrir(String sessionId) {
         StatusResponse s = fetchStatus(sessionId);
-        if (!s.connected() && !s.hasQr()) {
+        // Solo llamar /reconnect si no está conectado, sin QR y sin estar ya inicializando.
+        // Si ya está inicializando (Chromium arrancando), no interrumpir con un reset innecesario.
+        if (!s.connected() && !s.hasQr() && !s.initializing()) {
             post("/reconnect", Map.of("session", sessionId));
+            log.info("[WA:{}] /reconnect enviado — sesión no activa", sessionId);
+        } else {
+            log.info("[WA:{}] Servicio Baileys — conectado:{} qr:{} inicializando:{}", sessionId, s.connected(), s.hasQr(), s.initializing());
         }
-        log.info("[WA:{}] Servicio Baileys — conectado:{} qr:{}", sessionId, s.connected(), s.hasQr());
     }
 
     public void cerrar(String sessionId) {
@@ -115,10 +119,11 @@ public class WhatsappDriver {
                     .build();
             var res  = http.send(req, HttpResponse.BodyHandlers.ofString());
             var json = mapper.readValue(res.body(), Map.class);
-            boolean conn  = Boolean.TRUE.equals(json.get("connected"));
-            boolean hasQr = Boolean.TRUE.equals(json.get("hasQr"));
-            String  qr    = (String) json.get("qr");
-            return new StatusResponse(conn, hasQr, qr);
+            boolean conn         = Boolean.TRUE.equals(json.get("connected"));
+            boolean hasQr        = Boolean.TRUE.equals(json.get("hasQr"));
+            boolean initializing = Boolean.TRUE.equals(json.get("initializing"));
+            String  qr           = (String) json.get("qr");
+            return new StatusResponse(conn, hasQr, qr, initializing);
         } catch (Exception e) {
             log.warn("[WA:{}] No se pudo contactar el servicio Baileys: {}", sessionId, e.getMessage());
             return new StatusResponse(false, false, null);
@@ -145,5 +150,5 @@ public class WhatsappDriver {
                 .build();
     }
 
-    private record StatusResponse(boolean connected, boolean hasQr, String qr) {}
+    private record StatusResponse(boolean connected, boolean hasQr, String qr, boolean initializing) {}
 }

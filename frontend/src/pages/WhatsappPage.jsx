@@ -860,8 +860,17 @@ export default function WhatsappPage() {
     setStarting(true)
     try {
       await openChrome()
-      // esperar un momento para que el servicio arranque y genere el QR
-      await new Promise(r => setTimeout(r, 3000))
+      // Chromium puede tardar 10-30s en arrancar — hacer polling hasta que
+      // aparezca QR o conexión, con timeout de 45 segundos
+      const deadline = Date.now() + 45_000
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 2500))
+        const r = await getWhatsappStatus().catch(() => null)
+        if (!r) continue
+        setStatus(r.data)
+        if (r.data.connected || r.data.hasQr) break
+      }
+      // Carga final para sincronizar QR si todavía no está
       await loadStatus()
     } catch {}
     setStarting(false)
