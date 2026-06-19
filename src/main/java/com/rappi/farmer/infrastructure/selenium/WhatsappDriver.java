@@ -126,7 +126,7 @@ public class WhatsappDriver {
             return new StatusResponse(conn, hasQr, qr, initializing);
         } catch (Exception e) {
             log.warn("[WA:{}] No se pudo contactar el servicio Baileys: {}", sessionId, e.getMessage());
-            return new StatusResponse(false, false, null);
+            return new StatusResponse(false, false, null, false);
         }
     }
 
