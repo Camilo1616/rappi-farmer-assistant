@@ -215,7 +215,7 @@ public class AiService {
                 .orElse(LocalDate.now());
         LocalDate today = LocalDate.now();
 
-        String context = buildStoreContext(stores, 5); // máx 5 por segmento → ~25 tiendas total
+        String context = buildStoreContext(stores, 50); // sin límite práctico — onboarding 1-14 siempre completo
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
@@ -264,14 +264,17 @@ public class AiService {
                   ]
                 }
 
-                ⚠️ CRÍTICO: SOLO incluye tiendas que aparezcan EXACTAMENTE en la CARTERA SEGMENTADA de abajo.
-                NO inventes códigos PE. NO incluyas tiendas que no estén en la lista.
-                Máximo 15 tiendas en "priorities", ordenadas de más a menos urgente.
+                ⚠️ REGLAS OBLIGATORIAS:
+                1. INCLUYE SIEMPRE el 100%% de las tiendas de "ONBOARDING 1-7 DÍAS" y "ONBOARDING 8-14 DÍAS" — son ventana crítica y NO se pueden omitir.
+                2. Completa con tiendas IS, Churn y AVA hasta llegar a máximo 30 en "priorities".
+                3. SOLO incluye tiendas que aparezcan EXACTAMENTE en la CARTERA SEGMENTADA de abajo.
+                4. NO inventes códigos. NO incluyas tiendas que no estén en la lista.
+                Ordena de más a menos urgente.
 
                 CARTERA SEGMENTADA:
                 """, today, lastUpload, today) + context;
 
-        String raw = callGroq(systemPrompt, userPrompt, 0.3, 2200);
+        String raw = callGroq(systemPrompt, userPrompt, 0.3, 4000);
 
         try {
             // Limpiar posible markdown code block
