@@ -307,6 +307,11 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
   const available = sections.filter(s => (dashStores[s.key]?.length ?? 0) > 0)
   const [activeKey,    setActiveKey]    = useState(() => available[0]?.key ?? null)
   const [activeSubIdx, setActiveSubIdx] = useState(0)
+
+  // Seleccionar automáticamente la primera pestaña cuando llegan los datos
+  useEffect(() => {
+    if (!activeKey && available.length > 0) setActiveKey(available[0].key)
+  }, [available.length])
   const [search,       setSearch]       = useState('')
   const [hideNoPhone,  setHideNoPhone]  = useState(true)
   const [hideSentToday, setHideSentToday] = useState(false)
