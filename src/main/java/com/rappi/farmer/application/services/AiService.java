@@ -215,7 +215,7 @@ public class AiService {
                 .orElse(LocalDate.now());
         LocalDate today = LocalDate.now();
 
-        String context = buildStoreContext(stores, 50); // sin límite práctico — onboarding 1-14 siempre completo
+        String context = buildStoreContext(stores);
 
         String systemPrompt = """
                 Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
@@ -416,18 +416,17 @@ public class AiService {
      * Construye contexto segmentado por urgencia para la IA.
      * Agrupa tiendas por ventana crítica para que la IA priorice correctamente.
      */
-    private String buildStoreContext(List<Store> stores, int maxPerSegment) {
+    private String buildStoreContext(List<Store> stores) {
         LocalDate today = LocalDate.now();
         StringBuilder sb = new StringBuilder();
         sb.append("=== RESUMEN CARTERA ===\n");
         sb.append("Total tiendas activas: ").append(stores.size()).append("\n\n");
 
-        // Segmentar
-        List<Store> seg17    = new ArrayList<>(); // onboarding 1-7 días (ventana IS crítica)
-        List<Store> seg814   = new ArrayList<>(); // onboarding 8-14 días (ventana AVA/HO)
-        List<Store> churn    = new ArrayList<>(); // churn activo
-        List<Store> avaLow   = new ArrayList<>(); // AVA < 40%
-        List<Store> isStores = new ArrayList<>(); // gestionar = IS (entraron hoy/reciente a IS)
+        List<Store> seg17    = new ArrayList<>();
+        List<Store> seg814   = new ArrayList<>();
+        List<Store> churn    = new ArrayList<>();
+        List<Store> avaLow   = new ArrayList<>();
+        List<Store> isStores = new ArrayList<>();
         List<Store> resto    = new ArrayList<>();
 
         for (Store s : stores) {
@@ -438,36 +437,35 @@ public class AiService {
 
             boolean isInStore = gestionar.equals("IS") || gestionar.contains("IN STORE") || gestionar.contains("INSTORE");
             if (isInStore && aging <= 14) { isStores.add(s); continue; }
-            if (aging >= 1  && aging <= 7)                { seg17.add(s);   continue; }
-            if (aging >= 8  && aging <= 14)               { seg814.add(s);  continue; }
-            if (status.contains("churn"))                 { churn.add(s);   continue; }
-            if (ava < 40 && ava > 0)                      { avaLow.add(s);  continue; }
+            if (aging >= 1 && aging <= 7)  { seg17.add(s);  continue; }
+            if (aging >= 8 && aging <= 14) { seg814.add(s); continue; }
+            if (status.contains("churn"))  { churn.add(s);  continue; }
+            if (ava < 40 && ava > 0)       { avaLow.add(s); continue; }
             resto.add(s);
         }
 
-        appendSegment(sb, "🔴 PRIORIDAD MÁXIMA — IS (Ingresaron a IS, acción HOY)",
-                isStores, maxPerSegment, today,
-                "Estas tiendas acaban de entrar al estado IS. Deben ser contactadas HOY sin falta.");
-
-        appendSegment(sb, "🔴 ONBOARDING 1-7 DÍAS (ventana crítica de activación)",
-                seg17, maxPerSegment, today,
-                "Primeros 7 días = los más críticos. Si no se activan aquí hay riesgo alto de churn. HO=NO significa que el Handoff (activación) aún no ocurrió.");
-
+        // Onboarding 1-14 y IS: TODOS (son pocos y son la prioridad máxima)
+        appendSegment(sb, "🔴 PRIORIDAD MÁXIMA — IS (acción HOY)",
+                isStores, Integer.MAX_VALUE, today,
+                "Visita en tienda programada. Deben ser contactadas HOY sin falta.");
+        appendSegment(sb, "🔴 ONBOARDING 1-7 DÍAS (ventana crítica)",
+                seg17, Integer.MAX_VALUE, today,
+                "Primeros 7 días = los más críticos. HO=NO significa que el Handoff (activación) no ocurrió.");
         appendSegment(sb, "🟠 ONBOARDING 8-14 DÍAS (ventana AVA/Aliados)",
-                seg814, maxPerSegment, today,
-                "Entre día 8-14 la meta es AVA > 60%. Si AVA es baja o HO=NO hay que actuar urgente.");
+                seg814, Integer.MAX_VALUE, today,
+                "Meta AVA > 60%. Si AVA baja o HO=NO actuar urgente.");
 
+        // Churn y AVA: máximo 8 cada uno para no saturar el contexto
         appendSegment(sb, "🔴 CHURN ACTIVO",
-                churn, maxPerSegment, today,
-                "Tiendas en riesgo de abandonar Rappi. Requieren acción de retención inmediata.");
-
+                churn, 8, today,
+                "Riesgo de abandonar Rappi. Retención urgente.");
         appendSegment(sb, "🟡 AVA BAJA (< 40%)",
-                avaLow, maxPerSegment, today,
-                "Conexión Rappi Aliados por debajo del objetivo. Afecta directamente las ventas.");
+                avaLow, 8, today,
+                "Conexión Rappi Aliados por debajo del objetivo.");
 
         if (!resto.isEmpty()) {
             sb.append("\n📋 Otras tiendas activas: ").append(resto.size())
-              .append(" (estables, solo check-in si hay tiempo)\n");
+              .append(" (estables, solo si hay tiempo)\n");
         }
 
         return sb.toString();
