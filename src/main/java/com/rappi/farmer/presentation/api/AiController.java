@@ -162,24 +162,42 @@ public class AiController {
             }
         }
 
-        // 2. Enriquecer con gestiones del día (storeCode → resultType)
+        // 2. Construir mapa storeCode → storeId para las tiendas activas del farmer
+        Map<String, Long> codeToId = storeRepository.findActiveByUser(userId).stream()
+                .filter(s -> s.getStoreCode() != null)
+                .collect(java.util.stream.Collectors.toMap(
+                        s -> s.getStoreCode().toLowerCase().trim(),
+                        Store::getId,
+                        (a, b) -> a));
+
+        // 3. Enriquecer priorities con storeId resuelto desde BD
+        List<Map<String, Object>> enriched = priorities.stream().map(p -> {
+            String code = p.get("storeCode") instanceof String c ? c.toLowerCase().trim() : null;
+            Map<String, Object> e = new java.util.HashMap<>(p);
+            if (code != null && codeToId.containsKey(code)) {
+                e.put("storeId", codeToId.get(code));
+            }
+            return (Map<String, Object>) e;
+        }).toList();
+
+        // 4. Enriquecer con gestiones del día (storeCode → resultType)
         Map<String, String> managedResults = managementRepository.findTodayByUser(userId).stream()
                 .filter(m -> !m.isBrandSync() && m.getStoreCode() != null)
                 .collect(Collectors.toMap(
                         Management::getStoreCode,
                         m -> m.getResultType() != null ? m.getResultType() : "GESTIONADA",
-                        (a, b) -> b)); // si hay varias gestiones del día para la misma tienda, toma la última
+                        (a, b) -> b));
 
-        // 3. Detectar si todas las tiendas recomendadas ya fueron gestionadas
-        List<String> pendingCodes = priorities.stream()
+        // 5. Detectar si todas las tiendas recomendadas ya fueron gestionadas
+        List<String> pendingCodes = enriched.stream()
                 .map(p -> (String) p.get("storeCode"))
                 .filter(code -> code != null && !managedResults.containsKey(code))
                 .toList();
-        boolean allDone = !priorities.isEmpty() && pendingCodes.isEmpty();
+        boolean allDone = !enriched.isEmpty() && pendingCodes.isEmpty();
 
         return ResponseEntity.ok(Map.of(
                 "message",        message,
-                "priorities",     priorities,
+                "priorities",     enriched,
                 "managedResults", managedResults,
                 "allDone",        allDone
         ));

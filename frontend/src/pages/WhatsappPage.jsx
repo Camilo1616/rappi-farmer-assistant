@@ -813,27 +813,31 @@ export default function WhatsappPage() {
         return
       }
 
-      // Normalizar storeCodes a minúsculas para matching robusto
-      const topCodes = new Set(priorities.slice(0, 30).map(p => p.storeCode?.toLowerCase().trim()).filter(Boolean))
+      // El backend ya resolvió storeCode → storeId. Usar IDs directamente.
+      const topIds = new Set(priorities.slice(0, 30).map(p => p.storeId).filter(Boolean))
 
-      // Buscar en TODAS las secciones del dashboard (incluye saludables, IS, etc.)
+      // Fallback: si alguna prioridad no tiene storeId, intentar matching por storeCode
+      const topCodes = new Set(priorities.slice(0, 30)
+        .filter(p => !p.storeId)
+        .map(p => p.storeCode?.toLowerCase().trim())
+        .filter(Boolean))
+      const needsCodeFallback = topCodes.size > 0
+
       const allStores = Object.values(dashStores).flat().filter(s => s && typeof s === 'object' && s.id)
       let added = 0
       setSelected(prev => {
         const next = new Set(prev)
         allStores.forEach(s => {
-          if (topCodes.has(s.storeCode?.toLowerCase().trim())) {
-            next.add(s.id)
-            added++
-          }
+          const byId   = topIds.has(s.id)
+          const byCode = needsCodeFallback && topCodes.has(s.storeCode?.toLowerCase().trim())
+          if (byId || byCode) { next.add(s.id); added++ }
         })
         return next
       })
 
-      // Mensaje de resultado
       const total = priorities.length
       if (added === 0) {
-        setAiRecommMsg({ type: 'error', text: `La IA recomendó ${total} tiendas pero ninguna está en las secciones activas del selector. Verifica que cargaste el Excel hoy.` })
+        setAiRecommMsg({ type: 'error', text: `La IA recomendó ${total} tiendas pero no se encontraron en tu cartera cargada. Recarga las tiendas e intenta de nuevo.` })
       } else {
         setAiRecommMsg({ type: 'ok', text: `✓ IA seleccionó ${added} tiendas de ${total} recomendadas` })
         setTimeout(() => setAiRecommMsg(null), 4000)
