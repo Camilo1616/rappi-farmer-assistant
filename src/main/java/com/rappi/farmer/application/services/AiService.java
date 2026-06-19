@@ -509,10 +509,13 @@ public class AiService {
 
     /** Calcula el aging real: usa el campo stored; si es null lo deriva de onboarding_date. */
     private int resolveAging(Store s) {
-        if (s.getAging() != null) return s.getAging();
+        // Misma lógica que DashboardService.calcAgingEfectivo:
+        // uploadDate = cuándo se cargó esta tienda al Excel del farmer (días en cartera)
+        if (s.getUploadDate() != null)
+            return (int) java.time.temporal.ChronoUnit.DAYS.between(s.getUploadDate(), LocalDate.now());
         if (s.getOnboardingDate() != null)
             return (int) java.time.temporal.ChronoUnit.DAYS.between(s.getOnboardingDate(), LocalDate.now());
-        return 999;
+        return s.getAging() != null ? s.getAging() : 999;
     }
 
     /** Puntaje de urgencia descendente por ventana crítica. */
