@@ -383,21 +383,21 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
     return () => clearTimeout(id)
   }, [])
 
-  // Ojos que miran a distintos lados aleatoriamente
+  // Ojos que siguen el mouse
+  const buttonRef = useRef(null)
   useEffect(() => {
-    const directions = [
-      { dx: 0,  dy: 0  },
-      { dx: 2,  dy: 0  },
-      { dx: -2, dy: 0  },
-      { dx: 0,  dy: 2  },
-      { dx: 0,  dy: -1 },
-      { dx: 2,  dy: 1  },
-      { dx: -2, dy: 1  },
-    ]
-    const id = setInterval(() => {
-      setLook(directions[Math.floor(Math.random() * directions.length)])
-    }, Math.random() * 1500 + 1000)
-    return () => clearInterval(id)
+    const onMove = e => {
+      const el = buttonRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const cx = rect.left + rect.width  / 2
+      const cy = rect.top  + rect.height / 2
+      const angle = Math.atan2(e.clientY - cy, e.clientX - cx)
+      const dist  = Math.min(3, Math.hypot(e.clientX - cx, e.clientY - cy) / 30)
+      setLook({ dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist })
+    }
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
   }, [])
 
   useEffect(() => {
@@ -408,6 +408,7 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
 
   return (
     <div
+      ref={buttonRef}
       onMouseDown={onMouseDown}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
