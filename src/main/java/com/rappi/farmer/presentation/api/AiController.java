@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -162,8 +163,9 @@ public class AiController {
             }
         }
 
-        // 2. Construir mapa storeCode → storeId para las tiendas activas del farmer
-        Map<String, Long> codeToId = storeRepository.findActiveByUser(userId).stream()
+        // 2. Tiendas activas del farmer con sus IDs
+        List<Store> activeStores = storeRepository.findActiveByUser(userId);
+        Map<String, Long> codeToId = activeStores.stream()
                 .filter(s -> s.getStoreCode() != null)
                 .collect(java.util.stream.Collectors.toMap(
                         s -> s.getStoreCode().toLowerCase().trim(),
@@ -171,14 +173,45 @@ public class AiController {
                         (a, b) -> a));
 
         // 3. Enriquecer priorities con storeId resuelto desde BD
-        List<Map<String, Object>> enriched = priorities.stream().map(p -> {
+        List<Map<String, Object>> enriched = new java.util.ArrayList<>(priorities.stream().map(p -> {
             String code = p.get("storeCode") instanceof String c ? c.toLowerCase().trim() : null;
             Map<String, Object> e = new java.util.HashMap<>(p);
             if (code != null && codeToId.containsKey(code)) {
                 e.put("storeId", codeToId.get(code));
             }
             return (Map<String, Object>) e;
-        }).toList();
+        }).toList());
+
+        // 3b. GARANTIZAR que todas las tiendas onboarding 1-14 estén en la lista
+        // (el AI a veces las omite pese al prompt — esto las fuerza)
+        java.time.LocalDate todayDate = java.time.LocalDate.now();
+        Set<String> alreadyCodes = enriched.stream()
+                .map(p -> p.get("storeCode") instanceof String c ? c.toLowerCase().trim() : "")
+                .collect(java.util.stream.Collectors.toSet());
+
+        activeStores.stream()
+                .filter(s -> s.getStoreCode() != null)
+                .filter(s -> {
+                    java.time.LocalDate ref = s.getUploadDate() != null ? s.getUploadDate()
+                            : s.getOnboardingDate() != null ? s.getOnboardingDate() : null;
+                    if (ref == null) return false;
+                    long aging = java.time.temporal.ChronoUnit.DAYS.between(ref, todayDate);
+                    return aging >= 1 && aging <= 14;
+                })
+                .filter(s -> !alreadyCodes.contains(s.getStoreCode().toLowerCase().trim()))
+                .forEach(s -> {
+                    long aging = java.time.temporal.ChronoUnit.DAYS.between(
+                            s.getUploadDate() != null ? s.getUploadDate() : s.getOnboardingDate(), todayDate);
+                    Map<String, Object> entry = new java.util.HashMap<>();
+                    entry.put("storeCode", s.getStoreCode());
+                    entry.put("storeName", s.getStoreName());
+                    entry.put("storeId",   s.getId());
+                    entry.put("priority",  aging <= 7 ? "ALTA" : "ALTA");
+                    entry.put("reason",    "Onboarding día " + aging + " — ventana crítica de activación");
+                    entry.put("action",    aging <= 7 ? "Contactar para activar Rappi Aliados" : "Verificar AVA > 60% y HO");
+                    enriched.add(entry);
+                    log.info("Onboarding forzado en recomendación: {} (día {})", s.getStoreCode(), aging);
+                });
 
         // 4. Enriquecer con gestiones del día (storeCode → resultType)
         Map<String, String> managedResults = managementRepository.findTodayByUser(userId).stream()
