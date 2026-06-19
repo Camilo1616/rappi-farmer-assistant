@@ -237,10 +237,11 @@ function WaHistory() {
 }
 
 const SECTIONS = [
-  { key: 'onboardingCritical', label: 'Onboarding',         icon: '🚨', color: '#EF4444' },
-  { key: 'aliados',            label: 'Aliados 8–14',       icon: '🔗', color: '#F97316' },
-  { key: 'selfOnboarding',     label: 'Self',               icon: '🛒', color: '#8B5CF6' },
-  { key: 'churnRisk',          label: 'Churn',              icon: '⚠️', color: '#EF4444',
+  { key: 'insideSales',        label: 'Gestión IS',    icon: '🏪', color: '#3B82F6' },
+  { key: 'onboardingCritical', label: 'Tiendas 1-7',   icon: '🚨', color: '#EF4444' },
+  { key: 'aliados',            label: 'Tiendas 8-14',  icon: '🔗', color: '#F97316' },
+  { key: 'selfOnboarding',     label: 'Self',          icon: '🛒', color: '#8B5CF6' },
+  { key: 'churnRisk',          label: 'Churn',         icon: '⚠️', color: '#EF4444',
     subTabs: [
       { label: 'Todos',          filter: null },
       { label: 'Churn',          filter: s => s.churnLabel === 'Churn' },
@@ -251,9 +252,9 @@ const SECTIONS = [
   },
   { key: 'ava', label: 'AVA Bajando', icon: '📉', color: '#F59E0B',
     subTabs: [
-      { label: 'Todos',    filter: null },
-      { label: 'Crítico',  filter: s => s.avaLabel === 'Crítico' },
-      { label: 'Bajando',  filter: s => s.avaLabel === 'Bajando' },
+      { label: 'Todos',              filter: null },
+      { label: 'Retención',          filter: s => s.avaLabel === 'Crítico' },
+      { label: 'Tiendas bajando AVA', filter: s => s.avaLabel === 'Bajando' },
     ]
   },
 ]

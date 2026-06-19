@@ -185,10 +185,11 @@ public class AiController {
         // 3b. GARANTIZAR que todas las tiendas onboarding 1-14 estén en la lista
         // (el AI a veces las omite pese al prompt — esto las fuerza)
         java.time.LocalDate todayDate = java.time.LocalDate.now();
-        Set<String> alreadyCodes = enriched.stream()
+        Set<String> alreadyCodes = new java.util.HashSet<>(enriched.stream()
                 .map(p -> p.get("storeCode") instanceof String c ? c.toLowerCase().trim() : "")
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(java.util.stream.Collectors.toSet()));
 
+        // Forzar onboarding 1-14 días
         activeStores.stream()
                 .filter(s -> s.getStoreCode() != null)
                 .filter(s -> {
@@ -206,11 +207,33 @@ public class AiController {
                     entry.put("storeCode", s.getStoreCode());
                     entry.put("storeName", s.getStoreName());
                     entry.put("storeId",   s.getId());
-                    entry.put("priority",  aging <= 7 ? "ALTA" : "ALTA");
+                    entry.put("priority",  "ALTA");
                     entry.put("reason",    "Onboarding día " + aging + " — ventana crítica de activación");
                     entry.put("action",    aging <= 7 ? "Contactar para activar Rappi Aliados" : "Verificar AVA > 60% y HO");
                     enriched.add(entry);
-                    log.info("Onboarding forzado en recomendación: {} (día {})", s.getStoreCode(), aging);
+                    alreadyCodes.add(s.getStoreCode().toLowerCase().trim());
+                    log.info("Onboarding forzado: {} (día {})", s.getStoreCode(), aging);
+                });
+
+        // Forzar tiendas IS (Gestión In Store) — máxima prioridad
+        activeStores.stream()
+                .filter(s -> s.getStoreCode() != null && s.getGestionar() != null)
+                .filter(s -> {
+                    String g = s.getGestionar().toUpperCase();
+                    return g.equals("IS") || g.contains("IN STORE") || g.contains("INSTORE");
+                })
+                .filter(s -> !alreadyCodes.contains(s.getStoreCode().toLowerCase().trim()))
+                .forEach(s -> {
+                    Map<String, Object> entry = new java.util.HashMap<>();
+                    entry.put("storeCode", s.getStoreCode());
+                    entry.put("storeName", s.getStoreName());
+                    entry.put("storeId",   s.getId());
+                    entry.put("priority",  "ALTA");
+                    entry.put("reason",    "Gestión IS — visita en tienda programada HOY");
+                    entry.put("action",    "Coordinar activación presencial en el local");
+                    enriched.add(entry);
+                    alreadyCodes.add(s.getStoreCode().toLowerCase().trim());
+                    log.info("IS forzado en recomendación: {}", s.getStoreCode());
                 });
 
         // 4. Enriquecer con gestiones del día (storeCode → resultType)
