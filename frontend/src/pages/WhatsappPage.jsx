@@ -521,7 +521,7 @@ function StepConnection({ status, qr, onRefresh, onStart, loading, starting }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 0' }}>
           <p style={{ fontSize: 13, color: '#475569', margin: 0 }}>Abre WhatsApp → Dispositivos vinculados → Vincular dispositivo</p>
           <img src={qr} alt="QR WhatsApp" style={{ width: 220, height: 220, borderRadius: 12, border: '2px solid #e2e8f0' }} />
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>El QR expira en 60 segundos</p>
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>El QR expira en 60 segundos · Verificando cada 2s...</p>
         </div>
       )}
 
@@ -784,6 +784,13 @@ export default function WhatsappPage() {
     })
     return () => { clearInterval(iv); unsub() }
   }, [])
+
+  // Mientras el QR está visible, hacer polling cada 2s para detectar conexión rápido
+  useEffect(() => {
+    if (!qr) return
+    const iv = setInterval(loadStatus, 2000)
+    return () => clearInterval(iv)
+  }, [!!qr])
 
   const remaining = status.remaining ?? MAX_DIARIO
 
