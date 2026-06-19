@@ -294,20 +294,62 @@ const TIPS = [
   'Soy tu copiloto 🚀',
 ]
 
-function RobotSVG({ hovered }) {
+function RobotSVG({ hovered, blink, look }) {
+  const SIZE = 120
+  // Posición de los ojos sobre la imagen (ajustado al bigotón Rappi)
+  const leftEye  = { cx: SIZE * 0.38, cy: SIZE * 0.41 }
+  const rightEye = { cx: SIZE * 0.62, cy: SIZE * 0.41 }
+  const eyeR = 7
+  const pupilR = 3.5
+
   return (
-    <img
-      src={rappiMascot}
-      alt="Rappi"
-      style={{
-        width: 90,
-        height: 90,
-        objectFit: 'contain',
-        mixBlendMode: 'multiply',
-        filter: hovered ? 'drop-shadow(0 0 8px #FF441F88)' : 'none',
-        transition: 'filter 0.25s',
-      }}
-    />
+    <div style={{ position: 'relative', width: SIZE, height: SIZE }}>
+      <img
+        src={rappiMascot}
+        alt="Rappi"
+        style={{
+          width: SIZE, height: SIZE,
+          objectFit: 'contain',
+          filter: hovered ? 'drop-shadow(0 0 8px #FF441F88)' : 'none',
+          transition: 'filter 0.25s',
+        }}
+      />
+      {/* Ojos animados encima */}
+      <svg
+        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+        width={SIZE} height={SIZE}
+      >
+        {[leftEye, rightEye].map((eye, i) => (
+          <g key={i}>
+            {/* Blanco del ojo */}
+            <ellipse
+              cx={eye.cx} cy={eye.cy}
+              rx={eyeR} ry={blink ? 1 : eyeR}
+              fill="white"
+              style={{ transition: 'ry 0.06s' }}
+            />
+            {/* Pupila que mira */}
+            {!blink && (
+              <circle
+                cx={eye.cx + (look?.dx ?? 0)}
+                cy={eye.cy + (look?.dy ?? 0)}
+                r={pupilR}
+                fill="#1a1a1a"
+                style={{ transition: 'cx 0.18s, cy 0.18s' }}
+              />
+            )}
+            {/* Brillo */}
+            {!blink && (
+              <circle
+                cx={eye.cx + (look?.dx ?? 0) + 1.5}
+                cy={eye.cy + (look?.dy ?? 0) - 1.5}
+                r={1} fill="white" opacity={0.8}
+              />
+            )}
+          </g>
+        ))}
+      </svg>
+    </div>
   )
 }
 
@@ -412,7 +454,7 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
       {pulse && !open && (
         <div style={{
           position: 'absolute', bottom: 4, left: '50%',
-          width: 80, height: 80, marginLeft: -40,
+          width: 110, height: 110, marginLeft: -55,
           borderRadius: '50%', border: '2px solid #A78BFA',
           animation: 'ringPulse 0.8s ease-out forwards',
           pointerEvents: 'none',
@@ -424,7 +466,7 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
         transform: hovered ? 'scale(1.08) translateY(-4px)' : open ? 'scale(1.04)' : 'scale(1)',
         transition: 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
-        <RobotSVG hovered={hovered} />
+        <RobotSVG hovered={hovered} blink={blink} look={look} />
       </div>
     </div>
   )
