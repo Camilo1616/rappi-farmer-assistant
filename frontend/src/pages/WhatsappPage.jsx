@@ -260,7 +260,7 @@ const SECTIONS = [
   },
 ]
 
-const MAX_DIARIO = Infinity
+const MAX_DIARIO = 35
 
 /* ── Badge de aging con color según urgencia ── */
 function AgingBadge({ aging }) {
@@ -460,16 +460,16 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
           const hasPhone     = !!store.phoneNumber
           const sentToday    = sentTodayIds.has(store.id)
           const isEditing    = editingPhoneId === store.id
-          const disabled     = !hasPhone && !isEditing || (!isSelected && !canAddMore && hasPhone)
+          const blocked      = sentToday || (!hasPhone && !isEditing)
           return (
             <div key={store.id}
-              className={`${styles.storeRow} ${isSelected ? styles.storeRowSel : ''} ${!hasPhone && !isEditing ? styles.storeRowDis : ''}`}
+              className={`${styles.storeRow} ${isSelected ? styles.storeRowSel : ''} ${blocked ? styles.storeRowDis : ''}`}
               onClick={() => {
-                if (isEditing) return
+                if (isEditing || sentToday) return
                 if (hasPhone) { if (!(!isSelected && !canAddMore)) onToggle(store.id) }
                 else { setEditingPhoneId(store.id); setPhoneInput('') }
               }}>
-              <input type="checkbox" className={styles.checkbox} checked={isSelected} readOnly disabled={!hasPhone} />
+              <input type="checkbox" className={styles.checkbox} checked={isSelected} readOnly disabled={blocked} />
               <div className={styles.storeInfo} style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <span className={styles.storeName}>{store.storeName}</span>
@@ -790,7 +790,7 @@ function SendProgress({ progress, onClose }) {
 
 /* ── Página ── */
 export default function WhatsappPage() {
-  const [status,      setStatus]      = useState({ open:false, connected:false, sentToday:0, remaining:40, waLimit:40, phoneAgeWeeks:0, pendingSetup:false })
+  const [status,      setStatus]      = useState({ open:false, connected:false, sentToday:0, remaining:35, waLimit:35, pendingSetup:false })
   const [qr,          setQr]          = useState(null)
   const [showPhoneSetup, setShowPhoneSetup] = useState(false)
   const [dashStores,  setDashStores]  = useState({})
@@ -996,19 +996,18 @@ export default function WhatsappPage() {
   const canSend = status.connected && selected.size > 0 && message.trim() && !sending
 
   const waLimitBanner = () => {
-    const limit = status.waLimit ?? 100
-    if (status.pendingSetup) return null
-    if (limit >= 100) return null
-    const days = (status.phoneAgeWeeks ?? 0) * 7
-    if (limit === 0) return (
-      <div style={{ background: '#EF444415', border: '1px solid #EF4444', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#FCA5A5' }}>
-        🚫 <strong>WhatsApp bloqueado</strong> — Tu SIM tiene menos de 7 días. Úsala en conversaciones normales hasta cumplir la semana.
-      </div>
-    )
-    const color = limit <= 10 ? '#F97316' : limit <= 25 ? '#F59E0B' : '#3B82F6'
+    const sent      = status.sentToday ?? 0
+    const remaining = status.remaining ?? MAX_DIARIO
+    if (sent === 0) return null
+    const pct   = Math.round((sent / MAX_DIARIO) * 100)
+    const color = remaining === 0 ? '#EF4444' : remaining <= 10 ? '#F97316' : '#22C55E'
     return (
-      <div style={{ background: color + '15', border: `1px solid ${color}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color }}>
-        ⚠️ <strong>SIM con ~{days} días</strong> — Límite: <strong>{limit} envíos/día</strong>. Quedan <strong>{status.remaining}</strong> hoy. El límite sube automáticamente con el tiempo.
+      <div style={{ background: color + '15', border: `1px solid ${color}55`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontWeight: 700 }}>{remaining === 0 ? '🚫 Límite alcanzado hoy' : `📤 ${sent} / ${MAX_DIARIO} enviados hoy`}</span>
+        <div style={{ flex: 1, height: 6, background: color + '25', borderRadius: 99, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99 }} />
+        </div>
+        <span style={{ fontWeight: 700 }}>{remaining} restantes</span>
       </div>
     )
   }

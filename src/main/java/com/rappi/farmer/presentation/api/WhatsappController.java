@@ -61,35 +61,17 @@ public class WhatsappController {
         boolean hasQr     = whatsappService.tieneQr(userId);
         long    sentToday = whatsappService.enviadosHoy(userId);
 
-        java.time.LocalDate registeredAt = userRepository.findById(userId)
-                .map(u -> u.getWhatsappPhoneRegisteredAt())
-                .orElse(null);
-
-        boolean pendingSetup = registeredAt == null;
-        int phoneAgeWeeks    = 0;
-        int waLimit          = 40;
-
-        if (!pendingSetup) {
-            phoneAgeWeeks = (int) java.time.temporal.ChronoUnit.WEEKS.between(registeredAt, java.time.LocalDate.now());
-            long phoneAgeDays = java.time.temporal.ChronoUnit.DAYS.between(registeredAt, java.time.LocalDate.now());
-            if      (phoneAgeDays < 7)  { waLimit = 0; }
-            else if (phoneAgeDays < 15) { waLimit = 10; }
-            else if (phoneAgeDays < 31) { waLimit = 25; }
-            else if (phoneAgeDays < 91) { waLimit = 50; }
-            else                        { waLimit = 100; }
-        }
-
-        int remaining = Math.max(0, waLimit - (int) sentToday);
+        final int WA_LIMIT = 35;
+        int remaining = Math.max(0, WA_LIMIT - (int) sentToday);
 
         java.util.Map<String, Object> resp = new java.util.HashMap<>();
-        resp.put("open",         connected || hasQr);
-        resp.put("connected",    connected);
-        resp.put("hasQr",        hasQr);
-        resp.put("sentToday",    sentToday);
-        resp.put("remaining",    pendingSetup ? 40 : remaining);
-        resp.put("waLimit",      pendingSetup ? 40 : waLimit);
-        resp.put("phoneAgeWeeks", phoneAgeWeeks);
-        resp.put("pendingSetup", pendingSetup);
+        resp.put("open",      connected || hasQr);
+        resp.put("connected", connected);
+        resp.put("hasQr",     hasQr);
+        resp.put("sentToday", sentToday);
+        resp.put("remaining", remaining);
+        resp.put("waLimit",   WA_LIMIT);
+        resp.put("pendingSetup", false);
         return ResponseEntity.ok(resp);
     }
 
@@ -117,10 +99,15 @@ public class WhatsappController {
 
     @PostMapping(value = "/send", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sendMasivo(@Valid @RequestBody SendRequest request) {
+        final int WA_LIMIT = 35;
         Long userId = currentUserId();
+        long sentToday = whatsappService.enviadosHoy(userId);
+        int remaining  = Math.max(0, WA_LIMIT - (int) sentToday);
+
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
         List<StoreViewDto> stores = request.storeIds().stream()
+                .limit(remaining)
                 .map(id -> storeRepository.findById(id).orElse(null))
                 .filter(java.util.Objects::nonNull)
                 .map(store -> new StoreViewDto(
