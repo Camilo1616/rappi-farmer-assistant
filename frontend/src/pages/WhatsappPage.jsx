@@ -758,6 +758,7 @@ export default function WhatsappPage() {
   const [sentTodayIds, setSentTodayIds] = useState(new Set())
   const [aiRecommLoading, setAiRecommLoading] = useState(false)
   const [aiRecommMsg,    setAiRecommMsg]    = useState(null) // { type: 'ok'|'error', text }
+  const [historyKey,     setHistoryKey]     = useState(0)
 
   const loadStatus = async () => {
     try {
@@ -781,15 +782,17 @@ export default function WhatsappPage() {
     loadStatus(); loadDash(); loadSentToday()
     getMsgTemplates().then(r => setTemplates(r.data)).catch(() => {})
     const iv = setInterval(loadStatus, 5000)
+    // Refresca historial cada hora para que nuevos días aparezcan sin recargar
+    const histIv = setInterval(() => setHistoryKey(k => k + 1), 60 * 60 * 1000)
     // Reconectar estado si el usuario salió y volvió (navegación o recarga)
     const unsub = progressStore.subscribe(({ sending: s, progress: p, message: m, aiMessages: ai }) => {
       setSending(s)
       setProgress(p)
       setMessage(m)
       setAiMessages(ai)
-      if (p?.finalizado) { loadStatus(); loadSentToday() }
+      if (p?.finalizado) { loadStatus(); loadSentToday(); setHistoryKey(k => k + 1) }
     })
-    return () => { clearInterval(iv); unsub() }
+    return () => { clearInterval(iv); clearInterval(histIv); unsub() }
   }, [])
 
   // Mientras el QR está visible, hacer polling cada 2s para detectar conexión rápido
@@ -1133,7 +1136,7 @@ export default function WhatsappPage() {
         </div>
       </div>
 
-      <WaHistory />
+      <WaHistory key={historyKey} />
 
     </div>
   )
