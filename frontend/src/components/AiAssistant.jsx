@@ -311,7 +311,7 @@ function PriorityCard({ p, isManaged, result, onManage }) {
 
   return (
     <div
-      onClick={p.storeCode ? onManage : undefined}
+      onClick={p.storeCode ? e => { e.stopPropagation(); onManage(e) } : undefined}
       style={{
         borderRadius: 10, marginBottom: 6, overflow: 'hidden',
         border: `1px solid ${cfg.border}`,
@@ -457,7 +457,7 @@ function RecTab({ aiRec, aiLoading, aiError, rateLimit, setRateLimit, loadRec, m
             p={p}
             isManaged={false}
             result={null}
-            onManage={() => onManage(p.storeCode)}
+            onManage={e => onManage(p.storeCode, e)}
           />
         ))}
         {/* Gestionadas al final */}
@@ -567,9 +567,10 @@ export default function AiAssistant() {
     openCtxForCode(storeCode, e.clientX, e.clientY)
   }, [openCtxForCode])
 
-  const handleCardManage = useCallback((storeCode) => {
-    // Abre el ctx menu centrado en pantalla cuando se hace click en la tarjeta
-    openCtxForCode(storeCode, window.innerWidth / 2 - 180, window.innerHeight / 2 - 200)
+  const handleCardManage = useCallback((storeCode, e) => {
+    const x = e?.clientX ?? window.innerWidth  / 2 - 180
+    const y = e?.clientY ?? window.innerHeight / 2 - 200
+    openCtxForCode(storeCode, x, y)
   }, [openCtxForCode])
 
   const loadRec = useCallback(async () => {
