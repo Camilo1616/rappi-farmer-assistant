@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import api from '../services/api'
 import rappiMascot from '../assets/rappi-mascot.jpeg'
 import { useAuth } from '../context/AuthContext'
+import { getCached, setCache, invalidateCache } from '../services/aiRecommCache'
 
 /* ── Markdown renderer ──────────────────────────────────────────────────── */
 function Md({ children, onRowCtx }) {
@@ -388,7 +389,7 @@ function RecTab({ aiRec, aiLoading, aiError, rateLimit, setRateLimit, loadRec, m
         {rateLimit.secondsLeft}
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>segundos</div>
-      <button onClick={() => { setRateLimit({ active: false, secondsLeft: 0 }); loadRec() }}
+      <button onClick={() => { setRateLimit({ active: false, secondsLeft: 0 }); loadRec(true) }}
         style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#7C3AED,#6D28D9)', color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
         ↺ Reintentar ahora
       </button>
@@ -531,7 +532,7 @@ export default function AiAssistant() {
 
   const [open,         setOpen]        = useState(false)
   const [tab,          setTab]         = useState('rec')
-  const [aiRec,        setAiRec]       = useState(null)
+  const [aiRec,        setAiRec]       = useState(() => getCached())
   const [aiLoading,    setAiLoading]   = useState(false)
   const [aiError,      setAiError]     = useState(null)
   const [chatHistory,  setChatHistory] = useState([])
@@ -576,7 +577,7 @@ export default function AiAssistant() {
   // Rate limit countdown
   useEffect(() => {
     if (!rateLimit.active) return
-    if (rateLimit.secondsLeft <= 0) { setRateLimit({ active: false, secondsLeft: 0 }); loadRec(); return }
+    if (rateLimit.secondsLeft <= 0) { setRateLimit({ active: false, secondsLeft: 0 }); loadRec(true); return }
     rateLimitTimer.current = setTimeout(() => setRateLimit(prev => ({ ...prev, secondsLeft: prev.secondsLeft - 1 })), 1000)
     return () => clearTimeout(rateLimitTimer.current)
   }, [rateLimit.active, rateLimit.secondsLeft])
@@ -612,12 +613,18 @@ export default function AiAssistant() {
     openCtxForCode(storeCode, x, y)
   }, [openCtxForCode])
 
-  const loadRec = useCallback(async () => {
+  const loadRec = useCallback(async (force = false) => {
+    // Servir desde caché si existe y no se fuerza recarga
+    if (!force) {
+      const cached = getCached()
+      if (cached) { setAiRec(cached); if (cached.managedResults) setManagedCodes(new Set(Object.keys(cached.managedResults))); return }
+    }
     setAiLoading(true); setAiError(null)
     try {
       const res  = await api.get('/ai/recommend', { timeout: 45000 })
       const data = res.data
       if (data.rateLimited) { setRateLimit({ active: true, secondsLeft: data.retryAfterSeconds || 30 }); return }
+      setCache(data)
       setAiRec(data)
       if (data.managedResults) setManagedCodes(new Set(Object.keys(data.managedResults)))
     } catch (e) {
@@ -770,7 +777,8 @@ export default function AiAssistant() {
         onClose={() => setCtxMenu(m => ({ ...m, visible: false }))}
         onManaged={code => {
           setManagedCodes(prev => new Set([...prev, code]))
-          setTimeout(() => loadRec(), 800)
+          invalidateCache()
+          setTimeout(() => loadRec(true), 800)
         }}
       />
 
