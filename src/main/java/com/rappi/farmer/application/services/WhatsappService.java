@@ -58,6 +58,10 @@ public class WhatsappService {
         whatsappDriver.cerrar(sessionId(userId));
     }
 
+    public void logoutSession(Long userId) {
+        whatsappDriver.logout(sessionId(userId));
+    }
+
     public boolean tieneQr(Long userId) {
         return whatsappDriver.obtenerQr(sessionId(userId)) != null;
     }

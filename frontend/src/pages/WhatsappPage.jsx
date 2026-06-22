@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getDashboard } from '../services/dashboardService'
 import {
-  getWhatsappStatus, getWhatsappQr, openChrome,
+  getWhatsappStatus, getWhatsappQr, openChrome, logoutSession,
   sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
 import { generateWhatsappMessage, getAiRecommendations, invalidateAiRecommendation } from '../services/aiService'
@@ -550,7 +550,7 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
 
 
 /* ── Conexión WhatsApp (Baileys) ── */
-function StepConnection({ status, qr, onRefresh, onStart, loading, starting }) {
+function StepConnection({ status, qr, onRefresh, onStart, onLogout, loading, starting, loggingOut }) {
   return (
     <div className={styles.stepCard}>
       <div className={styles.stepHeader}>
@@ -558,7 +558,7 @@ function StepConnection({ status, qr, onRefresh, onStart, loading, starting }) {
         <div>
           <div className={styles.stepTitle}>Conexión WhatsApp</div>
           <div className={styles.stepSub}>
-            {status.connected ? 'Sesión activa' : qr ? 'Escanea el QR con WhatsApp' : 'Servicio no iniciado'}
+            {status.connected ? 'Sesión activa' : qr ? 'Escanea el QR con WhatsApp' : status.initializing ? 'Iniciando servicio...' : 'Servicio no iniciado'}
           </div>
         </div>
         <div className={`${styles.statusDot} ${status.connected ? styles.dotGreen : qr ? styles.dotYellow : styles.dotRed}`} />
@@ -578,14 +578,21 @@ function StepConnection({ status, qr, onRefresh, onStart, loading, starting }) {
         </div>
       )}
 
-      {!status.connected && !qr && (
+      {/* Cargando sin QR — el servicio está iniciando */}
+      {!status.connected && !qr && status.initializing && (
+        <div style={{ padding: '12px 0', fontSize: 13, color: '#94a3b8', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <span className={styles.spinner} /> Iniciando Chromium, espera unos segundos...
+        </div>
+      )}
+
+      {!status.connected && !qr && !status.initializing && (
         <div style={{ padding: '12px 0', fontSize: 13, color: '#94a3b8', textAlign: 'center' }}>
           Inicia el servicio para obtener el código QR
         </div>
       )}
 
       <div className={styles.btnRow}>
-        {!status.connected && !qr && (
+        {!status.connected && !qr && !status.initializing && (
           <button className={styles.btnPrimary} onClick={onStart} disabled={starting}>
             {starting ? <><span className={styles.spinner} /> Iniciando...</> : '▶ Iniciar servicio WhatsApp'}
           </button>
@@ -593,6 +600,21 @@ function StepConnection({ status, qr, onRefresh, onStart, loading, starting }) {
         <button className={styles.btnSecondary} onClick={onRefresh} disabled={loading}>
           {loading ? <><span className={styles.spinner} /> Verificando...</> : '🔄 Verificar estado'}
         </button>
+        {/* Botón desvincular: si está conectado o se quedó colgado (initializing sin QR por mucho tiempo) */}
+        {(status.connected || (!qr && (status.initializing || status.open))) && (
+          <button
+            onClick={onLogout}
+            disabled={loggingOut}
+            title="Cierra la sesión y borra los datos. Necesitarás escanear el QR de nuevo."
+            style={{
+              padding: '8px 14px', borderRadius: 8, border: '1.5px solid #DC2626',
+              background: 'transparent', color: '#DC2626', fontSize: '0.82rem',
+              fontWeight: 600, cursor: loggingOut ? 'not-allowed' : 'pointer', opacity: loggingOut ? 0.6 : 1,
+            }}
+          >
+            {loggingOut ? <><span className={styles.spinner} /> Desvinculando...</> : '🔌 Desvincular sesión'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -811,6 +833,7 @@ export default function WhatsappPage() {
   const [aiRecommLoading, setAiRecommLoading] = useState(false)
   const [aiRecommMsg,    setAiRecommMsg]    = useState(null) // { type: 'ok'|'error', text }
   const [historyKey,     setHistoryKey]     = useState(0)
+  const [loggingOut,     setLoggingOut]     = useState(false)
 
   const loadStatus = async () => {
     try {
@@ -966,6 +989,18 @@ export default function WhatsappPage() {
     setStarting(false)
   }
 
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    try {
+      await logoutSession()
+      setQr(null)
+      // Esperar 6s para que el servicio Node reinicie y genere QR fresco
+      await new Promise(r => setTimeout(r, 6000))
+      await loadStatus()
+    } catch {}
+    setLoggingOut(false)
+  }
+
   const handleSend = () => {
     if (!selected.size || !message.trim() || !status.connected) return
     const initial = { total: selected.size, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
@@ -1036,7 +1071,7 @@ export default function WhatsappPage() {
       <div className={styles.layout}>
         <div className={styles.leftCol}>
 
-          <StepConnection status={status} qr={qr} onRefresh={handleRefresh} onStart={handleStart} loading={chromLoad} starting={starting} />
+          <StepConnection status={status} qr={qr} onRefresh={handleRefresh} onStart={handleStart} onLogout={handleLogout} loading={chromLoad} starting={starting} loggingOut={loggingOut} />
 
           {/* ── Secciones de tiendas ── */}
           <div className={styles.stepCard}>

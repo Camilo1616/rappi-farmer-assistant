@@ -75,6 +75,12 @@ public class WhatsappDriver {
         log.info("[WA:{}] cerrar() — el microservicio Baileys sigue activo en segundo plano", sessionId);
     }
 
+    /** Cierra la sesión completamente y borra los datos guardados para forzar QR fresco. */
+    public void logout(String sessionId) {
+        post("/logout", Map.of("session", sessionId));
+        log.info("[WA:{}] /logout enviado — sesión y datos de autenticación eliminados", sessionId);
+    }
+
     public boolean esperarConexion(String sessionId, int timeoutSegundos) {
         long deadline = System.currentTimeMillis() + timeoutSegundos * 1000L;
         while (System.currentTimeMillis() < deadline) {

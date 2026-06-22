@@ -54,6 +54,12 @@ public class WhatsappController {
         return ResponseEntity.ok(Map.of("message", "Chrome cerrado"));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutSession() {
+        whatsappService.logoutSession(currentUserId());
+        return ResponseEntity.ok(Map.of("message", "Sesión cerrada — escanea QR para reconectar"));
+    }
+
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         Long userId       = currentUserId();

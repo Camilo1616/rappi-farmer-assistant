@@ -4,6 +4,7 @@ import QRCode from 'qrcode'
 import { existsSync, mkdirSync, readdirSync, statSync, rmSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { promisify } from 'util'
 
 const { Client, LocalAuth } = pkg
 
@@ -59,6 +60,25 @@ function forceReset(sessionId) {
   s.connected     = false
   s.initializing  = false
   s.initStartedAt = null
+}
+
+/** Borra los archivos de sesión de LocalAuth para forzar QR fresco en el próximo init. */
+function deleteSessionData(sessionId) {
+  // whatsapp-web.js guarda en <AUTH_DIR>/<sessionId>/ y también en <AUTH_DIR>/session-<sessionId>/
+  const paths = [
+    join(AUTH_DIR, sessionId),
+    join(AUTH_DIR, `session-${sessionId}`),
+  ]
+  for (const p of paths) {
+    if (existsSync(p)) {
+      try {
+        rmSync(p, { recursive: true, force: true })
+        console.log(`[WA:${sessionId}] Datos de sesión eliminados: ${p}`)
+      } catch (e) {
+        console.warn(`[WA:${sessionId}] No se pudo eliminar ${p}: ${e.message}`)
+      }
+    }
+  }
 }
 
 const CHROMIUM_LOCKS = new Set(['SingletonLock', 'SingletonSocket', 'SingletonCookie'])
@@ -148,7 +168,8 @@ function initSession(sessionId) {
     s.connected    = false
     s.initializing = false
     s.initStartedAt = null
-    // Reintentar tras 5 segundos
+    // Borrar sesión corrupta/revocada para que el próximo init muestre QR
+    deleteSessionData(sessionId)
     setTimeout(() => {
       if (sessions.has(sessionId) && !sessions.get(sessionId).connected) {
         console.log(`[WA:${sessionId}] Reintentando tras auth_failure...`)
@@ -165,12 +186,22 @@ function initSession(sessionId) {
     s.initializing = false
     s.initStartedAt = null
     s.client       = null
+
+    // Si el usuario desvinculó el dispositivo desde WhatsApp o hubo conflicto de sesión,
+    // los datos guardados en disco ya no son válidos — borrarlos para que el próximo
+    // init genere un QR fresco en lugar de quedarse colgado intentando restaurar.
+    const REVOKED_REASONS = ['LOGOUT', 'CONFLICT', 'UNLAUNCHED', 'UNPAIRED', 'UNPAIRED_IDLE']
+    if (reason && REVOKED_REASONS.includes(reason.toString().toUpperCase())) {
+      console.log(`[WA:${sessionId}] Sesión revocada (${reason}) — borrando datos de sesión para regenerar QR`)
+      deleteSessionData(sessionId)
+    }
+
     setTimeout(() => {
       if (sessions.has(sessionId)) {
-        console.log(`[WA:${sessionId}] Reiniciando cliente tras desconexión...`)
+        console.log(`[WA:${sessionId}] Reiniciando cliente tras desconexión (${reason})...`)
         initSession(sessionId)
       }
-    }, 10000)
+    }, 5000)
   })
 
   client.initialize().catch(e => {
@@ -291,6 +322,16 @@ app.post('/reconnect', (req, res) => {
   forceReset(sessionId)
   initSession(sessionId)
   res.json({ message: `Reconectando sesión ${sessionId}...`, sessionId })
+})
+
+// Cerrar sesión completamente y borrar datos — el próximo /status o /reconnect generará QR fresco
+app.post('/logout', (req, res) => {
+  const sessionId = resolveSession(req)
+  forceReset(sessionId)
+  deleteSessionData(sessionId)
+  sessions.delete(sessionId)
+  console.log(`[WA:${sessionId}] Logout manual — sesión y datos eliminados`)
+  res.json({ message: `Sesión ${sessionId} cerrada y datos eliminados`, sessionId })
 })
 
 app.listen(PORT, () => {
