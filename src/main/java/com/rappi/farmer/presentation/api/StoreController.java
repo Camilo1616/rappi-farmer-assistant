@@ -170,6 +170,17 @@ public class StoreController {
         return ResponseEntity.ok(detail);
     }
 
+    @PatchMapping("/{id}/phone")
+    public ResponseEntity<?> updatePhone(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String phone = body.getOrDefault("phoneNumber", "").trim();
+        if (phone.isBlank()) return ResponseEntity.badRequest().body(Map.of("error", "Teléfono vacío"));
+        return storeRepository.findById(id).map(store -> {
+            store.setPhoneNumber(phone);
+            storeRepository.save(store);
+            return ResponseEntity.ok(Map.of("id", id, "phoneNumber", phone));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/managements/today")
     public ResponseEntity<List<ManagementViewDto>> getTodayManagements() {
         return ResponseEntity.ok(managementService.getTodayManagements());

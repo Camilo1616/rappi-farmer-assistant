@@ -7,6 +7,7 @@ import {
 } from '../services/whatsappService'
 import { generateWhatsappMessage, getAiRecommendations, invalidateAiRecommendation } from '../services/aiService'
 import progressStore from '../services/whatsappProgressStore'
+import { updateStorePhone } from '../services/storeService'
 import api from '../services/api'
 import styles from './WhatsappPage.module.css'
 
@@ -304,7 +305,7 @@ function StatusBadge({ store }) {
 }
 
 /* ── Selector de tiendas mejorado ── */
-function StoreSelector({ sections, dashStores, selected, remaining, onToggle, onSelectAll, onClear, sentTodayIds }) {
+function StoreSelector({ sections, dashStores, selected, remaining, onToggle, onSelectAll, onClear, sentTodayIds, onPhoneSaved }) {
   const available = sections.filter(s => (dashStores[s.key]?.length ?? 0) > 0)
   const [activeKey,    setActiveKey]    = useState(() => available[0]?.key ?? null)
   const [activeSubIdx, setActiveSubIdx] = useState(0)
@@ -313,9 +314,12 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
   useEffect(() => {
     if (!activeKey && available.length > 0) setActiveKey(available[0].key)
   }, [available.length])
-  const [search,       setSearch]       = useState('')
-  const [hideNoPhone,  setHideNoPhone]  = useState(true)
-  const [hideSentToday, setHideSentToday] = useState(false)
+  const [search,          setSearch]         = useState('')
+  const [hideNoPhone,     setHideNoPhone]    = useState(true)
+  const [hideSentToday,   setHideSentToday]  = useState(false)
+  const [editingPhoneId,  setEditingPhoneId] = useState(null)
+  const [phoneInput,      setPhoneInput]     = useState('')
+  const [phoneSaving,     setPhoneSaving]    = useState(false)
 
   const sec       = sections.find(s => s.key === activeKey)
   const allStores = sec ? (dashStores[activeKey] ?? []) : []
@@ -455,12 +459,17 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
           const isSelected   = selected.has(store.id)
           const hasPhone     = !!store.phoneNumber
           const sentToday    = sentTodayIds.has(store.id)
-          const disabled     = !hasPhone || (!isSelected && !canAddMore)
+          const isEditing    = editingPhoneId === store.id
+          const disabled     = !hasPhone && !isEditing || (!isSelected && !canAddMore && hasPhone)
           return (
             <div key={store.id}
-              className={`${styles.storeRow} ${isSelected ? styles.storeRowSel : ''} ${disabled ? styles.storeRowDis : ''}`}
-              onClick={() => !disabled && onToggle(store.id)}>
-              <input type="checkbox" className={styles.checkbox} checked={isSelected} readOnly disabled={disabled} />
+              className={`${styles.storeRow} ${isSelected ? styles.storeRowSel : ''} ${!hasPhone && !isEditing ? styles.storeRowDis : ''}`}
+              onClick={() => {
+                if (isEditing) return
+                if (hasPhone) { if (!(!isSelected && !canAddMore)) onToggle(store.id) }
+                else { setEditingPhoneId(store.id); setPhoneInput('') }
+              }}>
+              <input type="checkbox" className={styles.checkbox} checked={isSelected} readOnly disabled={!hasPhone} />
               <div className={styles.storeInfo} style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <span className={styles.storeName}>{store.storeName}</span>
@@ -479,8 +488,50 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
                   <AgingBadge aging={store.aging} />
                   <StatusBadge store={store} />
                 </div>
+                {isEditing && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }} onClick={e => e.stopPropagation()}>
+                    <input
+                      autoFocus
+                      type="tel"
+                      placeholder="573001234567"
+                      value={phoneInput}
+                      onChange={e => setPhoneInput(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={e => { if (e.key === 'Escape') setEditingPhoneId(null) }}
+                      style={{
+                        flex: 1, padding: '4px 8px', borderRadius: 6, fontSize: 12,
+                        background: 'var(--bg-input)', border: '1.5px solid #7C3AED55',
+                        color: 'var(--text-primary)', outline: 'none',
+                      }}
+                    />
+                    <button
+                      disabled={phoneSaving || phoneInput.length < 7}
+                      onClick={async () => {
+                        setPhoneSaving(true)
+                        try {
+                          await updateStorePhone(store.id, phoneInput)
+                          onPhoneSaved(store.id, phoneInput)
+                          setEditingPhoneId(null)
+                          onToggle(store.id)
+                        } catch { /* silencioso */ } finally { setPhoneSaving(false) }
+                      }}
+                      style={{
+                        padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11,
+                        fontWeight: 700, cursor: phoneSaving || phoneInput.length < 7 ? 'not-allowed' : 'pointer',
+                        background: phoneInput.length >= 7 ? '#22C55E' : '#374151', color: '#fff',
+                      }}>
+                      {phoneSaving ? '...' : '✓'}
+                    </button>
+                    <button
+                      onClick={() => setEditingPhoneId(null)}
+                      style={{ padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 11, background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
-              {!hasPhone && <span className={styles.noPhone}>Sin tel.</span>}
+              {!hasPhone && !isEditing && (
+                <span className={styles.noPhone} style={{ cursor: 'pointer' }} title="Clic para registrar teléfono">+ Tel</span>
+              )}
             </div>
           )
         })}
@@ -1027,6 +1078,15 @@ export default function WhatsappPage() {
               onSelectAll={handleSelectAll}
               onClear={handleClearSection}
               sentTodayIds={sentTodayIds}
+              onPhoneSaved={(storeId, phone) => {
+                setDashStores(prev => {
+                  const next = {}
+                  for (const [k, arr] of Object.entries(prev)) {
+                    next[k] = arr.map(s => s.id === storeId ? { ...s, phoneNumber: phone } : s)
+                  }
+                  return next
+                })
+              }}
             />
           </div>
 
