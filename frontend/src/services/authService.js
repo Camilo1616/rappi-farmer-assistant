@@ -1,8 +1,11 @@
 import api from './api'
 
+export const SESSION_DURATION_MS = 5 * 60 * 60 * 1000 // 5 horas
+
 export const login = async (email, password) => {
   const { data } = await api.post('/auth/login', { email, password })
   localStorage.setItem('token', data.token)
+  localStorage.setItem('loginAt', Date.now().toString())
   localStorage.setItem('user', JSON.stringify({
     id: data.id,
     email: data.email,
@@ -21,6 +24,7 @@ export const sendPin    = (email) => api.post('/auth/send-pin', { email })
 export const register = async (body) => {
   const { data } = await api.post('/auth/register', body)
   localStorage.setItem('token', data.token)
+  localStorage.setItem('loginAt', Date.now().toString())
   localStorage.setItem('user', JSON.stringify({
     id: data.userId ?? data.id,
     email: data.email,
