@@ -361,6 +361,8 @@ function PriorityCard({ p, isManaged, result, onManage }) {
 
 /* ── Tab de recomendaciones ─────────────────────────────────────────────── */
 function RecTab({ aiRec, aiLoading, aiError, rateLimit, setRateLimit, loadRec, managedCodes, onManage }) {
+  const [search, setSearch] = useState('')
+
   const total    = aiRec?.priorities?.length ?? 0
   const managed  = Object.keys(aiRec?.managedResults ?? {}).length + [...managedCodes].filter(c => !aiRec?.managedResults?.[c]).length
   const pending  = total - Math.min(managed, total)
@@ -430,6 +432,18 @@ function RecTab({ aiRec, aiLoading, aiError, rateLimit, setRateLimit, loadRec, m
 
   const priorities = aiRec.priorities ?? []
 
+  const q = search.trim().toLowerCase()
+  const filtered = q
+    ? priorities.filter(p =>
+        p.storeName?.toLowerCase().includes(q) ||
+        p.storeCode?.toLowerCase().includes(q) ||
+        p.reason?.toLowerCase().includes(q)
+      )
+    : priorities
+
+  const pending  = filtered.filter(p => !aiRec.managedResults?.[p.storeCode] && !managedCodes.has(p.storeCode))
+  const done     = filtered.filter(p =>  aiRec.managedResults?.[p.storeCode] ||  managedCodes.has(p.storeCode))
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Stats bar */}
@@ -443,21 +457,38 @@ function RecTab({ aiRec, aiLoading, aiError, rateLimit, setRateLimit, loadRec, m
           <StatPill value={total}   label="Total"    color="#7C3AED" />
           <StatPill value={alta}    label="Urgentes" color="#EF4444" />
           <StatPill value={managed} label="Hechas"   color="#22C55E" />
-          <StatPill value={pending} label="Pendientes" color="#F97316" />
+          <StatPill value={pending.length} label="Pendientes" color="#F97316" />
         </div>
         {/* Barra de progreso */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <div style={{ flex: 1, height: 6, background: 'rgba(124,58,237,0.1)', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${progress}%`, background: progress === 100 ? '#22C55E' : 'linear-gradient(90deg,#7C3AED,#A78BFA)', borderRadius: 99, transition: 'width 0.5s' }} />
           </div>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>{progress}%</span>
         </div>
+        {/* Buscador inline */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 9px' }}>
+          <span style={{ fontSize: 12, opacity: 0.5 }}>🔍</span>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar tienda, código o motivo..."
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 11 }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 12, lineHeight: 1, padding: 0 }}>✕</button>
+          )}
+        </div>
+        {q && <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</div>}
       </div>
 
       {/* Lista de prioridades */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
+        {q && filtered.length === 0 && (
+          <div style={{ color: 'var(--text-secondary)', fontSize: 11, textAlign: 'center', padding: 20 }}>Sin resultados para "{search}"</div>
+        )}
         {/* Pendientes primero */}
-        {priorities.filter(p => !aiRec.managedResults?.[p.storeCode] && !managedCodes.has(p.storeCode)).map((p, i) => (
+        {pending.map((p, i) => (
           <PriorityCard
             key={p.storeCode ?? i}
             p={p}
@@ -467,7 +498,7 @@ function RecTab({ aiRec, aiLoading, aiError, rateLimit, setRateLimit, loadRec, m
           />
         ))}
         {/* Gestionadas al final */}
-        {priorities.filter(p => aiRec.managedResults?.[p.storeCode] || managedCodes.has(p.storeCode)).map((p, i) => (
+        {done.map((p, i) => (
           <PriorityCard
             key={`done-${p.storeCode ?? i}`}
             p={p}
@@ -486,96 +517,6 @@ function StatPill({ value, label, color }) {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 6px', borderRadius: 8, background: color + '10', border: `1px solid ${color}25` }}>
       <span style={{ fontSize: 15, fontWeight: 900, color, lineHeight: 1 }}>{value}</span>
       <span style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 600, marginTop: 1 }}>{label}</span>
-    </div>
-  )
-}
-
-/* ── Buscador de tiendas ────────────────────────────────────────────────── */
-function StoreSearchTab({ stores, loading, search, onSearch, onCtx }) {
-  const q = search.trim().toLowerCase()
-
-  const results = !stores ? [] : (q.length < 1 ? [] : stores.filter(s =>
-    s.storeName?.toLowerCase().includes(q) ||
-    s.storeCode?.toLowerCase().includes(q) ||
-    s.brandId?.toLowerCase().includes(q) ||
-    s.phoneNumber?.toLowerCase().includes(q)
-  ).slice(0, 40))
-
-  const hasPhone = s => s.phoneNumber && s.phoneNumber.trim().length > 3
-
-  return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '10px 12px', gap: 8 }}>
-      {/* Input */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-input)', border: '1.5px solid #7C3AED55', borderRadius: 10, padding: '7px 10px' }}>
-        <span style={{ fontSize: 14 }}>🔍</span>
-        <input
-          autoFocus
-          value={search}
-          onChange={e => onSearch(e.target.value)}
-          placeholder="Nombre, Store ID, Brand ID o teléfono..."
-          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 12 }}
-        />
-        {search && (
-          <button onClick={() => onSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1, padding: 0 }}>✕</button>
-        )}
-      </div>
-
-      {/* Hint */}
-      {!q && (
-        <div style={{ color: 'var(--text-secondary)', fontSize: 11, textAlign: 'center', padding: '20px 8px' }}>
-          Escribe para buscar en toda tu cartera
-        </div>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <div style={{ color: 'var(--text-secondary)', fontSize: 11, textAlign: 'center', padding: 12 }}>Cargando tiendas...</div>
-      )}
-
-      {/* Resultados */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {q && !loading && results.length === 0 && (
-          <div style={{ color: 'var(--text-secondary)', fontSize: 11, textAlign: 'center', padding: 16 }}>Sin resultados para "{search}"</div>
-        )}
-        {results.map((s, i) => (
-          <div
-            key={s.id ?? i}
-            onClick={e => s.storeCode && onCtx(s.storeCode, e)}
-            style={{
-              padding: '8px 10px', borderRadius: 8, background: 'var(--bg-input)',
-              border: '1px solid var(--border)', cursor: s.storeCode ? 'pointer' : 'default',
-              display: 'flex', flexDirection: 'column', gap: 3,
-              transition: 'background 0.12s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,58,237,0.09)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-input)'}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {s.storeName || '—'}
-              </span>
-              {s.storeCode && (
-                <span style={{ fontSize: 10, fontWeight: 600, color: '#7C3AED', background: '#7C3AED18', border: '1px solid #7C3AED33', borderRadius: 5, padding: '1px 5px', whiteSpace: 'nowrap' }}>
-                  {s.storeCode}
-                </span>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {s.brandId && (
-                <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Brand: <b style={{ color: 'var(--text-primary)' }}>{s.brandId}</b></span>
-              )}
-              {hasPhone(s) ? (
-                <span style={{ fontSize: 10, color: '#22C55E', fontWeight: 600 }}>📞 {s.phoneNumber}</span>
-              ) : (
-                <span style={{ fontSize: 10, color: '#6B7280' }}>Sin teléfono</span>
-              )}
-            </div>
-          </div>
-        ))}
-        {q && results.length === 40 && (
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'center', padding: '4px 0' }}>Mostrando los primeros 40 resultados — afina la búsqueda</div>
-        )}
-      </div>
     </div>
   )
 }
@@ -604,9 +545,6 @@ export default function AiAssistant() {
   const [ctxMenu,      setCtxMenu]     = useState({ visible: false, x: 0, y: 0, storeCode: null, data: null, loading: false })
   const [managedCodes, setManagedCodes]= useState(new Set())
   const [rateLimit,    setRateLimit]   = useState({ active: false, secondsLeft: 0 })
-  const [allStores,    setAllStores]   = useState(null) // null = no cargado, [] = vacío
-  const [storeSearch,  setStoreSearch] = useState('')
-  const [storesLoading,setStoresLoading]=useState(false)
   const rateLimitTimer = useRef(null)
   const dragStart      = useRef(null)
   const chatEndRef     = useRef(null)
@@ -675,16 +613,6 @@ export default function AiAssistant() {
     openCtxForCode(storeCode, x, y)
   }, [openCtxForCode])
 
-  const loadStores = useCallback(async () => {
-    if (allStores !== null) return
-    setStoresLoading(true)
-    try {
-      const res = await api.get('/stores', { params: { size: 2000 } })
-      const data = res.data
-      setAllStores(Array.isArray(data) ? data : (data.content ?? []))
-    } catch { setAllStores([]) } finally { setStoresLoading(false) }
-  }, [allStores])
-
   const loadRec = useCallback(async () => {
     setAiLoading(true); setAiError(null)
     try {
@@ -720,17 +648,13 @@ export default function AiAssistant() {
   }, [chatInput, chatHistory, chatLoading])
 
   const toggleOpen = () => {
-    if (!open) {
-      setOpen(true)
-      if (!aiRec && tab === 'rec') loadRec()
-      if (tab === 'search') loadStores()
-    } else setOpen(false)
+    if (!open) { setOpen(true); if (!aiRec && tab === 'rec') loadRec() }
+    else setOpen(false)
   }
 
   const switchTab = (k) => {
     setTab(k)
     if (k === 'rec' && !aiRec && !aiLoading) loadRec()
-    if (k === 'search') loadStores()
   }
 
   // ── Posición del panel: arriba o abajo del robot ──────────────────────
@@ -767,7 +691,7 @@ export default function AiAssistant() {
               <span style={{ fontSize: 18 }}>🤖</span>
               <span style={{ flex: 1, fontWeight: 800, fontSize: 13, color: 'var(--text-primary)' }}>Asistente IA</span>
               <div style={{ display: 'flex', gap: 3 }}>
-                {[['rec', '📊 Hoy'], ['search', '🔍'], ['chat', '💬 Chat']].map(([k, l]) => (
+                {[['rec', '📊 Hoy'], ['chat', '💬 Chat']].map(([k, l]) => (
                   <button key={k} onClick={() => switchTab(k)} style={{ padding: '4px 11px', borderRadius: 8, border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer', background: tab === k ? '#7C3AED' : 'transparent', color: tab === k ? '#fff' : 'var(--text-secondary)', transition: 'all 0.15s' }}>{l}</button>
                 ))}
               </div>
@@ -781,17 +705,6 @@ export default function AiAssistant() {
                 rateLimit={rateLimit} setRateLimit={setRateLimit} loadRec={loadRec}
                 managedCodes={managedCodes}
                 onManage={handleCardManage}
-              />
-            )}
-
-            {/* Tab Buscar */}
-            {tab === 'search' && (
-              <StoreSearchTab
-                stores={allStores}
-                loading={storesLoading}
-                search={storeSearch}
-                onSearch={setStoreSearch}
-                onCtx={(storeCode, e) => handleCardManage(storeCode, e)}
               />
             )}
 
