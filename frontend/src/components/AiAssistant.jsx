@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import api from '../services/api'
 import rappiMascot from '../assets/rappi-mascot.jpeg'
+import { useAuth } from '../context/AuthContext'
 
 /* ── Markdown renderer ──────────────────────────────────────────────────── */
 function Md({ children, onRowCtx }) {
@@ -188,14 +189,18 @@ function StoreContextMenu({ menu, onClose, onManaged }) {
 }
 
 /* ── Robot Button ───────────────────────────────────────────────────────── */
-const TIPS = [
-  '¿Qué ataco hoy? 🎯',
-  'Tengo tu cartera lista 📋',
-  '¡Hagámoslo! 💪',
-  'Checa tus IS 👀',
-  'Onboarding crítico ⚠️',
-  'Soy tu copiloto 🚀',
-]
+function buildTips(name) {
+  const n = name ? `, ${name}` : ''
+  return [
+    '¿Qué ataco hoy? 🎯',
+    'Tengo tu cartera lista 📋',
+    '¡Hagámoslo! 💪',
+    'Checa tus IS 👀',
+    'Onboarding crítico ⚠️',
+    `Soy tu copiloto${n} 🚀`,
+    `Hoy te ayudo${n} a priorizar, escribir WA y cerrar más tiendas 🏪`,
+  ]
+}
 
 function RobotSVG({ hovered, blink, look }) {
   const SIZE = 120
@@ -218,19 +223,20 @@ function RobotSVG({ hovered, blink, look }) {
   )
 }
 
-function RobotButton({ open, dragging, onMouseDown, onClick }) {
+function RobotButton({ open, dragging, onMouseDown, onClick, farmerName }) {
   const [hovered, setHovered] = useState(false)
   const [tipIdx,  setTipIdx]  = useState(0)
   const [blink,   setBlink]   = useState(false)
   const [pulse,   setPulse]   = useState(false)
   const [look,    setLook]    = useState({ dx: 0, dy: 0 })
   const buttonRef = useRef(null)
+  const tips = buildTips(farmerName)
 
   useEffect(() => {
     if (open) return
-    const id = setInterval(() => setTipIdx(i => (i + 1) % TIPS.length), 4000)
+    const id = setInterval(() => setTipIdx(i => (i + 1) % tips.length), 4000)
     return () => clearInterval(id)
-  }, [open])
+  }, [open, tips.length])
 
   useEffect(() => {
     const doBlink = () => {
@@ -270,7 +276,7 @@ function RobotButton({ open, dragging, onMouseDown, onClick }) {
     >
       {!open && (
         <div style={{ position: 'relative', background: hovered ? 'linear-gradient(135deg,#6D28D9,#7C3AED)' : 'linear-gradient(135deg,#7C3AED,#6D28D9)', color: '#fff', borderRadius: 12, padding: '5px 12px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', marginBottom: 6, boxShadow: hovered ? '0 4px 20px #7C3AED88' : '0 2px 12px #7C3AED55', transform: hovered ? 'scale(1.07) translateY(-3px)' : 'scale(1)', animation: hovered ? 'none' : 'bubbleBounce 2.8s ease-in-out infinite', transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)' }}>
-          {TIPS[tipIdx]}
+          {tips[tipIdx]}
           <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #7C3AED' }} />
         </div>
       )}
@@ -490,6 +496,9 @@ const PANEL_H = 600
 const ROBOT_H = 128 // altura del robot (sin burbuja, que se oculta cuando está abierto)
 
 export default function AiAssistant() {
+  const { user } = useAuth()
+  const farmerName = user?.nickname || user?.fullName?.split(' ')[0] || null
+
   const [open,         setOpen]        = useState(false)
   const [tab,          setTab]         = useState('rec')
   const [aiRec,        setAiRec]       = useState(null)
@@ -623,7 +632,7 @@ export default function AiAssistant() {
   return (
     <>
       <div style={{ position: 'fixed', left: pos.x, top: pos.y, zIndex: 9999 }}>
-        <RobotButton open={open} dragging={dragging} onMouseDown={onMouseDown} onClick={!dragging ? toggleOpen : undefined} />
+        <RobotButton open={open} dragging={dragging} onMouseDown={onMouseDown} onClick={!dragging ? toggleOpen : undefined} farmerName={farmerName} />
 
         {/* Panel */}
         {open && (
