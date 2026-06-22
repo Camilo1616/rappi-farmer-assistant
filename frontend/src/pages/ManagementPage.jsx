@@ -139,6 +139,7 @@ export default function ManagementPage() {
   const [waStores,     setWaStores]     = useState([])
   const [waOpen,       setWaOpen]       = useState(false)
   const [waSaving,     setWaSaving]     = useState({})  // storeId -> 'EFECTIVA'|'NO_CONTACTO'
+  const [waDone,       setWaDone]       = useState(new Set())  // storeIds ya gestionados esta sesión
 
   const load = () => {
     setLoading(true)
@@ -160,8 +161,8 @@ export default function ManagementPage() {
     setWaSaving(s => ({ ...s, [store.id]: resultType }))
     try {
       await registerManagement(store.id, { managementType: 'WHATSAPP', resultType, comments: '' })
+      setWaDone(prev => new Set([...prev, store.id]))
       load()
-      loadWaStores()
     } finally {
       setWaSaving(s => { const n = { ...s }; delete n[store.id]; return n })
     }
@@ -242,7 +243,7 @@ export default function ManagementPage() {
       </div>
 
       {/* ── Panel WhatsApp pendientes ── */}
-      {waStores.length > 0 && (
+      {waStores.length > 0 && waStores.filter(s => !waDone.has(s.id)).length > 0 && (
         <div className={styles.waPanel}>
           <button
             className={`${styles.waPanelToggle} ${waOpen ? styles.waPanelToggleOpen : ''}`}
@@ -250,50 +251,63 @@ export default function ManagementPage() {
           >
             <span className={styles.waPanelIcon}>💬</span>
             <span className={styles.waPanelTitle}>
-              {waStores.length} tienda{waStores.length !== 1 ? 's' : ''} con WhatsApp enviado hoy — pendiente de gestión
+              {waStores.filter(s => !waDone.has(s.id)).length} tienda{waStores.filter(s => !waDone.has(s.id)).length !== 1 ? 's' : ''} con WhatsApp enviado hoy — pendiente de gestión
+              {waDone.size > 0 && <span style={{ color: '#22C55E', marginLeft: 8 }}>· {waDone.size} gestionada{waDone.size !== 1 ? 's' : ''} ✅</span>}
             </span>
             <span className={styles.waPanelChevron}>{waOpen ? '▲' : '▼'}</span>
           </button>
 
           {waOpen && (
             <div className={styles.waPanelBody}>
-              {waStores.map(store => (
-                <div key={store.id} className={styles.waStoreRow}>
-                  <div className={styles.waStoreInfo}>
-                    <span className={styles.waStoreName}>{store.storeName}</span>
-                    <span className={styles.waStoreCode}>{store.brandId}</span>
-                    {store.phoneNumber && (
-                      <span className={styles.waStorePhone}>📱 {store.phoneNumber}</span>
+              {waStores.map(store => {
+                const done = waDone.has(store.id)
+                return (
+                  <div key={store.id} className={styles.waStoreRow}
+                    style={done ? { opacity: 0.55 } : {}}>
+                    <div className={styles.waStoreInfo}>
+                      <span className={styles.waStoreName}>{store.storeName}</span>
+                      <span className={styles.waStoreCode}>{store.brandId}</span>
+                      {store.phoneNumber && (
+                        <span className={styles.waStorePhone}>📱 {store.phoneNumber}</span>
+                      )}
+                    </div>
+                    {done ? (
+                      <span style={{
+                        padding: '4px 12px', borderRadius: 6,
+                        background: 'rgba(34,197,94,0.12)', color: '#22C55E',
+                        fontSize: 11, fontWeight: 700,
+                      }}>✅ Gestionada</span>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          disabled={!!waSaving[store.id]}
+                          onClick={() => registerWaGestion(store, 'EFECTIVA')}
+                          style={{
+                            padding: '4px 10px', borderRadius: 6, border: '1px solid #22C55E40',
+                            background: waSaving[store.id] === 'EFECTIVA' ? '#22C55E' : 'rgba(34,197,94,0.1)',
+                            color: waSaving[store.id] === 'EFECTIVA' ? '#fff' : '#22C55E',
+                            fontSize: 11, fontWeight: 700, cursor: waSaving[store.id] ? 'wait' : 'pointer',
+                          }}
+                        >
+                          {waSaving[store.id] === 'EFECTIVA' ? '...' : '✅ Efectiva'}
+                        </button>
+                        <button
+                          disabled={!!waSaving[store.id]}
+                          onClick={() => registerWaGestion(store, 'NO_CONTACTO')}
+                          style={{
+                            padding: '4px 10px', borderRadius: 6, border: '1px solid #F9731640',
+                            background: waSaving[store.id] === 'NO_CONTACTO' ? '#F97316' : 'rgba(249,115,22,0.1)',
+                            color: waSaving[store.id] === 'NO_CONTACTO' ? '#fff' : '#F97316',
+                            fontSize: 11, fontWeight: 700, cursor: waSaving[store.id] ? 'wait' : 'pointer',
+                          }}
+                        >
+                          {waSaving[store.id] === 'NO_CONTACTO' ? '...' : '📵 No contacto'}
+                        </button>
+                      </div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                      disabled={!!waSaving[store.id]}
-                      onClick={() => registerWaGestion(store, 'EFECTIVA')}
-                      style={{
-                        padding: '4px 10px', borderRadius: 6, border: '1px solid #22C55E40',
-                        background: waSaving[store.id] === 'EFECTIVA' ? '#22C55E' : 'rgba(34,197,94,0.1)',
-                        color: waSaving[store.id] === 'EFECTIVA' ? '#fff' : '#22C55E',
-                        fontSize: 11, fontWeight: 700, cursor: waSaving[store.id] ? 'wait' : 'pointer',
-                      }}
-                    >
-                      {waSaving[store.id] === 'EFECTIVA' ? '...' : '✅ Efectiva'}
-                    </button>
-                    <button
-                      disabled={!!waSaving[store.id]}
-                      onClick={() => registerWaGestion(store, 'NO_CONTACTO')}
-                      style={{
-                        padding: '4px 10px', borderRadius: 6, border: '1px solid #F9731640',
-                        background: waSaving[store.id] === 'NO_CONTACTO' ? '#F97316' : 'rgba(249,115,22,0.1)',
-                        color: waSaving[store.id] === 'NO_CONTACTO' ? '#fff' : '#F97316',
-                        fontSize: 11, fontWeight: 700, cursor: waSaving[store.id] ? 'wait' : 'pointer',
-                      }}
-                    >
-                      {waSaving[store.id] === 'NO_CONTACTO' ? '...' : '📵 No contacto'}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
