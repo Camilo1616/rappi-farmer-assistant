@@ -51,13 +51,10 @@ public class ExcelReaderService {
     private static final String COL_LAST_FOLLOW_UP   = "Último FollowUP";
     private static final String COL_FOLLOW_UP_30D    = "FollowUp last 30D";
 
-    // Columnas mínimas que deben estar presentes para que el archivo sea válido
+    // Solo columnas mínimas para validar que sea la plantilla correcta.
+    // Las demás columnas son opcionales — quedan null si no están en el Excel.
     private static final List<String> REQUIRED_COLS = List.of(
-            "COUNTRY STORE ID", "STORE NAME", "FARMER", "CANAL",
-            "AVA_L4W", "AVA_MTD", "AVA_L7D", "AGING", "TUVO_HANDOFF",
-            "Estado Churn AVA", "AVA STATUS", "Ordenes L4W Hoy",
-            "GESTIONAR", "Fecha de cargue", "Fecha inicio store",
-            "TELEFONO_PRINCIPAL", "Último Login", "COUNTRY BRAND ID"
+            "COUNTRY STORE ID", "STORE NAME", "FARMER"
     );
 
     public List<StoreExcelRowDto> read(File file) throws IOException {
@@ -122,12 +119,20 @@ public class ExcelReaderService {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    // Nombres alternativos para detectar la fila de encabezado
+    private static final List<String> STORE_ID_ALIASES = List.of(
+            "COUNTRY STORE ID", "STORE ID", "STORE_ID", "ID TIENDA", "ID_TIENDA"
+    );
+
     private int findHeaderRowIndex(Sheet sheet) {
         for (int i = 0; i <= Math.min(10, sheet.getLastRowNum()); i++) {
             Row row = sheet.getRow(i);
             if (row == null) continue;
             for (Cell cell : row) {
-                if (COL_STORE_ID.equalsIgnoreCase(cell.toString().trim())) return i;
+                String val = cell.toString().trim();
+                for (String alias : STORE_ID_ALIASES) {
+                    if (alias.equalsIgnoreCase(val)) return i;
+                }
             }
         }
         return -1;
@@ -165,7 +170,18 @@ public class ExcelReaderService {
         if (idx != null) return idx;
         idx = cols.get(normalize(colName));
         if (idx != null) return idx;
-        return cols.get(normalize(colName).toUpperCase());
+        idx = cols.get(normalize(colName).toUpperCase());
+        if (idx != null) return idx;
+        // Para STORE ID intentar aliases alternativos
+        if (COL_STORE_ID.equals(colName)) {
+            for (String alias : STORE_ID_ALIASES) {
+                idx = cols.get(alias);
+                if (idx != null) return idx;
+                idx = cols.get(alias.toUpperCase());
+                if (idx != null) return idx;
+            }
+        }
+        return null;
     }
 
     private String getString(Row row, Map<String, Integer> cols, String colName) {
@@ -254,20 +270,30 @@ public class ExcelReaderService {
      * Verifica que el archivo contenga todas las columnas requeridas.
      * Si falta alguna, lanza una excepción con el listado exacto de columnas ausentes.
      */
+    private boolean colPresent(Map<String, Integer> cols, String name) {
+        return cols.containsKey(name)
+                || cols.containsKey(name.toUpperCase())
+                || cols.containsKey(normalize(name))
+                || cols.containsKey(normalize(name).toUpperCase());
+    }
+
     private void validateRequiredColumns(Map<String, Integer> cols, String fileName) {
         List<String> missing = REQUIRED_COLS.stream()
-                .filter(req -> !cols.containsKey(req)
-                        && !cols.containsKey(req.toUpperCase())
-                        && !cols.containsKey(normalize(req))
-                        && !cols.containsKey(normalize(req).toUpperCase()))
+                .filter(req -> {
+                    // Para STORE ID aceptar cualquiera de los aliases
+                    if ("COUNTRY STORE ID".equals(req)) {
+                        return STORE_ID_ALIASES.stream().noneMatch(a -> colPresent(cols, a));
+                    }
+                    return !colPresent(cols, req);
+                })
                 .toList();
 
         if (!missing.isEmpty()) {
             String missingList = String.join(", ", missing);
             throw new IllegalArgumentException(
-                    "El archivo «" + fileName + "» no es la plantilla correcta de Rappi Farmer. " +
-                    "Faltan " + missing.size() + " columna(s) requerida(s): " + missingList + ". " +
-                    "Descarga la plantilla oficial desde el botón «Descargar plantilla Excel».");
+                    "El archivo «" + fileName + "» no tiene las columnas mínimas requeridas. " +
+                    "Faltan: " + missingList + ". " +
+                    "Asegúrate de que el archivo tenga al menos: COUNTRY STORE ID, STORE NAME y FARMER.");
         }
     }
 }

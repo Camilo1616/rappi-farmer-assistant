@@ -23,7 +23,8 @@ export default function StoreTable({ stores }) {
       s.storeName?.toLowerCase().includes(term) ||
       s.storeCode?.toLowerCase().includes(term) ||
       s.brandId?.toLowerCase().includes(term) ||
-      String(s.id ?? '').includes(term)
+      String(s.id ?? '').includes(term) ||
+      s.phoneNumber?.toLowerCase().includes(term)
     )
   }, [stores, q])
 
@@ -41,7 +42,7 @@ export default function StoreTable({ stores }) {
           type="text"
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder="Buscar por nombre, Store ID, Brand ID..."
+          placeholder="Buscar por nombre, Store ID, Brand ID, teléfono..."
           style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}
         />
         {q && (
@@ -63,6 +64,7 @@ export default function StoreTable({ stores }) {
               <th>Tienda</th>
               <th>Brand ID</th>
               <th>Store ID</th>
+              <th>Teléfono</th>
               <th>Canal dashboard</th>
               <th>Canal</th>
               <th>Último contacto</th>
@@ -82,6 +84,11 @@ export default function StoreTable({ stores }) {
                   </td>
                   <td><span className={styles.mono}>{s.brandId ?? '—'}</span></td>
                   <td><span className={styles.mono}>{s.storeCode ?? '—'}</span></td>
+                  <td>
+                    {s.phoneNumber
+                      ? <span className={styles.mono} style={{ fontSize: '12px' }}>{s.phoneNumber}</span>
+                      : <span className={styles.dash}>—</span>}
+                  </td>
                   <td>
                     {seg
                       ? <span className={styles.tag} style={{ background: segStyle.bg, color: segStyle.color }}>{seg}</span>
