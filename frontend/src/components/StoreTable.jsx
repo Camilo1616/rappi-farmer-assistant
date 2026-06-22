@@ -58,6 +58,7 @@ export default function StoreTable({ stores }) {
         </div>
       ) : (
         <>
+        <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -107,6 +108,7 @@ export default function StoreTable({ stores }) {
             })}
           </tbody>
         </table>
+        </div>
         <Pagination
           page={page}
           pageSize={pageSize}

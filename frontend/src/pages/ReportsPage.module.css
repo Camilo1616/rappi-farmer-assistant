@@ -207,3 +207,6 @@
 }
 .alertVal   { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
 .alertLabel { font-size: 0.72rem; color: var(--text-secondary); }
+
+@media (max-width: 900px) { .page, .wrap { padding: 16px !important; } }
+@media (max-width: 640px) { .page, .wrap { padding: 12px !important; } .grid { grid-template-columns: 1fr !important; } }

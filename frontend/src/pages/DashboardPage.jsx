@@ -152,6 +152,7 @@ export default function DashboardPage() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [notifOpen, setNotifOpen]   = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false)
   const [sidebarFiltersOpen, setSidebarFiltersOpen] = useState(false)
   const [sidebarSegment, setSidebarSegment] = useState('Todos')
   const [confirmAction, setConfirmAction] = useState(null)
@@ -288,11 +289,19 @@ export default function DashboardPage() {
   const churnCount     = dash?.churnRisk?.length ?? 0
   const healthyCount   = dash?.healthy?.length ?? 0
 
+  // Ítems de la bottom nav (los más usados en mobile)
+  const BOTTOM_NAV = NAV_ITEMS.filter(n => ['dashboard','stores','management','whatsapp','excel'].includes(n.key))
+
   return (
     <div className={styles.layout}>
 
+      {/* ── Overlay mobile (cierra sidebar al tocar fuera) ── */}
+      {sidebarMobileOpen && (
+        <div className={styles.sidebarOverlay} onClick={() => setSidebarMobileOpen(false)} />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
+      <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ''} ${sidebarMobileOpen ? styles.sidebarMobileOpen : ''}`}>
         <div className={styles.sidebarBrand}>
           <span className={styles.sidebarDot} />
           {!sidebarCollapsed && <span className={styles.sidebarBrandName}>Rappi Farmer</span>}
@@ -414,6 +423,7 @@ export default function DashboardPage() {
 
         {/* Topbar */}
         <div className={styles.topbar}>
+          <button className={styles.hamburger} onClick={() => setSidebarMobileOpen(o => !o)} aria-label="Menú">☰</button>
           <h1 className={styles.pageTitle}>{NAV_ITEMS.find(n=>n.key===activeNav)?.label}</h1>
           <div className={styles.topbarRight}>
             <span className={styles.liveIndicator}><span className={styles.liveDot}/> En vivo</span>
@@ -567,6 +577,24 @@ export default function DashboardPage() {
           onCancel={() => setConfirmAction(null)}
         />
       )}
+
+      {/* ── Bottom nav (solo mobile) ── */}
+      <nav className={styles.bottomNav}>
+        {BOTTOM_NAV.map(item => {
+          const blocked = importedToday === false && item.key !== 'excel' && item.key !== 'profile'
+          return (
+            <button
+              key={item.key}
+              className={`${styles.bottomNavItem} ${activeNav === item.key ? styles.active : ''}`}
+              onClick={() => { if (!blocked) { goTo(item.key); setSidebarMobileOpen(false) } }}
+              style={{ opacity: blocked ? 0.4 : 1 }}
+            >
+              <span className={styles.bottomNavIcon} style={{ color: item.color }}>{item.icon}</span>
+              <span className={styles.bottomNavLabel}>{item.label}</span>
+            </button>
+          )
+        })}
+      </nav>
     </div>
   )
 }

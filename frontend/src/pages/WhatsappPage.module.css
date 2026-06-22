@@ -9,6 +9,24 @@
 .leftCol  { display: flex; flex-direction: column; gap: 16px; }
 .rightCol { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 24px; }
 
+/* ── TABLET ≤900px ── */
+@media (max-width: 900px) {
+  .page { padding: 20px; }
+  .layout { grid-template-columns: 1fr; }
+  .rightCol { position: static; }
+}
+
+/* ── MOBILE ≤640px ── */
+@media (max-width: 640px) {
+  .page { padding: 12px; gap: 14px; }
+  .title { font-size: 1.2rem; }
+  .stepCard { padding: 14px; gap: 10px; }
+  .btnRow { gap: 6px; }
+  .btnPrimary, .btnSecondary, .btnDanger { padding: 8px 12px; font-size: 0.8rem; }
+  .testRow { flex-direction: column; }
+  .previewBubble { max-width: 100%; }
+}
+
 /* ── Step card ── */
 .stepCard {
   background: var(--bg-secondary);

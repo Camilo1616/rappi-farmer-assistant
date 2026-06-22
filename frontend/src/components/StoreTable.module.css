@@ -110,3 +110,15 @@
 }
 
 .emptyIcon { font-size: 32px; }
+
+/* ── Responsive: tabla con scroll horizontal en mobile ── */
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 640px) {
+  .table { font-size: 12px; min-width: 560px; }
+  .table th, .table td { padding: 8px 12px; }
+}

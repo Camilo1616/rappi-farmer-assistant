@@ -1146,3 +1146,262 @@
 
 .baseStoreName { font-size: 13px; color: var(--text-primary); }
 .baseStoreCode { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Tablet (≤900px) y Mobile (≤640px)
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Bottom navigation bar (sólo mobile) ── */
+.bottomNav {
+  display: none;
+}
+
+/* ── Hamburger button en topbar (sólo mobile) ── */
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.hamburger:hover { background: var(--bg-card); }
+
+/* ── Overlay para cerrar sidebar en mobile ── */
+.sidebarOverlay {
+  display: none;
+}
+
+/* ── TABLET (≤900px) — sidebar colapsa a iconos ── */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 64px;
+  }
+  .sidebar .navLabel,
+  .sidebar .navLock,
+  .sidebar .sidebarBrandName,
+  .sidebar .sidebarFilters,
+  .sidebar .userInfo,
+  .sidebar .chevron {
+    display: none !important;
+  }
+  .sidebar .navItem {
+    justify-content: center;
+    padding: 6px;
+  }
+  .sidebar .navIconWrap {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  .sidebar .sidebarBrand {
+    justify-content: center;
+    padding: 0 12px 20px;
+  }
+  .sidebar .sidebarToggle {
+    display: none;
+  }
+  .sidebar .userCard {
+    justify-content: center;
+    padding: 10px 0;
+  }
+  .main {
+    padding: 20px 16px;
+  }
+  .topbar {
+    padding: 14px 20px;
+  }
+  .tabGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+/* ── MOBILE (≤640px) — sidebar oculto, bottom nav ── */
+@media (max-width: 640px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  /* Ocultar sidebar lateral completamente */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 260px !important;
+    height: 100%;
+    z-index: 200;
+    transition: left 0.25s cubic-bezier(0.4,0,0.2,1);
+    overflow-y: auto;
+    /* Restablecer estilos del sidebar colapsado */
+    padding: 28px 0;
+  }
+  .sidebar.sidebarMobileOpen {
+    left: 0;
+    box-shadow: 4px 0 40px rgba(0,0,0,0.5);
+  }
+
+  /* Mostrar labels de nuevo en sidebar mobile abierto */
+  .sidebar.sidebarMobileOpen .navLabel,
+  .sidebar.sidebarMobileOpen .sidebarBrandName,
+  .sidebar.sidebarMobileOpen .userInfo,
+  .sidebar.sidebarMobileOpen .chevron {
+    display: block !important;
+  }
+  .sidebar.sidebarMobileOpen .navItem {
+    justify-content: flex-start;
+    padding: 7px 10px;
+  }
+  .sidebar.sidebarMobileOpen .navIconWrap {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+  }
+  .sidebar.sidebarMobileOpen .sidebarBrand {
+    justify-content: flex-start;
+    padding: 0 24px 28px;
+  }
+  .sidebar.sidebarMobileOpen .userCard {
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  /* Overlay oscuro detrás del sidebar */
+  .sidebarOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 199;
+    backdrop-filter: blur(2px);
+  }
+
+  /* Bottom nav */
+  .bottomNav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    align-items: stretch;
+    justify-content: space-around;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .bottomNavItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex: 1;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 6px 4px;
+    transition: color 0.15s, background 0.15s;
+    min-width: 0;
+  }
+  .bottomNavItem:hover,
+  .bottomNavItem.active {
+    color: var(--rappi-orange-light);
+    background: rgba(255,68,31,0.08);
+  }
+  .bottomNavIcon {
+    font-size: 18px;
+    line-height: 1;
+  }
+  .bottomNavLabel {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    letter-spacing: 0.01em;
+  }
+
+  /* Hamburger visible */
+  .hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Contenido principal */
+  .content {
+    padding-bottom: 60px; /* espacio para bottom nav */
+  }
+
+  .topbar {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .pageTitle {
+    font-size: 16px;
+  }
+  .date {
+    display: none;
+  }
+  .liveIndicator {
+    display: none;
+  }
+
+  .main {
+    padding: 16px 12px;
+  }
+
+  .welcomeText {
+    font-size: 20px;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .tabGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+  .tabCardLabel {
+    font-size: 9px;
+  }
+  .tabCardIcon {
+    font-size: 16px;
+  }
+
+  .tableToolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .toolbarLeft {
+    flex-wrap: wrap;
+  }
+  .searchBox {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .notifDropdown {
+    width: calc(100vw - 32px);
+    right: -8px;
+  }
+}

@@ -664,29 +664,55 @@ export default function AiAssistant() {
   }
 
   // ── Posición del panel: arriba o abajo del robot ──────────────────────
-  const openAbove  = pos.y + ROBOT_H + PANEL_H > window.innerHeight
+  const isMobile = window.innerWidth <= 640
+  const openAbove  = !isMobile && pos.y + ROBOT_H + PANEL_H > window.innerHeight
   // Offset horizontal para que el panel no salga de pantalla
-  const panelLeft  = Math.min(pos.x, window.innerWidth - PANEL_W) - pos.x
-  const panelVertical = openAbove
-    ? { bottom: ROBOT_H + 8, top: 'auto' }
-    : { top: ROBOT_H + 8,   bottom: 'auto' }
+  const panelLeft  = isMobile ? 0 : Math.min(pos.x, window.innerWidth - PANEL_W) - pos.x
+  const panelVertical = isMobile
+    ? { bottom: 0, top: 'auto' }
+    : openAbove
+      ? { bottom: ROBOT_H + 8, top: 'auto' }
+      : { top: ROBOT_H + 8,   bottom: 'auto' }
+
+  // En mobile el panel es un bottom sheet fijo, no relativo al robot
+  const panelStyle = isMobile
+    ? {
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: '85vh',
+        borderRadius: '20px 20px 0 0',
+        zIndex: 10000,
+      }
+    : {
+        position: 'absolute',
+        left: panelLeft,
+        ...panelVertical,
+        width: PANEL_W,
+        height: PANEL_H,
+        borderRadius: 16,
+      }
 
   return (
     <>
+      {/* Overlay mobile detrás del bottom sheet */}
+      {open && isMobile && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999 }}
+        />
+      )}
       <div style={{ position: 'fixed', left: pos.x, top: pos.y, zIndex: 9999 }}>
-        <RobotButton open={open} dragging={dragging} onMouseDown={onMouseDown} onClick={!dragging ? toggleOpen : undefined} farmerName={farmerName} />
+        <RobotButton open={open} dragging={dragging} onMouseDown={isMobile ? undefined : onMouseDown} onClick={toggleOpen} farmerName={farmerName} />
 
         {/* Panel */}
         {open && (
           <div style={{
-            position: 'absolute',
-            left: panelLeft,
-            ...panelVertical,
-            width: PANEL_W,
-            height: PANEL_H,
+            ...panelStyle,
             background: 'var(--bg-card)',
             border: '1.5px solid #7C3AED44',
-            borderRadius: 16,
             boxShadow: '0 12px 48px #7C3AED2A, 0 2px 12px #0004',
             display: 'flex',
             flexDirection: 'column',
