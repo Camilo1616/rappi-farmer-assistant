@@ -10,29 +10,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import com.rappi.farmer.domain.exceptions.RateLimitException;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
 public class AiService {
 
-    private static final String GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions";
+    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
     /** Modelo rápido con límite de tokens/min 3x mayor que versatile. */
-    private static final String MODEL         = "llama-3.1-8b-instant";
-    private static final long   CACHE_SECONDS = 1200; // 20 min
+    private static final String MODEL    = "llama-3.1-8b-instant";
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
-
-    // Caché de recomendación por usuario (userId → resultado)
-    private record CachedRec(Map<String, Object> data, Instant expiresAt) {}
-    private final ConcurrentHashMap<Long, CachedRec> recCache = new ConcurrentHashMap<>();
 
     public AiService(@Value("${groq.api.key:}") String apiKey) {
         this.apiKey = apiKey;
@@ -201,12 +193,6 @@ public class AiService {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> generateRecommendation(List<Store> stores, Long userId) {
-        // Caché por usuario — cada farmer tiene su propia recomendación
-        CachedRec cached = recCache.get(userId);
-        if (cached != null && Instant.now().isBefore(cached.expiresAt())) {
-            log.debug("Recomendación desde caché para userId={}", userId);
-            return cached.data();
-        }
         // Fecha de la última carga del Excel (uploadDate más reciente entre las tiendas activas)
         LocalDate lastUpload = stores.stream()
                 .map(Store::getUploadDate)
@@ -283,7 +269,6 @@ public class AiService {
                 json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
             }
             Map<String, Object> result = new ObjectMapper().readValue(json, Map.class);
-            recCache.put(userId, new CachedRec(result, Instant.now().plusSeconds(CACHE_SECONDS)));
             return result;
         } catch (Exception e) {
             log.warn("No se pudo parsear JSON de IA, devolviendo raw: {}", e.getMessage());
@@ -503,10 +488,8 @@ public class AiService {
             });
     }
 
-    /** Limpia la caché de recomendación del usuario (llamar al registrar una gestión). */
-    public void clearRecommendationCache(Long userId) {
-        if (userId != null) recCache.remove(userId);
-    }
+    /** No-op: el caché de recomendación vive solo en BD (ver AiController). */
+    public void clearRecommendationCache(Long userId) {}
 
     /** Calcula el aging real: usa el campo stored; si es null lo deriva de onboarding_date. */
     private int resolveAging(Store s) {

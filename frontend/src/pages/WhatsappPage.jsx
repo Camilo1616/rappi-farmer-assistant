@@ -611,7 +611,13 @@ function StepMessage({ message, onChange, selectedStores = [], onAiMessages, onM
       setAiDone(true)
       onAiMessages(results)
     } catch (e) {
-      setAiError(e.response?.data?.error || 'Error al generar con IA')
+      const d = e.response?.data
+      if (e.response?.status === 429 || d?.rateLimited) {
+        const secs = d?.retryAfterSeconds || 30
+        setAiError(`Trabajando con otros farmers — espera ${secs}s e intenta de nuevo`)
+      } else {
+        setAiError(d?.error || 'Error al generar con IA')
+      }
     } finally {
       setAiLoading(false)
     }

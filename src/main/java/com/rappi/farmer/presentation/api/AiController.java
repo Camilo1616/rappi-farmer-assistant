@@ -49,6 +49,11 @@ public class AiController {
                     req.storeName(), req.agingDays(), req.agingStage(), req.segment(),
                     req.churnLabel(), req.avaLabel(), req.avaPct(), req.currentStatus(), req.baseTemplate());
             return ResponseEntity.ok(Map.of("message", message));
+        } catch (RateLimitException rle) {
+            return ResponseEntity.status(429).body(Map.of(
+                    "rateLimited", true,
+                    "retryAfterSeconds", rle.getRetryAfterSeconds(),
+                    "error", "Trabajando con otros farmers — intenta en " + rle.getRetryAfterSeconds() + "s"));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(503).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -63,6 +68,11 @@ public class AiController {
             String summary = aiService.generateDailySummary(
                     req.efectivas(), req.noContacto(), req.whatsappEnviados(), req.tiendas(), req.topPrioridades());
             return ResponseEntity.ok(Map.of("summary", summary));
+        } catch (RateLimitException rle) {
+            return ResponseEntity.status(429).body(Map.of(
+                    "rateLimited", true,
+                    "retryAfterSeconds", rle.getRetryAfterSeconds(),
+                    "error", "Trabajando con otros farmers — intenta en " + rle.getRetryAfterSeconds() + "s"));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(503).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
