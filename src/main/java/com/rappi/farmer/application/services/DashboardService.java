@@ -1,5 +1,6 @@
 package com.rappi.farmer.application.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rappi.farmer.application.dtos.DashboardDataDto;
 import com.rappi.farmer.application.dtos.StoreViewDto;
 import com.rappi.farmer.domain.entities.DailyMetric;
@@ -10,12 +11,16 @@ import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.domain.repositories.ManagementRepository;
 import com.rappi.farmer.domain.repositories.StoreRepository;
 import com.rappi.farmer.domain.repositories.UserRepository;
+import com.rappi.farmer.infrastructure.persistence.entity.DashboardSnapshotEntity;
+import com.rappi.farmer.infrastructure.persistence.repository.DashboardSnapshotJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,10 +49,43 @@ public class DashboardService {
     private final ManagementRepository managementRepository;
     private final UserRepository userRepository;
     private final SessionContext sessionContext;
+    private final DashboardSnapshotJpaRepository snapshotRepository;
+    private final ObjectMapper objectMapper;
 
+    /**
+     * Invalida el snapshot del día para un usuario (llamar tras importar Excel).
+     * Así la próxima carga recalcula y guarda un snapshot fresco.
+     */
+    @Transactional
+    public void invalidateSnapshot(Long userId) {
+        snapshotRepository.deleteByUserIdAndSnapshotDate(userId, LocalDate.now());
+        log.info("Snapshot invalidado para userId={}", userId);
+    }
+
+    @Transactional
     public DashboardDataDto load() {
         LocalDate today = LocalDate.now();
         Long userId = sessionContext.getCurrentUserId();
+
+        // Servir desde snapshot si existe para hoy
+        if (userId != null) {
+            var snap = snapshotRepository.findByUserIdAndSnapshotDate(userId, today);
+            if (snap.isPresent()) {
+                try {
+                    DashboardDataDto dto = objectMapper.readValue(snap.get().getJsonData(), DashboardDataDto.class);
+                    // Recalcular gestiones del día (cambian en tiempo real, no se snapshottean)
+                    Map<Long, String> todayMgmt = managementRepository.findAllToday().stream()
+                            .collect(Collectors.toMap(Management::getStoreId, Management::getResultType,
+                                    (a, b) -> a));
+                    dto = withTodayManagements(dto, todayMgmt);
+                    log.debug("Dashboard servido desde snapshot para userId={}", userId);
+                    return dto;
+                } catch (Exception e) {
+                    log.warn("Error deserializando snapshot, recalculando: {}", e.getMessage());
+                    snapshotRepository.delete(snap.get());
+                }
+            }
+        }
 
         List<Store> stores;
         if (userId != null) {
@@ -153,7 +191,7 @@ public class DashboardService {
         }
         boolean needsRefresh = lastImport == null || lastImport.isBefore(today);
 
-        return new DashboardDataDto(
+        DashboardDataDto result = new DashboardDataDto(
                 onboardingCritical, aliados,
                 churnRisk, ava, healthy, recommended,
                 selfOnboarding, insideSales, new ArrayList<>(),
@@ -162,6 +200,51 @@ public class DashboardService {
                 stores.size(),
                 selfOnboarding.size(), insideSales.size(), 0,
                 needsRefresh, lastImport
+        );
+
+        // Guardar snapshot para que Ctrl+R sirva datos estables todo el día
+        if (userId != null && !needsRefresh) {
+            try {
+                DashboardSnapshotEntity snap = new DashboardSnapshotEntity();
+                snap.setUserId(userId);
+                snap.setSnapshotDate(today);
+                snap.setJsonData(objectMapper.writeValueAsString(result));
+                snap.setCreatedAt(LocalDateTime.now());
+                snapshotRepository.save(snap);
+                log.info("Snapshot guardado para userId={} fecha={}", userId, today);
+            } catch (Exception e) {
+                log.warn("No se pudo guardar snapshot: {}", e.getMessage());
+            }
+        }
+
+        return result;
+    }
+
+    /** Actualiza el campo todayManagementResult en todos los dtos del snapshot con las gestiones en tiempo real. */
+    private DashboardDataDto withTodayManagements(DashboardDataDto dto, Map<Long, String> mgmt) {
+        java.util.function.Function<List<StoreViewDto>, List<StoreViewDto>> patch = list ->
+                list == null ? list : list.stream().map(s -> {
+                    String res = mgmt.get(s.getId());
+                    if (res == null && s.getTodayManagementResult() == null) return s;
+                    return new StoreViewDto(s.getId(), s.getStoreCode(), s.getBrandId(), s.getStoreName(),
+                            s.getPhoneNumber(), s.getAging(), s.getOrdersL4W(), s.getConnectionPercentage(),
+                            s.getCurrentStatus(), s.getTendencia(), res, s.getDashboardSegment(),
+                            s.getHadHandoff(), s.getLastLoginDate(), s.getDiasSinLogin(), s.getAgingStage(),
+                            s.getChurnLabel(), s.getAvaLabel(), s.getFarmerEmail(), s.getFarmerId(),
+                            s.getAvaMtd(), s.getAvaL4w(), s.getAvaL7d(), s.getDashboardSegment(),
+                            s.getLastContact(), s.getChannel(), s.getCredentialsDate());
+                }).toList();
+
+        return new DashboardDataDto(
+                patch.apply(dto.getOnboardingCritical()), patch.apply(dto.getAliados()),
+                patch.apply(dto.getChurnRisk()), patch.apply(dto.getAva()),
+                patch.apply(dto.getHealthy()), patch.apply(dto.getRecommended()),
+                patch.apply(dto.getSelfOnboarding()), patch.apply(dto.getInsideSales()),
+                dto.getRecontactosW2() != null ? dto.getRecontactosW2() : new ArrayList<>(),
+                dto.getOnboardingCount(), dto.getAliadosCount(), dto.getChurnCount(),
+                dto.getAvaCount(), dto.getHealthyCount(), dto.getRecommendedCount(),
+                dto.getTotalCount(), dto.getSelfOnboardingCount(), dto.getInsideSalesCount(), 0,
+                dto.isNeedsRefresh(), dto.getLastImportDate()
         );
     }
 

@@ -41,6 +41,7 @@ public class StoreImportService {
     private final PasswordEncoder encoder;
     private final StoreDeleteService storeDeleteService;
     private final EntityManager entityManager;
+    private final DashboardService dashboardService;
 
     // Hash calculado una vez al arrancar — bcrypt es costoso, no repetir por cada farmer del Excel
     private String defaultFarmerPwdHash;
@@ -148,13 +149,14 @@ public class StoreImportService {
                 rows.size(), result.getCreated(), result.getUpdated(),
                 result.getSkipped(), result.getErrors(), result.getRemoved());
 
-        // Registrar que el usuario realizó el cargue hoy
+        // Registrar que el usuario realizó el cargue hoy e invalidar snapshot del día
         Long currentUserId = sessionContext.getCurrentUserId();
         if (currentUserId != null) {
             userRepository.findById(currentUserId).ifPresent(u -> {
                 u.setLastImportDate(today);
                 userRepository.save(u);
             });
+            dashboardService.invalidateSnapshot(currentUserId);
         }
 
         return result;
