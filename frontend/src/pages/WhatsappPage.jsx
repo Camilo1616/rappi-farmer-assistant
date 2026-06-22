@@ -400,6 +400,7 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
         {noPhoneCount > 0 && <span>· {noPhoneCount} sin teléfono</span>}
         {sentCount > 0    && <span style={{ color: '#22C55E' }}>· {sentCount} ya enviados hoy</span>}
         {sectionSel.length > 0 && <span style={{ color: '#3B82F6', fontWeight: 700 }}>· {sectionSel.length} seleccionadas aquí</span>}
+        {!canAddMore && selected.size > 0 && <span style={{ color: '#F97316', fontWeight: 700 }}>· límite de selección alcanzado ({selected.size}/{remaining})</span>}
       </div>
 
       {/* Toolbar: buscar + filtros rápidos + acciones */}
@@ -841,7 +842,12 @@ export default function WhatsappPage() {
       setProgress(p)
       setMessage(m)
       setAiMessages(ai)
-      if (p?.finalizado) { loadStatus(); loadSentToday(); setHistoryKey(k => k + 1) }
+      if (p?.finalizado) {
+        loadStatus(); loadSentToday(); setHistoryKey(k => k + 1)
+        setSelected(new Set())
+        setAiMessages([])
+        progressStore.update({ aiMessages: [] })
+      }
     })
     return () => { clearInterval(iv); clearInterval(histIv); unsub() }
   }, [])

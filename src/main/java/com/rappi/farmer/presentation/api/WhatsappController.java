@@ -106,8 +106,9 @@ public class WhatsappController {
 
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
+        // El frontend ya respeta el límite; aquí solo recortamos como red de seguridad
         List<StoreViewDto> stores = request.storeIds().stream()
-                .limit(remaining)
+                .limit(Math.max(remaining, 0))
                 .map(id -> storeRepository.findById(id).orElse(null))
                 .filter(java.util.Objects::nonNull)
                 .map(store -> new StoreViewDto(
@@ -139,13 +140,19 @@ public class WhatsappController {
 
     @PostMapping(value = "/send-personalized", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sendPersonalized(@Valid @RequestBody SendPersonalizedRequest request) {
+        final int WA_LIMIT = 35;
         Long userId = currentUserId();
+        long sentToday = whatsappService.enviadosHoy(userId);
+        int remaining  = Math.max(0, WA_LIMIT - (int) sentToday);
+
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
         Map<Long, String> messageMap = request.storeMessages().stream()
+                .limit(Math.max(remaining, 0))
                 .collect(java.util.stream.Collectors.toMap(StoreMessage::storeId, StoreMessage::message));
 
         List<StoreViewDto> stores = request.storeMessages().stream()
+                .limit(Math.max(remaining, 0))
                 .map(sm -> storeRepository.findById(sm.storeId()).orElse(null))
                 .filter(java.util.Objects::nonNull)
                 .map(store -> new StoreViewDto(
