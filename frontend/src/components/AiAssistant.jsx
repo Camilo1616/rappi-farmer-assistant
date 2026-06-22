@@ -365,7 +365,6 @@ function RecTab({ aiRec, aiLoading, aiError, rateLimit, setRateLimit, loadRec, m
 
   const total    = aiRec?.priorities?.length ?? 0
   const managed  = Object.keys(aiRec?.managedResults ?? {}).length + [...managedCodes].filter(c => !aiRec?.managedResults?.[c]).length
-  const pending  = total - Math.min(managed, total)
   const alta     = aiRec?.priorities?.filter(p => p.priority === 'ALTA' && !aiRec.managedResults?.[p.storeCode]).length ?? 0
   const progress = total > 0 ? Math.min(100, Math.round((managed / total) * 100)) : 0
 
