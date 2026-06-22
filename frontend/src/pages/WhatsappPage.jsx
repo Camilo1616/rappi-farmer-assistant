@@ -255,7 +255,7 @@ const SECTIONS = [
   { key: 'ava', label: 'AVA Bajando', icon: '📉', color: '#F59E0B',
     subTabs: [
       { label: 'Todos',              filter: null },
-      { label: 'Retención',          filter: s => s.avaLabel === 'Crítico' },
+      { label: 'AVA',                filter: s => s.avaLabel === 'Retención' },
       { label: 'Tiendas bajando AVA', filter: s => s.avaLabel === 'Bajando' },
     ]
   },
