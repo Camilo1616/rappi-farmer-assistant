@@ -1,7 +1,10 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { getCurrentUser, logout, SESSION_DURATION_MS } from '../services/authService'
 
 const AuthContext = createContext(null)
+
+const INACTIVITY_MS = 60 * 60 * 1000 // 1 hora sin actividad
+const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']
 
 function isSessionExpired() {
   const loginAt = localStorage.getItem('loginAt')
@@ -12,20 +15,39 @@ function isSessionExpired() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const lastActivityRef = useRef(Date.now())
+
+  const resetActivity = useCallback(() => {
+    lastActivityRef.current = Date.now()
+  }, [])
 
   useEffect(() => {
     if (isSessionExpired()) {
-      logout() // redirige a /login internamente
-      return   // loading queda true — la redirección desmonta el árbol
+      logout()
+      return
     }
     setUser(getCurrentUser())
     setLoading(false)
   }, [])
 
-  // Verifica expiración cada minuto mientras la app está abierta
+  // Escucha actividad del usuario y actualiza el timestamp
   useEffect(() => {
+    if (!user) return
+    ACTIVITY_EVENTS.forEach(e => window.addEventListener(e, resetActivity, { passive: true }))
+    return () => {
+      ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, resetActivity))
+    }
+  }, [user, resetActivity])
+
+  // Verifica cada minuto: inactividad de 1h o sesión de 5h
+  useEffect(() => {
+    if (!user) return
     const interval = setInterval(() => {
-      if (user && isSessionExpired()) {
+      if (isSessionExpired()) {
+        logout()
+        return
+      }
+      if (Date.now() - lastActivityRef.current > INACTIVITY_MS) {
         logout()
       }
     }, 60 * 1000)
