@@ -8,7 +8,7 @@ import {
 } from '../services/whatsappService'
 import { generateWhatsappMessage, getAiRecommendations, invalidateAiRecommendation } from '../services/aiService'
 import progressStore from '../services/whatsappProgressStore'
-import { updateStorePhone } from '../services/storeService'
+import { updateStorePhone, getStores } from '../services/storeService'
 import api from '../services/api'
 import styles from './WhatsappPage.module.css'
 
@@ -303,6 +303,136 @@ function StatusBadge({ store }) {
     )
   }
   return null
+}
+
+/* ── Buscador general de tiendas ── */
+function StoreSearchPanel({ selected, remaining, sentTodayIds, onToggle, onPhoneSaved }) {
+  const [query,         setQuery]         = useState('')
+  const [results,       setResults]       = useState([])
+  const [loading,       setLoading]       = useState(false)
+  const [editingId,     setEditingId]     = useState(null)
+  const [phoneInput,    setPhoneInput]    = useState('')
+  const [phoneSaving,   setPhoneSaving]   = useState(false)
+  const debounceRef = useRef(null)
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return }
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const r = await getStores({ q: query.trim() })
+        setResults(r.data ?? [])
+      } catch { setResults([]) }
+      finally { setLoading(false) }
+    }, 300)
+    return () => clearTimeout(debounceRef.current)
+  }, [query])
+
+  const canAddMore = selected.size < remaining
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ position: 'relative' }}>
+        <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#6B7280' }}>🔍</span>
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar cualquier tienda por nombre, código o teléfono..."
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            padding: '9px 32px 9px 32px', borderRadius: 8,
+            background: 'var(--bg-input)', border: '1.5px solid #374151',
+            color: 'var(--text-primary)', fontSize: 13, outline: 'none',
+          }}
+        />
+        {query && (
+          <button onClick={() => { setQuery(''); setResults([]) }} style={{
+            position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: 13,
+          }}>✕</button>
+        )}
+      </div>
+
+      {loading && <div style={{ fontSize: 12, color: '#6B7280', padding: '4px 0' }}>Buscando...</div>}
+
+      {results.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 320, overflowY: 'auto' }}>
+          {results.map(store => {
+            const isSelected = selected.has(store.id)
+            const hasPhone   = !!store.phoneNumber
+            const sentToday  = sentTodayIds.has(store.id)
+            const isEditing  = editingId === store.id
+            const blocked    = sentToday || (!hasPhone && !isEditing)
+            return (
+              <div key={store.id}
+                onClick={() => {
+                  if (isEditing || sentToday) return
+                  if (hasPhone) { if (!(!isSelected && !canAddMore)) onToggle(store.id) }
+                  else { setEditingId(store.id); setPhoneInput('') }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
+                  borderRadius: 8, cursor: blocked ? 'default' : 'pointer',
+                  background: isSelected ? 'rgba(59,130,246,0.12)' : 'var(--bg-card)',
+                  border: `1.5px solid ${isSelected ? '#3B82F6' : '#374151'}`,
+                  opacity: sentToday ? 0.55 : 1,
+                }}>
+                <input type="checkbox" checked={isSelected} readOnly
+                  style={{ accentColor: '#3B82F6', cursor: 'pointer' }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{store.storeName}</span>
+                    {sentToday && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: '#22C55E20', color: '#22C55E', border: '1px solid #22C55E40' }}>
+                        ✓ WA enviado hoy
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                    {store.storeCode}
+                    {hasPhone ? ` · ${store.phoneNumber}` : ' · Sin teléfono'}
+                  </div>
+                  {isEditing && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6 }} onClick={e => e.stopPropagation()}>
+                      <input autoFocus type="tel" placeholder="573001234567"
+                        value={phoneInput}
+                        onChange={e => setPhoneInput(e.target.value.replace(/\D/g, ''))}
+                        onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
+                        style={{ flex: 1, padding: '4px 8px', borderRadius: 6, fontSize: 12, background: 'var(--bg-input)', border: '1.5px solid #7C3AED55', color: 'var(--text-primary)', outline: 'none' }}
+                      />
+                      <button disabled={phoneSaving || phoneInput.length < 7}
+                        onClick={async () => {
+                          setPhoneSaving(true)
+                          try {
+                            await updateStorePhone(store.id, phoneInput)
+                            onPhoneSaved(store.id, phoneInput)
+                            setResults(prev => prev.map(s => s.id === store.id ? { ...s, phoneNumber: phoneInput } : s))
+                            setEditingId(null)
+                            onToggle(store.id)
+                          } catch {} finally { setPhoneSaving(false) }
+                        }}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 700, background: phoneInput.length >= 7 ? '#22C55E' : '#374151', color: '#fff', cursor: 'pointer' }}>
+                        {phoneSaving ? '...' : '✓'}
+                      </button>
+                      <button onClick={() => setEditingId(null)}
+                        style={{ padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 11, background: 'transparent', color: '#6B7280', cursor: 'pointer' }}>✕</button>
+                    </div>
+                  )}
+                </div>
+                {!hasPhone && !isEditing && (
+                  <span style={{ fontSize: 11, color: '#7C3AED', fontWeight: 700, cursor: 'pointer' }} title="Registrar teléfono">+ Tel</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {!loading && query.trim() && results.length === 0 && (
+        <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 8 }}>Sin resultados para "{query}"</div>
+      )}
+    </div>
+  )
 }
 
 /* ── Selector de tiendas mejorado ── */
@@ -1138,6 +1268,34 @@ export default function WhatsappPage() {
                 )}
               </div>
             </div>
+            {/* Buscador general */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                🔍 Búsqueda general
+              </div>
+              <StoreSearchPanel
+                selected={selected}
+                remaining={remaining}
+                sentTodayIds={sentTodayIds}
+                onToggle={handleToggle}
+                onPhoneSaved={(storeId, phone) => {
+                  setDashStores(prev => {
+                    const next = {}
+                    for (const [k, arr] of Object.entries(prev)) {
+                      next[k] = arr.map(s => s.id === storeId ? { ...s, phoneNumber: phone } : s)
+                    }
+                    return next
+                  })
+                }}
+              />
+            </div>
+
+            <div style={{ borderTop: '1px solid #374151', paddingTop: 16, marginBottom: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+                📂 Secciones prioritarias
+              </div>
+            </div>
+
             <StoreSelector
               sections={SECTIONS}
               dashStores={dashStores}
