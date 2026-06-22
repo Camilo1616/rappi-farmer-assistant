@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 public class DashboardService {
 
     private static final BigDecimal ALIADOS_THRESHOLD = BigDecimal.valueOf(60);
-    private static final int MAX_PER_SECTION = 30;
 
     private final StoreRepository storeRepository;
     private final DailyMetricRepository dailyMetricRepository;
@@ -125,7 +124,8 @@ public class DashboardService {
                 churnRisk.add(dto);
             } else if (resolveAvaLabel(metric) != null) {
                 ava.add(dto);
-            } else if (isHealthy(metric)) {
+            } else {
+                // Saludables + tiendas sin métrica que no encajan en otro segmento
                 healthy.add(dto);
             }
         }
@@ -154,7 +154,7 @@ public class DashboardService {
         boolean needsRefresh = lastImport == null || lastImport.isBefore(today);
 
         return new DashboardDataDto(
-                cap(onboardingCritical), cap(aliados),
+                onboardingCritical, aliados,
                 churnRisk, ava, healthy, recommended,
                 selfOnboarding, insideSales, new ArrayList<>(),
                 onboardingCritical.size(), aliados.size(), churnRisk.size(),
@@ -303,10 +303,6 @@ public class DashboardService {
         if (up.contains("PREVENTION W2") || up.contains("PREVENTION 2W")) return "Prevention W2";
         if (up.contains("PREVENTION W3") || up.contains("PREVENTION 3W")) return "Prevention W3";
         return null;
-    }
-
-    private List<StoreViewDto> cap(List<StoreViewDto> list) {
-        return list.size() <= MAX_PER_SECTION ? list : list.subList(0, MAX_PER_SECTION);
     }
 
     private StoreViewDto toViewDto(Store store, DailyMetric metric, int aging, String managementResult) {
