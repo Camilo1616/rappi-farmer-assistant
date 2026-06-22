@@ -96,13 +96,17 @@ public class WhatsappDriver {
     // ── Envío ─────────────────────────────────────────────────────────────────
 
     public String enviarMensaje(String telefono, String mensaje, String sessionId) {
-        if (!estaConectado(sessionId)) return "ERROR_CHROME_CERRADO";
         try {
             var body = mapper.writeValueAsString(
                     Map.of("phone", telefono, "message", mensaje, "session", sessionId));
             var req  = buildRequest("/send", body);
             var res  = http.send(req, HttpResponse.BodyHandlers.ofString());
-            var json = mapper.readValue(res.body(), Map.class);
+            // 503 = servicio WA desconectado para esta sesión
+            if (res.statusCode() == 503) {
+                log.warn("[WA:{}] /send devolvió 503 — sesión desconectada", sessionId);
+                return "ERROR_CHROME_CERRADO";
+            }
+            var json   = mapper.readValue(res.body(), Map.class);
             String result = (String) json.getOrDefault("result", "ERROR");
             log.debug("[WA:{}] Enviado a {} → {}", sessionId, telefono, result);
             return result;

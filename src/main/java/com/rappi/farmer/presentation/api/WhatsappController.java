@@ -60,6 +60,23 @@ public class WhatsappController {
         return ResponseEntity.ok(Map.of("message", "Sesión cerrada — escanea QR para reconectar"));
     }
 
+    @PostMapping("/pause")
+    public ResponseEntity<?> pauseSend() {
+        whatsappService.pauseSend(currentUserId());
+        return ResponseEntity.ok(Map.of("paused", true));
+    }
+
+    @PostMapping("/resume")
+    public ResponseEntity<?> resumeSend() {
+        whatsappService.resumeSend(currentUserId());
+        return ResponseEntity.ok(Map.of("paused", false));
+    }
+
+    @GetMapping("/paused")
+    public ResponseEntity<?> isPaused() {
+        return ResponseEntity.ok(Map.of("paused", whatsappService.isPaused(currentUserId())));
+    }
+
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         Long userId       = currentUserId();

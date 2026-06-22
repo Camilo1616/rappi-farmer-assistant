@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { getDashboard } from '../services/dashboardService'
 import {
   getWhatsappStatus, getWhatsappQr, openChrome, logoutSession,
+  pauseSend, resumeSend,
   sendTest, getMsgTemplates, sendMasivo, sendPersonalized, getWaHistory, getWaSentToday
 } from '../services/whatsappService'
 import { generateWhatsappMessage, getAiRecommendations, invalidateAiRecommendation } from '../services/aiService'
@@ -777,18 +778,34 @@ function StepMessage({ message, onChange, selectedStores = [], onAiMessages, onM
 }
 
 /* ── Progreso ── */
-function SendProgress({ progress, onClose }) {
+function SendProgress({ progress, onClose, paused, onPause, onResume }) {
   const pct = progress.total > 0 ? Math.round((progress.procesados / progress.total) * 100) : 0
-  const dotColor = { ENVIADO:'#22C55E', ERROR:'#EF4444', NUMERO_INVALIDO:'#F59E0B', ESPERANDO:'#6B7280', ENVIANDO:'#3B82F6', COMPLETADO:'#22C55E' }
+  const dotColor = { ENVIADO:'#22C55E', ERROR:'#EF4444', NUMERO_INVALIDO:'#F59E0B', ESPERANDO:'#6B7280', ENVIANDO:'#3B82F6', COMPLETADO:'#22C55E', PAUSADO:'#F59E0B' }
+  const isPaused = paused || progress.status === 'PAUSADO'
   return (
     <div className={styles.progressCard}>
       <div className={styles.progressHeader}>
-        <span className={styles.progressTitle}>{progress.finalizado ? '✅ Completado' : '📤 Enviando...'}</span>
-        {progress.finalizado && <button className={styles.btnSecondary} onClick={onClose}>Nueva sesión</button>}
+        <span className={styles.progressTitle}>
+          {progress.finalizado ? '✅ Completado' : isPaused ? '⏸ Pausado' : '📤 Enviando...'}
+        </span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {!progress.finalizado && (
+            isPaused
+              ? <button
+                  onClick={onResume}
+                  style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: '#22C55E', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                >▶ Reanudar</button>
+              : <button
+                  onClick={onPause}
+                  style={{ padding: '5px 14px', borderRadius: 8, border: '1.5px solid #F59E0B', background: 'rgba(245,158,11,0.1)', color: '#F59E0B', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                >⏸ Frenar</button>
+          )}
+          {progress.finalizado && <button className={styles.btnSecondary} onClick={onClose}>Nueva sesión</button>}
+        </div>
       </div>
       <div className={styles.progressBarWrap}>
         <div className={styles.progressBarBg}>
-          <div className={styles.progressBarFill} style={{ width: `${pct}%` }} />
+          <div className={styles.progressBarFill} style={{ width: `${pct}%`, background: isPaused ? '#F59E0B' : undefined }} />
         </div>
         <span className={styles.progressPct}>{pct}%</span>
       </div>
@@ -803,7 +820,7 @@ function SendProgress({ progress, onClose }) {
           <span className={styles.currentDot} style={{ background: dotColor[progress.status] || '#6B7280' }} />
           <span className={styles.currentName}>{progress.storeName}</span>
           <span className={styles.currentStatus}>
-            {progress.status === 'ESPERANDO' ? `⏳ ${progress.waitSeconds}s` : progress.status}
+            {progress.status === 'ESPERANDO' ? `⏳ ${progress.waitSeconds}s` : progress.status === 'PAUSADO' ? '⏸ En pausa' : progress.status}
           </span>
         </div>
       )}
@@ -834,6 +851,7 @@ export default function WhatsappPage() {
   const [aiRecommMsg,    setAiRecommMsg]    = useState(null) // { type: 'ok'|'error', text }
   const [historyKey,     setHistoryKey]     = useState(0)
   const [loggingOut,     setLoggingOut]     = useState(false)
+  const [paused,         setPaused]         = useState(false)
 
   const loadStatus = async () => {
     try {
@@ -869,6 +887,7 @@ export default function WhatsappPage() {
         loadStatus(); loadSentToday(); setHistoryKey(k => k + 1)
         setSelected(new Set())
         setAiMessages([])
+        setPaused(false)
         progressStore.update({ aiMessages: [] })
       }
     })
@@ -987,6 +1006,16 @@ export default function WhatsappPage() {
       await loadStatus()
     } catch {}
     setStarting(false)
+  }
+
+  const handlePause = async () => {
+    setPaused(true)
+    await pauseSend().catch(() => {})
+  }
+
+  const handleResume = async () => {
+    setPaused(false)
+    await resumeSend().catch(() => {})
   }
 
   const handleLogout = async () => {
@@ -1231,7 +1260,11 @@ export default function WhatsappPage() {
 
           {progress && (
             <SendProgress progress={progress}
-              onClose={() => { progressStore.clear(); setSelected(new Set()) }} />
+              onClose={() => { progressStore.clear(); setSelected(new Set()); setPaused(false) }}
+              paused={paused}
+              onPause={handlePause}
+              onResume={handleResume}
+            />
           )}
         </div>
       </div>

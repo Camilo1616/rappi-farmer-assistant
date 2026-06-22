@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -18,14 +20,50 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class WhatsappService {
 
-    private static final int MAX_DIARIO   = 40;
-    private static final int DELAY_MIN_MS = 10_000;
-    private static final int DELAY_MAX_MS = 25_000;
+    private static final int MAX_DIARIO    = 40;
+    private static final int DELAY_MIN_MS  = 10_000;
+    private static final int DELAY_MAX_MS  = 25_000;
+    private static final int TICK_MS       = 500;   // granularidad del sleep para responder a pause rápido
 
     private final WhatsappDriver whatsappDriver;
     private final WhatsappMessageRepository whatsappMessageRepository;
 
     private final Random random = new Random();
+
+    // ── Pause/resume por userId ───────────────────────────────────────────────
+    private final ConcurrentHashMap<Long, AtomicBoolean> pauseFlags = new ConcurrentHashMap<>();
+
+    private AtomicBoolean pauseFlag(Long userId) {
+        return pauseFlags.computeIfAbsent(userId, k -> new AtomicBoolean(false));
+    }
+
+    public void pauseSend(Long userId)  { pauseFlag(userId).set(true);  log.info("[WA:u{}] Envío pausado",  userId); }
+    public void resumeSend(Long userId) { pauseFlag(userId).set(false); log.info("[WA:u{}] Envío reanudado", userId); }
+    public boolean isPaused(Long userId) { return pauseFlag(userId).get(); }
+
+    /**
+     * Espera {@code ms} ms respetando la pausa. Devuelve false si el hilo fue interrumpido.
+     * Mientras está pausado emite eventos PAUSADO al callback.
+     */
+    private boolean sleepWithPause(long ms, Long userId, WhatsappSendProgress pausedProgress,
+                                   Consumer<WhatsappSendProgress> cb) {
+        long remaining = ms;
+        while (remaining > 0) {
+            if (Thread.currentThread().isInterrupted()) return false;
+            while (pauseFlag(userId).get()) {
+                cb.accept(pausedProgress);
+                try { Thread.sleep(TICK_MS); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt(); return false;
+                }
+            }
+            long tick = Math.min(TICK_MS, remaining);
+            try { Thread.sleep(tick); } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); return false;
+            }
+            remaining -= tick;
+        }
+        return true;
+    }
 
     /** Construye el sessionId del farmer a partir de su userId. */
     public static String sessionId(Long userId) {
@@ -91,14 +129,19 @@ public class WhatsappService {
 
     public void enviarMasivo(List<StoreViewDto> stores, String template, Long userId,
                               Consumer<WhatsappSendProgress> progressCallback) {
+        pauseFlag(userId).set(false); // resetear pausa al iniciar
         String session = sessionId(userId);
-        int total  = Math.min(stores.size(), MAX_DIARIO);
+        int total    = Math.min(stores.size(), MAX_DIARIO);
         int enviados = 0;
         int errores  = 0;
 
         for (int i = 0; i < total; i++) {
-            StoreViewDto store = stores.get(i);
-            String mensaje = template.replace("{store_name}", store.getStoreName());
+            StoreViewDto store  = stores.get(i);
+            String mensaje      = template.replace("{store_name}", store.getStoreName());
+
+            // Esperar si está pausado antes de enviar
+            var waiting = new WhatsappSendProgress(total, i, enviados, errores, store.getStoreName(), "PAUSADO", false);
+            if (!sleepWithPause(0, userId, waiting, progressCallback)) break;
 
             progressCallback.accept(new WhatsappSendProgress(
                     total, i, enviados, errores, store.getStoreName(), "ENVIANDO", false));
@@ -108,13 +151,14 @@ public class WhatsappService {
             if ("ERROR_CHROME_CERRADO".equals(resultado)) {
                 progressCallback.accept(new WhatsappSendProgress(
                         total, i + 1, enviados, errores, store.getStoreName(), "ERROR_CHROME_CERRADO", true));
-                log.warn("[WA:{}] Envío masivo abortado — servicio desconectado", session);
+                log.warn("[WA:{}] Envío masivo abortado — servicio desconectado en tienda {}", session, store.getStoreName());
+                pauseFlag(userId).set(false);
                 return;
             }
 
             whatsappMessageRepository.save(store.getId(), userId, mensaje, resultado, null);
 
-            if ("ENVIADO".equals(resultado))            enviados++;
+            if ("ENVIADO".equals(resultado))             enviados++;
             else if (!"NUMERO_INVALIDO".equals(resultado)) errores++;
 
             progressCallback.accept(new WhatsappSendProgress(
@@ -122,34 +166,34 @@ public class WhatsappService {
 
             if (i < total - 1) {
                 int delay = DELAY_MIN_MS + random.nextInt(DELAY_MAX_MS - DELAY_MIN_MS);
-                progressCallback.accept(new WhatsappSendProgress(
-                        total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delay / 1000));
+                var waitProg = new WhatsappSendProgress(total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delay / 1000);
+                progressCallback.accept(waitProg);
                 log.debug("[WA:{}] Esperando {}ms antes del siguiente mensaje", session, delay);
-                try { Thread.sleep(delay); }
-                catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.warn("[WA:{}] Envío interrumpido en tienda {}", session, store.getStoreName());
-                    break;
-                }
+                var pausedProg = new WhatsappSendProgress(total, i + 1, enviados, errores, store.getStoreName(), "PAUSADO", false);
+                if (!sleepWithPause(delay, userId, pausedProg, progressCallback)) break;
             }
         }
 
+        pauseFlag(userId).set(false);
         progressCallback.accept(new WhatsappSendProgress(
                 total, total, enviados, errores, "", "COMPLETADO", true));
-
         log.info("[WA:{}] Envío masivo completado — enviados:{} errores:{}", session, enviados, errores);
     }
 
     public void enviarMasivoPersonalizado(List<StoreViewDto> stores, Map<Long, String> messageMap,
                                           Long userId, Consumer<WhatsappSendProgress> progressCallback) {
+        pauseFlag(userId).set(false);
         String session = sessionId(userId);
-        int total  = Math.min(stores.size(), MAX_DIARIO);
+        int total    = Math.min(stores.size(), MAX_DIARIO);
         int enviados = 0;
         int errores  = 0;
 
         for (int i = 0; i < total; i++) {
-            StoreViewDto store   = stores.get(i);
+            StoreViewDto store  = stores.get(i);
             String       mensaje = messageMap.getOrDefault(store.getId(), "");
+
+            var waiting = new WhatsappSendProgress(total, i, enviados, errores, store.getStoreName(), "PAUSADO", false);
+            if (!sleepWithPause(0, userId, waiting, progressCallback)) break;
 
             progressCallback.accept(new WhatsappSendProgress(
                     total, i, enviados, errores, store.getStoreName(), "ENVIANDO", false));
@@ -159,12 +203,13 @@ public class WhatsappService {
             if ("ERROR_CHROME_CERRADO".equals(resultado)) {
                 progressCallback.accept(new WhatsappSendProgress(
                         total, i + 1, enviados, errores, store.getStoreName(), "ERROR_CHROME_CERRADO", true));
+                pauseFlag(userId).set(false);
                 return;
             }
 
             whatsappMessageRepository.save(store.getId(), userId, mensaje, resultado, null);
 
-            if ("ENVIADO".equals(resultado))            enviados++;
+            if ("ENVIADO".equals(resultado))             enviados++;
             else if (!"NUMERO_INVALIDO".equals(resultado)) errores++;
 
             progressCallback.accept(new WhatsappSendProgress(
@@ -172,16 +217,16 @@ public class WhatsappService {
 
             if (i < total - 1) {
                 int delay = DELAY_MIN_MS + random.nextInt(DELAY_MAX_MS - DELAY_MIN_MS);
-                progressCallback.accept(new WhatsappSendProgress(
-                        total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delay / 1000));
-                try { Thread.sleep(delay); }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+                var waitProg   = new WhatsappSendProgress(total, i + 1, enviados, errores, store.getStoreName(), "ESPERANDO", false, delay / 1000);
+                var pausedProg = new WhatsappSendProgress(total, i + 1, enviados, errores, store.getStoreName(), "PAUSADO",   false);
+                progressCallback.accept(waitProg);
+                if (!sleepWithPause(delay, userId, pausedProg, progressCallback)) break;
             }
         }
 
+        pauseFlag(userId).set(false);
         progressCallback.accept(new WhatsappSendProgress(
                 total, total, enviados, errores, "", "COMPLETADO", true));
-
         log.info("[WA:{}] Envío personalizado completado — enviados:{} errores:{}", session, enviados, errores);
     }
 }
