@@ -914,7 +914,7 @@ const RESULTADO_LABEL = {
   REQUIERE_SEGUIMIENTO: 'Requiere seguimiento',
 }
 
-function StoreContextMenu({ x, y, store, onClose }) {
+function StoreContextMenu({ x, y, store, onClose, onEfectiva }) {
   const [tipo, setTipo] = useState('')
   const [resultado, setResultado] = useState('')
   const [comentario, setComentario] = useState('')
@@ -933,6 +933,7 @@ function StoreContextMenu({ x, y, store, onClose }) {
     setSaving(true)
     try {
       await registerManagement(store.id, { managementType: tipo, resultType: resultado, comments: comentario })
+      if (resultado === 'EFECTIVA') onEfectiva(store.id)
       setDone(true)
       setTimeout(onClose, 900)
     } catch {
@@ -997,6 +998,7 @@ function BaseCard({ base, onStatusChange }) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [ctxMenu, setCtxMenu] = useState(null) // { x, y, store }
+  const [efectivas, setEfectivas] = useState(new Set())
   const nextStatus = STATUS_NEXT[base.status] ?? null
   const { bg, color } = STATUS_COLOR[base.status] ?? {}
 
@@ -1045,19 +1047,24 @@ function BaseCard({ base, onStatusChange }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {base.stores.map(s => (
-                    <tr
-                      key={s.id}
-                      onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, store: s }) }}
-                      title="Click derecho para tipificar"
-                    >
-                      <td>{s.storeName}</td>
-                      <td className={styles.tdCode}>{s.storeCode}</td>
-                      <td className={styles.tdMono}>{s.phoneNumber ?? '—'}</td>
-                      <td>{s.currentStatus ?? '—'}</td>
-                      <td>{s.connectionPercentage != null ? `${s.connectionPercentage}%` : '—'}</td>
-                    </tr>
-                  ))}
+                  {base.stores.map(s => {
+                    const isEfectiva = efectivas.has(s.id)
+                    return (
+                      <tr
+                        key={s.id}
+                        className={isEfectiva ? styles.trEfectiva : ''}
+                        onContextMenu={isEfectiva ? undefined : e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, store: s }) }}
+                        title={isEfectiva ? 'Gestión efectiva registrada' : 'Click derecho para tipificar'}
+                        style={{ cursor: isEfectiva ? 'default' : 'context-menu' }}
+                      >
+                        <td>{s.storeName} {isEfectiva && <span className={styles.efectivaBadge}>✓ Efectiva</span>}</td>
+                        <td className={styles.tdCode}>{s.storeCode}</td>
+                        <td className={styles.tdMono}>{s.phoneNumber ?? '—'}</td>
+                        <td>{s.currentStatus ?? '—'}</td>
+                        <td>{s.connectionPercentage != null ? `${s.connectionPercentage}%` : '—'}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1068,6 +1075,7 @@ function BaseCard({ base, onStatusChange }) {
               y={ctxMenu.y}
               store={ctxMenu.store}
               onClose={() => setCtxMenu(null)}
+              onEfectiva={storeId => setEfectivas(prev => new Set([...prev, storeId]))}
             />
           )}
 
