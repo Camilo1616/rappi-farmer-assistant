@@ -845,7 +845,7 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
                 </div>
 
                 {/* Lista por farmer */}
-                <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+                <div>
                   {Object.entries(preview).map(([fId, { name, stores }]) => {
                     const visible = q
                       ? stores.filter(s => s.storeName?.toLowerCase().includes(q) || s.storeCode?.toLowerCase().includes(q))
