@@ -140,7 +140,7 @@ function EquipoTab({ farmers, managements, sort, setSort }) {
             <button key={key} onClick={() => setSort(key)} style={{
               padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
               border: sort === key ? 'none' : '1px solid var(--border)',
-              background: sort === key ? '#0f172a' : 'var(--bg-input)',
+              background: sort === key ? '#ff441f' : 'var(--bg-input)',
               color: sort === key ? '#fff' : 'var(--text-secondary)',
               cursor: 'pointer', fontFamily: 'inherit',
             }}>{label}</button>
@@ -885,28 +885,225 @@ const inputStyle = {
   fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
 }
 
-/* ─── Métricas globales ─────────────────────────────────────────────── */
-function MetricGrid({ data }) {
-  const items = [
-    { label: 'Farmers',      value: data?.farmers?.length ?? 0, color: 'var(--text-primary)' },
-    { label: 'Tiendas',      value: data?.totalStores ?? 0,      color: 'var(--text-primary)' },
-    { label: 'Gestiones hoy',value: data?.totalGestiones ?? 0,   color: '#3b82f6' },
-    { label: 'Efectivas',    value: data?.totalEfectivas ?? 0,   color: '#16a34a' },
-    { label: 'No contacto',  value: data?.totalNoContacto ?? 0,  color: '#d97706' },
-    { label: 'Onboarding',   value: data?.totalOnboarding ?? 0,  color: '#7c3aed' },
-    { label: 'Churn',        value: data?.totalChurn ?? 0,       color: '#dc2626' },
-    { label: 'Saludables',   value: data?.totalSaludables ?? 0,  color: '#16a34a' },
-  ]
+/* ─── Pantalla de métricas del líder ───────────────────────────────── */
+function MetricsScreen({ data, bases, onNav }) {
+  const farmers      = data?.farmers      ?? []
+  const totalG       = data?.totalGestiones  ?? 0
+  const totalEf      = data?.totalEfectivas  ?? 0
+  const totalNC      = data?.totalNoContacto ?? 0
+  const totalStores  = data?.totalStores     ?? 0
+  const totalOnb     = data?.totalOnboarding ?? 0
+  const totalChurn   = data?.totalChurn      ?? 0
+  const totalSal     = data?.totalSaludables ?? 0
+  const bPend        = data?.basesPendientes ?? 0
+  const bProc        = data?.basesEnProceso  ?? 0
+  const bComp        = data?.basesCompletadas ?? 0
+
+  const convRate     = totalG > 0 ? Math.round((totalEf / totalG) * 100) : 0
+  const enMeta       = farmers.filter(f => f.exitosasHoy >= 8).length
+  const sinIniciar   = farmers.filter(f => f.gestionesHoy === 0).length
+  const enProgreso   = farmers.length - enMeta - sinIniciar
+
+  // Ordenar farmers: primero los que más necesitan atención (sin iniciar), luego en progreso, luego en meta
+  const farmersOrdenados = [...farmers].sort((a, b) => {
+    const ord = (f) => f.gestionesHoy === 0 ? 0 : f.exitosasHoy >= 8 ? 2 : 1
+    return ord(a) - ord(b)
+  })
+
+  const card = (content, style = {}) => (
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 16, boxShadow: 'var(--shadow-sm)', ...style }}>
+      {content}
+    </div>
+  )
+
+  const kpi = (label, value, sub, color, icon) => (
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 16, padding: '20px 22px', boxShadow: 'var(--shadow-sm)',
+      display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
+          textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+        <span style={{ fontSize: 20 }}>{icon}</span>
+      </div>
+      <p style={{ fontSize: 36, fontWeight: 900, color, margin: 0, lineHeight: 1 }}>{value}</p>
+      {sub && <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{sub}</p>}
+    </div>
+  )
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-      {items.map(({ label, value, color }) => (
-        <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 14, padding: '16px 20px', boxShadow: 'var(--shadow-sm)' }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
-          <p style={{ fontSize: 28, fontWeight: 800, color, margin: '4px 0 0', lineHeight: 1 }}>{value}</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* ── Sección 1: KPIs de gestión de hoy ── */}
+      <div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase',
+          letterSpacing: '0.08em', margin: '0 0 10px' }}>Gestión del equipo · hoy</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+          {kpi('Gestiones totales', totalG, `${farmers.length} farmers`, '#3b82f6', '📋')}
+          {kpi('Efectivas', totalEf, `${convRate}% conversión`, '#16a34a', '✅')}
+          {kpi('No contacto', totalNC, totalG > 0 ? `${Math.round((totalNC/totalG)*100)}% del total` : '—', '#d97706', '📵')}
+          {kpi('Farmers en meta', enMeta, `de ${farmers.length} · meta ≥ 8 ef.`, enMeta === farmers.length ? '#16a34a' : '#d97706', '🎯')}
         </div>
-      ))}
+      </div>
+
+      {/* ── Sección 2: Cartera + Bases ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 14, alignItems: 'start' }}>
+
+        {/* Cartera */}
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase',
+            letterSpacing: '0.08em', margin: '0 0 10px' }}>Cartera del equipo</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            {[
+              { label: 'Total tiendas', value: totalStores, color: 'var(--text-primary)', icon: '🏪' },
+              { label: 'Onboarding',    value: totalOnb,    color: '#7c3aed',             icon: '🚀' },
+              { label: 'Churn',         value: totalChurn,  color: '#dc2626',             icon: '⚠️' },
+              { label: 'Saludables',    value: totalSal,    color: '#16a34a',             icon: '💚' },
+            ].map(({ label, value, color, icon }) => (
+              <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)',
+                borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span style={{ fontSize: 16 }}>{icon}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+                </div>
+                <p style={{ fontSize: 28, fontWeight: 900, color, margin: 0, lineHeight: 1 }}>{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bases — columna derecha */}
+        <div style={{ minWidth: 180 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase',
+            letterSpacing: '0.08em', margin: '0 0 10px' }}>Bases</p>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+            {[
+              { label: 'Pendientes',  value: bPend, color: '#6b7280', dot: '#9ca3af' },
+              { label: 'En proceso',  value: bProc, color: '#d97706', dot: '#f59e0b' },
+              { label: 'Completadas', value: bComp, color: '#16a34a', dot: '#22c55e' },
+            ].map(({ label, value, color, dot }, i, arr) => (
+              <div key={label} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', gap: 10,
+                borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+                </div>
+                <span style={{ fontSize: 22, fontWeight: 800, color }}>{value}</span>
+              </div>
+            ))}
+            <button onClick={() => onNav('bases')} style={{ width: '100%', padding: '10px 16px',
+              background: 'var(--bg-secondary)', border: 'none', borderTop: '1px solid var(--border)',
+              color: '#7c3aed', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'inherit', textAlign: 'center', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,58,237,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}>
+              Ver bases →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Sección 3: Semáforo del equipo ── */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase',
+            letterSpacing: '0.08em', margin: 0 }}>Semáforo del equipo</p>
+          <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)' }}>
+            <span>🔴 Sin iniciar: <strong style={{ color: '#dc2626' }}>{sinIniciar}</strong></span>
+            <span>🟡 En progreso: <strong style={{ color: '#d97706' }}>{enProgreso}</strong></span>
+            <span>🟢 En meta: <strong style={{ color: '#16a34a' }}>{enMeta}</strong></span>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+
+          {farmers.length === 0 ? (
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+              No hay farmers asignados al equipo
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+                    {['Est.', 'Farmer', 'Tiendas', 'Gestiones hoy', 'Efectivas', 'No cont.', 'Progreso'].map((h, i) => (
+                      <th key={i} style={{ padding: '9px 14px', textAlign: i <= 1 ? 'left' : 'center',
+                        fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {farmersOrdenados.map((f, i) => {
+                    const s = semaforo(f)
+                    const pct = Math.min(100, Math.round((f.exitosasHoy / 8) * 100))
+                    return (
+                      <tr key={f.id} style={{ borderBottom: i < farmersOrdenados.length - 1 ? '1px solid var(--border)' : 'none',
+                        background: f.gestionesHoy === 0 ? 'rgba(239,68,68,0.03)' : 'transparent' }}>
+                        <td style={{ padding: '11px 14px', textAlign: 'center' }}>
+                          <span title={s.label} style={{ fontSize: 15 }}>{s.icon}</span>
+                        </td>
+                        <td style={{ padding: '11px 14px' }}>
+                          <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)', fontSize: 13 }}>{f.fullName}</p>
+                          <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>
+                            {f.farmerCode || `#${f.id}`}{f.countryCode ? ` · ${f.countryCode}` : ''}
+                          </p>
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {f.totalStores}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center',
+                          fontWeight: 700, fontSize: 15, color: f.gestionesHoy > 0 ? '#3b82f6' : 'var(--text-muted)' }}>
+                          {f.gestionesHoy}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center',
+                          fontWeight: 700, fontSize: 15,
+                          color: f.exitosasHoy >= 8 ? '#16a34a' : f.exitosasHoy > 0 ? '#d97706' : 'var(--text-muted)' }}>
+                          {f.exitosasHoy}
+                          {f.exitosasHoy >= 8 && <span style={{ fontSize: 10, marginLeft: 4 }}>✓</span>}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center',
+                          color: f.noContactoHoy > 0 ? '#d97706' : 'var(--text-muted)',
+                          fontWeight: f.noContactoHoy > 0 ? 700 : 400 }}>
+                          {f.noContactoHoy || '—'}
+                        </td>
+                        <td style={{ padding: '11px 20px 11px 14px', minWidth: 140 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ flex: 1, height: 6, background: 'var(--bg-secondary)',
+                              borderRadius: 99, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                              <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99,
+                                background: pct >= 100 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#ef4444',
+                                transition: 'width 0.4s' }} />
+                            </div>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
+                              whiteSpace: 'nowrap', minWidth: 30 }}>{pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {farmers.length > 0 && (
+            <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)',
+              background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => onNav('equipo')} style={{ padding: '7px 18px', borderRadius: 8,
+                background: '#3b82f6', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit' }}>
+                Ver detalle completo →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
     </div>
   )
 }
@@ -1122,46 +1319,23 @@ export default function LiderDashboardPage() {
 
         <main className={styles.main}>
 
-          {/* Dashboard */}
+          {/* Dashboard — pantalla principal de métricas */}
           {activeNav === 'dashboard' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              <div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  {greeting}, {user?.nickname || user?.fullName?.split(' ')[0]} 👋
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4, textTransform: 'capitalize' }}>{now}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    {greeting}, {user?.nickname || user?.fullName?.split(' ')[0]} 👋
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4, textTransform: 'capitalize' }}>{now}</p>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-card)',
+                  border: '1px solid var(--border)', borderRadius: 8, padding: '5px 12px' }}>
+                  🔄 Actualiza cada 30s
+                </span>
               </div>
               {loading ? <Spinner /> : (
-                <>
-                  <MetricGrid data={data} />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-                    {[
-                      { key: 'equipo', color: '#3b82f6', label: 'Ver equipo hoy',   desc: `${data?.farmers?.length ?? 0} farmers activos` },
-                      { key: 'bases',  color: '#7c3aed', label: 'Gestionar bases',  desc: `${bases.length} bases creadas` },
-                    ].map(({ key, label, desc, color }) => {
-                      const nav = NAV_ITEMS_LIDER.find(n => n.key === key)
-                      return (
-                        <button key={key} onClick={() => setActiveNav(key)} style={{
-                          display: 'flex', alignItems: 'center', gap: 14,
-                          background: 'var(--bg-card)', border: '1px solid var(--border)',
-                          borderRadius: 14, padding: '18px 20px', cursor: 'pointer',
-                          textAlign: 'left', fontFamily: 'inherit', boxShadow: 'var(--shadow-sm)',
-                          transition: 'border-color 0.15s, box-shadow 0.15s',
-                        }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.boxShadow = 'var(--shadow-md)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)' }}>
-                          <span className={styles.navIconWrap} style={{ background: nav?.bg, borderColor: color + '33', color, width: 40, height: 40, fontSize: 20 }}>
-                            {nav?.icon}
-                          </span>
-                          <div>
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</p>
-                            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>{desc}</p>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
+                <MetricsScreen data={data} bases={bases} onNav={setActiveNav} />
               )}
             </div>
           )}
