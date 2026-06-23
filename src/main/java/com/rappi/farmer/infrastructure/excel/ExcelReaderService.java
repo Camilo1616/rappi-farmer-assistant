@@ -32,7 +32,7 @@ public class ExcelReaderService {
     private static final String COL_BRAND_ID       = "COUNTRY BRAND ID";
     private static final String COL_STORE_NAME     = "STORE NAME";
     private static final String COL_PHONE          = "TELEFONO_PRINCIPAL";
-    private static final String COL_BACKUP_PHONE   = "OTROS TELEFONOS";
+    private static final String COL_BACKUP_PHONE   = "OTROS_TELEFONOS";
     private static final String COL_CHANNEL        = "CANAL";
     private static final String COL_ONBOARDING     = "Fecha inicio store";
     private static final String COL_CONNECTION     = "AVA_L4W";

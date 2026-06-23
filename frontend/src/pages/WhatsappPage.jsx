@@ -910,71 +910,107 @@ function StepMessage({ message, onChange, selectedStores = [], onAiMessages, onM
 }
 
 /* ── Modal de confirmación antes de enviar ── */
-function SendConfirmModal({ stores, allStores, aiMode, onConfirm, onCancel }) {
-  // phoneChoice: { [storeId]: 'primary' | 'backup' | 'custom' }
+function SendConfirmModal({ stores, aiMode, onConfirm, onCancel }) {
+  // phoneChoice: { [storeId]: 'primary' | 'backup' | 'both' | 'custom' }
   const [phoneChoice, setPhoneChoice] = useState(() => {
     const init = {}
     stores.forEach(s => { init[s.id] = 'primary' })
     return init
   })
-  // customPhone: { [storeId]: string } — teléfono editado manualmente
   const [customPhone, setCustomPhone] = useState({})
-  const [editingId, setEditingId] = useState(null)
+  const [editingId,   setEditingId]   = useState(null)
 
-  const resolvePhone = (s) => {
+  const setAll = (mode) => setPhoneChoice(() => {
+    const next = {}
+    stores.forEach(s => {
+      if (mode === 'backup' && !s.backupPhone) next[s.id] = 'primary'
+      else if (mode === 'both' && !s.backupPhone) next[s.id] = 'primary'
+      else next[s.id] = mode
+    })
+    return next
+  })
+
+  // Cuántos envíos totales (both = 2 por tienda)
+  const totalSends = stores.reduce((acc, s) => {
     const c = phoneChoice[s.id]
-    if (c === 'custom') return customPhone[s.id] ?? s.phoneNumber ?? ''
-    if (c === 'backup') return s.backupPhone ?? ''
-    return s.phoneNumber ?? ''
-  }
+    if (c === 'both' && s.backupPhone) return acc + 2
+    const phone = c === 'custom' ? (customPhone[s.id] || s.phoneNumber) : c === 'backup' ? s.backupPhone : s.phoneNumber
+    return acc + (phone ? 1 : 0)
+  }, 0)
 
   const handleConfirm = () => {
-    const overrides = {}
+    // Construir lista de { storeId, phone, storeName, originalStore }
+    // Para 'both' se duplica la tienda con distinto teléfono
+    const entries = []
     stores.forEach(s => {
-      const phone = resolvePhone(s)
-      if (phone !== s.phoneNumber) overrides[s.id] = phone
+      const c = phoneChoice[s.id]
+      if (c === 'both' && s.backupPhone) {
+        entries.push({ storeId: s.id, phone: s.phoneNumber, storeName: s.storeName, orig: s })
+        entries.push({ storeId: s.id, phone: s.backupPhone, storeName: s.storeName, orig: s, isBothSecond: true })
+      } else {
+        const phone = c === 'custom' ? (customPhone[s.id] || s.phoneNumber)
+                    : c === 'backup'  ? s.backupPhone
+                    : s.phoneNumber
+        if (phone) entries.push({ storeId: s.id, phone, storeName: s.storeName, orig: s })
+      }
     })
-    onConfirm(overrides)
+    onConfirm(entries)
   }
 
-  const readyCount = stores.filter(s => resolvePhone(s)).length
+  const cs = {
+    overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:10000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 },
+    modal:   { background:'var(--bg-card)', borderRadius:16, width:'100%', maxWidth:720, maxHeight:'88vh', display:'flex', flexDirection:'column', border:'1.5px solid var(--border)', boxShadow:'0 24px 64px rgba(0,0,0,0.4)' },
+    header:  { padding:'20px 24px 14px', borderBottom:'1px solid var(--border)' },
+    body:    { overflowY:'auto', flex:1, padding:'0 24px 8px' },
+    footer:  { padding:'14px 24px', borderTop:'1px solid var(--border)', display:'flex', gap:10, justifyContent:'space-between', alignItems:'center', flexWrap:'wrap' },
+    th:      { padding:'8px 8px', fontWeight:600, fontSize:11, color:'var(--text-secondary)', borderBottom:'1px solid var(--border)', textAlign:'left', whiteSpace:'nowrap' },
+    td:      { padding:'8px 8px', fontSize:12, verticalAlign:'middle' },
+    chip: (active, color) => ({
+      padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:600, cursor:'pointer',
+      background: active ? color + '22' : 'transparent',
+      border: `1.5px solid ${active ? color : 'var(--border)'}`,
+      color: active ? color : 'var(--text-secondary)',
+      transition:'all 0.15s',
+    }),
+  }
 
   return createPortal(
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 10000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-    }}>
-      <div style={{
-        background: '#1F2937', borderRadius: 16, padding: '24px 0 0',
-        width: '100%', maxWidth: 680, maxHeight: '85vh',
-        display: 'flex', flexDirection: 'column',
-        border: '1.5px solid #374151', boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-      }}>
+    <div style={cs.overlay}>
+      <div style={cs.modal}>
+
         {/* Header */}
-        <div style={{ padding: '0 24px 16px', borderBottom: '1px solid #374151' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={cs.header}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
             <div>
-              <h3 style={{ color: '#F9FAFB', fontWeight: 700, fontSize: '1.1rem', margin: 0 }}>
+              <h3 style={{ color:'var(--text-primary)', fontWeight:700, fontSize:'1.1rem', margin:0 }}>
                 📤 Confirmar envío
               </h3>
-              <p style={{ color: '#9CA3AF', fontSize: 12, margin: '4px 0 0' }}>
-                {stores.length} tiendas seleccionadas · {readyCount} con número listo
-                {aiMode && ' · Mensajes personalizados IA'}
+              <p style={{ color:'var(--text-secondary)', fontSize:12, margin:'4px 0 0' }}>
+                {stores.length} tiendas · {totalSends} envíos totales
+                {aiMode && ' · Mensajes IA personalizados'}
               </p>
             </div>
-            <button onClick={onCancel} style={{ background: 'none', border: 'none', color: '#6B7280', fontSize: 18, cursor: 'pointer' }}>✕</button>
+            <button onClick={onCancel} style={{ background:'none', border:'none', color:'var(--text-secondary)', fontSize:18, cursor:'pointer', flexShrink:0 }}>✕</button>
+          </div>
+
+          {/* Botones globales */}
+          <div style={{ display:'flex', gap:6, marginTop:12, flexWrap:'wrap' }}>
+            <span style={{ fontSize:11, color:'var(--text-secondary)', alignSelf:'center', marginRight:4 }}>Aplicar a todos:</span>
+            <button style={cs.chip(false,'#3B82F6')} onClick={() => setAll('primary')}>📞 Solo principal</button>
+            <button style={cs.chip(false,'#F59E0B')} onClick={() => setAll('backup')}>📋 Solo respaldo</button>
+            <button style={cs.chip(false,'#22C55E')} onClick={() => setAll('both')}>📞+📋 Ambos números</button>
           </div>
         </div>
 
         {/* Tabla */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 24px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <div style={cs.body}>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
-              <tr style={{ color: '#6B7280', textAlign: 'left' }}>
-                <th style={{ padding: '6px 8px', fontWeight: 600, borderBottom: '1px solid #374151' }}>Tienda</th>
-                <th style={{ padding: '6px 8px', fontWeight: 600, borderBottom: '1px solid #374151' }}>Store ID</th>
-                <th style={{ padding: '6px 8px', fontWeight: 600, borderBottom: '1px solid #374151' }}>Brand ID</th>
-                <th style={{ padding: '6px 8px', fontWeight: 600, borderBottom: '1px solid #374151', minWidth: 200 }}>Número a enviar</th>
+              <tr>
+                <th style={cs.th}>Tienda</th>
+                <th style={cs.th}>Store ID</th>
+                <th style={cs.th}>Brand ID</th>
+                <th style={{ ...cs.th, minWidth:260 }}>Número(s) a enviar</th>
               </tr>
             </thead>
             <tbody>
@@ -982,73 +1018,64 @@ function SendConfirmModal({ stores, allStores, aiMode, onConfirm, onCancel }) {
                 const hasPrimary = !!s.phoneNumber
                 const hasBackup  = !!s.backupPhone
                 const choice     = phoneChoice[s.id]
-                const phone      = resolvePhone(s)
                 const isEditing  = editingId === s.id
+                const editVal    = customPhone[s.id] ?? s.phoneNumber ?? ''
                 return (
-                  <tr key={s.id} style={{ borderBottom: '1px solid #1F2937' }}>
-                    <td style={{ padding: '8px 8px', color: '#F9FAFB', fontWeight: 600 }}>{s.storeName}</td>
-                    <td style={{ padding: '8px 8px', color: '#9CA3AF' }}>{s.storeCode}</td>
-                    <td style={{ padding: '8px 8px', color: '#9CA3AF' }}>{s.brandId}</td>
-                    <td style={{ padding: '8px 8px' }}>
+                  <tr key={s.id} style={{ borderBottom:'1px solid var(--border)' }}>
+                    <td style={{ ...cs.td, color:'var(--text-primary)', fontWeight:600, maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.storeName}</td>
+                    <td style={{ ...cs.td, color:'var(--text-secondary)' }}>{s.storeCode}</td>
+                    <td style={{ ...cs.td, color:'var(--text-secondary)' }}>{s.brandId}</td>
+                    <td style={cs.td}>
                       {isEditing ? (
-                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                          <input
-                            autoFocus
-                            type="tel"
-                            value={customPhone[s.id] ?? phone}
-                            onChange={e => setCustomPhone(p => ({ ...p, [s.id]: e.target.value.replace(/\D/g, '') }))}
+                        <div style={{ display:'flex', gap:4 }}>
+                          <input autoFocus type="tel" value={editVal}
+                            onChange={e => setCustomPhone(p => ({ ...p, [s.id]: e.target.value.replace(/\D/g,'') }))}
                             onKeyDown={e => {
-                              if (e.key === 'Enter') { setPhoneChoice(c => ({ ...c, [s.id]: 'custom' })); setEditingId(null) }
-                              if (e.key === 'Escape') { setEditingId(null) }
+                              if (e.key === 'Enter') { setPhoneChoice(c => ({ ...c, [s.id]:'custom' })); setEditingId(null) }
+                              if (e.key === 'Escape') setEditingId(null)
                             }}
-                            style={{ flex: 1, padding: '4px 8px', borderRadius: 6, fontSize: 11, background: '#111827', border: '1.5px solid #7C3AED', color: '#F9FAFB', outline: 'none' }}
+                            style={{ flex:1, padding:'4px 8px', borderRadius:6, fontSize:11, background:'var(--bg-input)', border:'1.5px solid #7C3AED', color:'var(--text-primary)', outline:'none' }}
                           />
-                          <button onClick={() => { setPhoneChoice(c => ({ ...c, [s.id]: 'custom' })); setEditingId(null) }}
-                            style={{ padding: '3px 8px', borderRadius: 5, border: 'none', background: '#22C55E', color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>✓</button>
+                          <button onClick={() => { setPhoneChoice(c => ({ ...c, [s.id]:'custom' })); setEditingId(null) }}
+                            style={{ padding:'3px 8px', borderRadius:5, border:'none', background:'#22C55E', color:'#fff', fontSize:11, cursor:'pointer', fontWeight:700 }}>✓</button>
                           <button onClick={() => setEditingId(null)}
-                            style={{ padding: '3px 6px', borderRadius: 5, border: 'none', background: 'transparent', color: '#6B7280', fontSize: 11, cursor: 'pointer' }}>✕</button>
+                            style={{ padding:'3px 6px', borderRadius:5, border:'none', background:'transparent', color:'var(--text-secondary)', fontSize:11, cursor:'pointer' }}>✕</button>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:4, alignItems:'center' }}>
                           {/* Principal */}
                           <button
-                            onClick={() => setPhoneChoice(c => ({ ...c, [s.id]: 'primary' }))}
-                            style={{
-                              padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: hasPrimary ? 'pointer' : 'not-allowed',
-                              background: choice === 'primary' ? '#3B82F622' : 'transparent',
-                              border: `1.5px solid ${choice === 'primary' ? '#3B82F6' : '#374151'}`,
-                              color: choice === 'primary' ? '#3B82F6' : hasPrimary ? '#9CA3AF' : '#4B5563',
-                              opacity: hasPrimary ? 1 : 0.4,
-                            }}
-                            disabled={!hasPrimary}
-                            title={hasPrimary ? `Principal: ${s.phoneNumber}` : 'Sin número principal'}
+                            onClick={() => hasPrimary && setPhoneChoice(c => ({ ...c, [s.id]:'primary' }))}
+                            style={{ ...cs.chip(choice === 'primary','#3B82F6'), opacity: hasPrimary ? 1 : 0.35, cursor: hasPrimary ? 'pointer' : 'not-allowed' }}
+                            title={hasPrimary ? s.phoneNumber : 'Sin número principal'}
                           >
                             📞 {hasPrimary ? s.phoneNumber : 'Sin número'}
                           </button>
                           {/* Respaldo */}
-                          {hasBackup && (
+                          <button
+                            onClick={() => hasBackup && setPhoneChoice(c => ({ ...c, [s.id]:'backup' }))}
+                            style={{ ...cs.chip(choice === 'backup','#F59E0B'), opacity: hasBackup ? 1 : 0.35, cursor: hasBackup ? 'pointer' : 'not-allowed' }}
+                            title={hasBackup ? s.backupPhone : 'Sin número de respaldo'}
+                          >
+                            📋 {hasBackup ? s.backupPhone : 'Sin respaldo'}
+                          </button>
+                          {/* Ambos */}
+                          {hasBackup && hasPrimary && (
                             <button
-                              onClick={() => setPhoneChoice(c => ({ ...c, [s.id]: 'backup' }))}
-                              style={{
-                                padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                                background: choice === 'backup' ? '#F59E0B22' : 'transparent',
-                                border: `1.5px solid ${choice === 'backup' ? '#F59E0B' : '#374151'}`,
-                                color: choice === 'backup' ? '#F59E0B' : '#9CA3AF',
-                              }}
-                              title={`Respaldo: ${s.backupPhone}`}
+                              onClick={() => setPhoneChoice(c => ({ ...c, [s.id]:'both' }))}
+                              style={cs.chip(choice === 'both','#22C55E')}
+                              title="Enviar a ambos números"
                             >
-                              📋 {s.backupPhone}
+                              📞+📋
                             </button>
                           )}
-                          {/* Editar/custom */}
+                          {/* Custom */}
                           {choice === 'custom' && customPhone[s.id] && (
-                            <span style={{ fontSize: 11, color: '#22C55E', fontWeight: 600 }}>✓ {customPhone[s.id]}</span>
+                            <span style={{ fontSize:11, color:'#22C55E', fontWeight:600 }}>✓ {customPhone[s.id]}</span>
                           )}
-                          <button
-                            onClick={() => { setEditingId(s.id) }}
-                            style={{ padding: '2px 6px', borderRadius: 99, fontSize: 10, cursor: 'pointer', background: 'transparent', border: '1px solid #374151', color: '#6B7280' }}
-                            title="Editar número manualmente"
-                          >✏️</button>
+                          <button onClick={() => setEditingId(s.id)}
+                            style={{ padding:'2px 6px', borderRadius:99, fontSize:10, cursor:'pointer', background:'transparent', border:'1px solid var(--border)', color:'var(--text-secondary)' }}
+                            title="Editar número">✏️</button>
                         </div>
                       )}
                     </td>
@@ -1060,18 +1087,20 @@ function SendConfirmModal({ stores, allStores, aiMode, onConfirm, onCancel }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #374151', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={{
-            padding: '9px 20px', borderRadius: 8, border: '1.5px solid #374151',
-            background: 'transparent', color: '#9CA3AF', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-          }}>Cancelar</button>
-          <button onClick={handleConfirm} disabled={readyCount === 0} style={{
-            padding: '9px 24px', borderRadius: 8, border: 'none',
-            background: readyCount > 0 ? '#22C55E' : '#374151', color: '#fff',
-            fontWeight: 700, fontSize: 13, cursor: readyCount > 0 ? 'pointer' : 'not-allowed',
-          }}>
-            📤 Enviar a {readyCount} tienda{readyCount !== 1 ? 's' : ''}
-          </button>
+        <div style={cs.footer}>
+          <span style={{ fontSize:12, color:'var(--text-secondary)' }}>
+            {totalSends} mensaje{totalSends !== 1 ? 's' : ''} se enviarán
+          </span>
+          <div style={{ display:'flex', gap:10 }}>
+            <button onClick={onCancel} style={{ padding:'9px 20px', borderRadius:8, border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-secondary)', fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancelar</button>
+            <button onClick={handleConfirm} disabled={totalSends === 0} style={{
+              padding:'9px 24px', borderRadius:8, border:'none',
+              background: totalSends > 0 ? '#22C55E' : 'var(--border)', color:'#fff',
+              fontWeight:700, fontSize:13, cursor: totalSends > 0 ? 'pointer' : 'not-allowed',
+            }}>
+              📤 Enviar {totalSends} mensaje{totalSends !== 1 ? 's' : ''}
+            </button>
+          </div>
         </div>
       </div>
     </div>,
@@ -1355,19 +1384,26 @@ export default function WhatsappPage() {
   }
 
   // phoneOverrides: { [storeId]: customPhone } — solo las tiendas con número distinto al principal
-  const handleConfirmedSend = (phoneOverrides) => {
+  // entries = [{ storeId, phone, storeName }] — del modal (puede haber duplicados por 'both')
+  const handleConfirmedSend = (entries) => {
     setShowConfirm(false)
     if (aiMessages.length > 0) {
+      // Modo IA: construir storeMessages, usar phone del entry si hay override
+      const phoneMap = {}
+      entries.forEach(e => { phoneMap[e.storeId] = e.phone })
       const msgs = aiMessages.map(m => ({
         storeId: m.storeId,
         message: m.message,
-        ...(phoneOverrides[m.storeId] ? { phone: phoneOverrides[m.storeId] } : {}),
+        ...(phoneMap[m.storeId] ? { phone: phoneMap[m.storeId] } : {}),
       }))
       const initial = { total: msgs.length, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
       progressStore.update({ sending: true, progress: initial })
       sendPersonalized(msgs, () => {}, () => { loadStatus(); loadSentToday() }, () => {})
     } else {
-      const storeIds = Array.from(selected)
+      // Modo template: pasar storeIds y phoneOverrides (entry con 'both' produce 2 entradas)
+      const storeIds = entries.map(e => e.storeId)
+      const phoneOverrides = {}
+      entries.forEach(e => { phoneOverrides[e.storeId] = e.phone })
       const initial = { total: storeIds.length, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
       progressStore.update({ sending: true, progress: initial })
       sendMasivo(storeIds, message, phoneOverrides, () => {}, () => { loadStatus(); loadSentToday() }, () => {})
@@ -1416,7 +1452,6 @@ export default function WhatsappPage() {
       {showConfirm && (
         <SendConfirmModal
           stores={selectedStoresList}
-          allStores={Object.values(dashStores).flat()}
           aiMode={aiMessages.length > 0}
           onConfirm={handleConfirmedSend}
           onCancel={() => setShowConfirm(false)}
