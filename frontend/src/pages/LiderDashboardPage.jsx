@@ -444,24 +444,27 @@ function BaseCard({ base, baseStoresData, baseStoresLoading, expanded, onToggle,
           {confirm ? (
             <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
               <button onClick={handleDelete} disabled={deleting} style={{
-                padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700,
-                background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              }}>{deleting ? '...' : '¿Confirmar?'}</button>
+                padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700,
+                background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', boxShadow: '0 2px 6px rgba(220,38,38,0.4)',
+              }}>{deleting ? 'Eliminando...' : '¿Eliminar?'}</button>
               <button onClick={cancelConfirm} style={{
-                padding: '4px 8px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                padding: '6px 10px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                 background: 'var(--bg-input)', color: 'var(--text-secondary)', border: '1px solid var(--border)',
                 cursor: 'pointer', fontFamily: 'inherit',
               }}>Cancelar</button>
             </div>
           ) : (
             <button onClick={handleDelete} title="Eliminar base" style={{
-              padding: '4px 8px', borderRadius: 7, fontSize: 13, lineHeight: 1,
-              background: 'transparent', color: 'var(--text-muted)', border: '1px solid transparent',
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700,
+              background: 'rgba(220,38,38,0.1)', color: '#dc2626',
+              border: '1.5px solid rgba(220,38,38,0.35)',
               cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
             }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.1)'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.borderColor = 'rgba(220,38,38,0.3)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'transparent' }}>
-              🗑
+              onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.1)'; e.currentTarget.style.color = '#dc2626' }}>
+              🗑 Eliminar
             </button>
           )}
         </div>
