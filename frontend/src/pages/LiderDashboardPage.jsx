@@ -611,7 +611,6 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
 
   const handleTypeChange = (val) => {
     setType(val)
-    setPreview(null)
     if (!message || Object.values(templates).some(t => message === t)) {
       setMessage(templates[val] || '')
     }
@@ -621,39 +620,41 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
 
   const toggleFarmer = (id) => {
     setSel(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
-    setPreview(null)
-    setSelStores([])
     setStoreSearch('')
   }
 
-  const loadPreview = async () => {
-    if (selectedFarmers.length === 0) return
-    setLoadPrev(true); setPreview(null)
-    try {
-      const params = type === 'ACTIVE' ? { activeDays } : {}
-      const r = await getStoresByBaseType(type, selectedFarmers, params)
-      const allStores = r.data || []
-      const byFarmer = {}
-      for (const f of selectedFarmers) {
-        const farmer = farmers.find(x => x.id === f)
-        byFarmer[f] = { name: farmer?.fullName || `#${f}`, stores: [] }
-      }
-      for (const s of allStores) {
-        // farmerId puede llegar como number o string según el JSON
-        const fId = selectedFarmers.find(id => id === s.farmerId || id === Number(s.farmerId))
-        if (fId != null) byFarmer[fId].stores.push(s)
-        else {
-          // si no tiene farmerId asociado, asignarlo al primer farmer seleccionado
-          const fallback = selectedFarmers[0]
-          if (fallback != null) byFarmer[fallback].stores.push(s)
+  // Carga automática cuando cambian farmers seleccionados, tipo o activeDays
+  useEffect(() => {
+    if (selectedFarmers.length === 0) { setPreview(null); setSelStores([]); return }
+    let cancelled = false
+    const run = async () => {
+      setLoadPrev(true)
+      try {
+        const params = type === 'ACTIVE' ? { activeDays } : {}
+        const r = await getStoresByBaseType(type, selectedFarmers, params)
+        if (cancelled) return
+        const allStores = r.data || []
+        const byFarmer = {}
+        for (const f of selectedFarmers) {
+          const farmer = farmers.find(x => x.id === f)
+          byFarmer[f] = { name: farmer?.fullName || `#${f}`, stores: [] }
         }
-      }
-      setPreview(byFarmer)
-      setSelStores(allStores.map(s => s.id))
-      setStoreSearch('')
-    } catch { setError('Error al cargar preview') }
-    finally { setLoadPrev(false) }
-  }
+        for (const s of allStores) {
+          const fId = selectedFarmers.find(id => id === s.farmerId || id === Number(s.farmerId))
+          if (fId != null) byFarmer[fId].stores.push(s)
+          else {
+            const fallback = selectedFarmers[0]
+            if (fallback != null) byFarmer[fallback].stores.push(s)
+          }
+        }
+        setPreview(byFarmer)
+        setSelStores(allStores.map(s => s.id))
+      } catch { setError('Error al cargar tiendas') }
+      finally { if (!cancelled) setLoadPrev(false) }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [selectedFarmers, type, activeDays])
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError('El título es obligatorio'); return }
@@ -775,17 +776,11 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
                 ))
               }
             </div>
-            {selectedFarmers.length > 0 && (
+            {selectedFarmers.length > 0 && loadingPrev && (
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedFarmers.length} seleccionados</span>
-                <button onClick={loadPreview} disabled={loadingPrev} style={{
-                  fontSize: 13, fontWeight: 700, color: '#fff', background: '#3b82f6',
-                  border: 'none', borderRadius: 8, padding: '8px 18px',
-                  cursor: loadingPrev ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                  opacity: loadingPrev ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  {loadingPrev ? '⏳ Cargando...' : '👁 Ver tiendas que entran'}
-                </button>
+                <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #ff441f',
+                  borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cargando tiendas...</span>
               </div>
             )}
           </div>
