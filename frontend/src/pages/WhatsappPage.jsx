@@ -1102,7 +1102,10 @@ function SendProgress({ progress, onClose, paused, onPause, onResume }) {
                   style={{ padding: '5px 14px', borderRadius: 8, border: '1.5px solid #F59E0B', background: 'rgba(245,158,11,0.1)', color: '#F59E0B', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
                 >⏸ Frenar</button>
           )}
-          {progress.finalizado && <button className={styles.btnSecondary} onClick={onClose}>Nueva sesión</button>}
+          {progress.finalizado
+            ? <button className={styles.btnSecondary} onClick={onClose}>Nueva sesión</button>
+            : <button onClick={onClose} style={{ padding: '5px 12px', borderRadius: 8, border: '1.5px solid #EF4444', background: 'transparent', color: '#EF4444', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>🗑 Cancelar</button>
+          }
         </div>
       </div>
       <div className={styles.progressBarWrap}>
