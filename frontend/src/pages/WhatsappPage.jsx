@@ -306,7 +306,7 @@ function StatusBadge({ store }) {
 }
 
 /* ── Buscador general de tiendas ── */
-function StoreSearchPanel({ selected, remaining, sentTodayIds, onToggle, onPhoneSaved }) {
+function StoreSearchPanel({ selected, remaining, sentTodayIds, onToggle, onPhoneSaved, onStoreFound }) {
   const [query,         setQuery]         = useState('')
   const [results,       setResults]       = useState([])
   const [loading,       setLoading]       = useState(false)
@@ -322,7 +322,9 @@ function StoreSearchPanel({ selected, remaining, sentTodayIds, onToggle, onPhone
       setLoading(true)
       try {
         const r = await getStores({ q: query.trim() })
-        setResults(r.data ?? [])
+        const data = r.data ?? []
+        setResults(data)
+        if (onStoreFound) data.forEach(s => onStoreFound(s))
       } catch { setResults([]) }
       finally { setLoading(false) }
     }, 300)
@@ -1153,6 +1155,8 @@ export default function WhatsappPage() {
   const [loggingOut,     setLoggingOut]     = useState(false)
   const [paused,         setPaused]         = useState(false)
   const [showConfirm,    setShowConfirm]    = useState(false)
+  // Registro de tiendas seleccionadas desde el buscador general (no están en dashStores)
+  const searchRegistryRef = useRef({})
 
   const loadStatus = async () => {
     try {
@@ -1397,8 +1401,9 @@ export default function WhatsappPage() {
   }
 
   // Tiendas seleccionadas como array (deduplicado por id)
+  // Combina dashStores + tiendas encontradas por búsqueda general
   const selectedStoresList = [...new Map(
-    Object.values(dashStores).flat()
+    [...Object.values(dashStores).flat(), ...Object.values(searchRegistryRef.current)]
       .filter(s => s && selected.has(s.id))
       .map(s => [s.id, s])
   ).values()]
@@ -1478,6 +1483,7 @@ export default function WhatsappPage() {
                 remaining={remaining}
                 sentTodayIds={sentTodayIds}
                 onToggle={handleToggle}
+                onStoreFound={store => { searchRegistryRef.current[store.id] = store }}
                 onPhoneSaved={(storeId, phone) => {
                   setDashStores(prev => {
                     const next = {}
