@@ -920,6 +920,7 @@ function StoreContextMenu({ x, y, store, onClose, onEfectiva }) {
   const [comentario, setComentario] = useState('')
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState(null)
   const ref = useRef()
 
   useEffect(() => {
@@ -929,14 +930,17 @@ function StoreContextMenu({ x, y, store, onClose, onEfectiva }) {
   }, [onClose])
 
   const handleSave = async () => {
-    if (!tipo || !resultado) return
+    if (!tipo || !resultado || !comentario.trim()) return
     setSaving(true)
+    setError(null)
     try {
       await registerManagement(store.id, { managementType: tipo, resultType: resultado, comments: comentario })
       if (resultado === 'EFECTIVA') onEfectiva(store.id)
       setDone(true)
       setTimeout(onClose, 900)
-    } catch {
+    } catch (err) {
+      const msg = err?.response?.data?.message ?? 'Error al guardar la gestión'
+      setError(msg)
       setSaving(false)
     }
   }
@@ -979,6 +983,7 @@ function StoreContextMenu({ x, y, store, onClose, onEfectiva }) {
             onChange={e => setComentario(e.target.value)}
           />
 
+          {error && <div className={styles.ctxError}>{error}</div>}
           <div className={styles.ctxActions}>
             <button className={styles.ctxBack} onClick={onClose}>Cancelar</button>
             <button
