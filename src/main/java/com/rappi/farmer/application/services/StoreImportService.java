@@ -187,7 +187,7 @@ public class StoreImportService {
         LocalDate handoffActivatedAt = calcularHandoffActivatedAt(
                 row.getChannel(), row.getHadHandoff(), row.getOnboardingDate(), null, null);
         Store s = new Store(null, row.getStoreCode(), row.getBrandId(), row.getStoreName(),
-                row.getPhoneNumber(), row.getChannel(), row.getOnboardingDate(),
+                row.getPhoneNumber(), row.getBackupPhone(), row.getChannel(), row.getOnboardingDate(),
                 true, row.getConnectionPercentage(), row.getCurrentStatus(),
                 row.getHadHandoff(), handoffActivatedAt, farmerId, row.getAging(),
                 row.getAgingStage(), row.getLastLoginDate(),
