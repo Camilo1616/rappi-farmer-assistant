@@ -969,11 +969,11 @@ function StoreContextMenu({ x, y, store, onClose }) {
             {RESULTADOS.map(r => <option key={r} value={r}>{RESULTADO_LABEL[r]}</option>)}
           </select>
 
-          <div className={styles.ctxFieldLabel}>Comentario</div>
+          <div className={styles.ctxFieldLabel}>Comentario *</div>
           <textarea
             className={styles.ctxTextarea}
             rows={2}
-            placeholder="Opcional..."
+            placeholder="Requerido..."
             value={comentario}
             onChange={e => setComentario(e.target.value)}
           />
@@ -982,7 +982,7 @@ function StoreContextMenu({ x, y, store, onClose }) {
             <button className={styles.ctxBack} onClick={onClose}>Cancelar</button>
             <button
               className={styles.ctxSave}
-              disabled={!tipo || !resultado || saving}
+              disabled={!tipo || !resultado || !comentario.trim() || saving}
               onClick={handleSave}
             >{saving ? 'Guardando...' : 'Registrar gestión'}</button>
           </div>
@@ -995,19 +995,17 @@ function StoreContextMenu({ x, y, store, onClose }) {
 
 function BaseCard({ base, onStatusChange }) {
   const [open, setOpen] = useState(false)
-  const [comment, setComment] = useState(base.farmerComment ?? '')
   const [saving, setSaving] = useState(false)
   const [ctxMenu, setCtxMenu] = useState(null) // { x, y, store }
   const nextStatus = STATUS_NEXT[base.status] ?? null
   const { bg, color } = STATUS_COLOR[base.status] ?? {}
-  const isCompleted = base.status === 'COMPLETADO'
 
   const handleAdvance = async (e) => {
     e.stopPropagation()
-    if (!comment.trim()) return
+    if (!nextStatus) return
     setSaving(true)
     try {
-      await onStatusChange(base.assignmentId, nextStatus, comment.trim())
+      await onStatusChange(base.assignmentId, nextStatus)
     } finally {
       setSaving(false)
     }
@@ -1022,6 +1020,11 @@ function BaseCard({ base, onStatusChange }) {
           <span className={styles.baseStatusBadge} style={{ background: bg, color }}>{base.status?.replace(/_/g,' ')}</span>
         </div>
         <div className={styles.baseRight}>
+          {nextStatus && (
+            <button className={styles.btnAdvance} disabled={saving} onClick={handleAdvance}>
+              {saving ? '...' : `Avanzar → ${nextStatus.replace(/_/g,' ')}`}
+            </button>
+          )}
           <span className={styles.chevronSm}>{open ? '▲' : '▼'}</span>
         </div>
       </div>
@@ -1068,34 +1071,6 @@ function BaseCard({ base, onStatusChange }) {
             />
           )}
 
-          {/* Sección de comentario obligatorio */}
-          <div className={styles.baseCommentSection}>
-            <label className={styles.baseCommentLabel}>
-              Comentario {!isCompleted && <span style={{ color: 'var(--danger, #e53e3e)' }}>*</span>}
-            </label>
-            {isCompleted ? (
-              <p className={styles.baseCommentReadonly}>{comment || '—'}</p>
-            ) : (
-              <textarea
-                className={styles.baseCommentTextarea}
-                rows={3}
-                placeholder="Escribe un comentario sobre tu gestión de esta base (obligatorio para avanzar)..."
-                value={comment}
-                onChange={e => setComment(e.target.value)}
-                onClick={e => e.stopPropagation()}
-              />
-            )}
-            {nextStatus && !isCompleted && (
-              <button
-                className={styles.btnAdvance}
-                disabled={!comment.trim() || saving}
-                onClick={handleAdvance}
-                style={{ marginTop: 8, opacity: comment.trim() ? 1 : 0.45 }}
-              >
-                {saving ? 'Guardando...' : `Avanzar → ${nextStatus.replace(/_/g,' ')}`}
-              </button>
-            )}
-          </div>
         </>
       )}
     </div>
