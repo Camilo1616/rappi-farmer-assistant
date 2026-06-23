@@ -179,26 +179,25 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         @org.springframework.data.repository.query.Param("maxDays") int maxDays);
 
     /**
-     * ACTIVE 7 días: exactamente 7 días desde onboarding_date (calculado dinámicamente),
-     * HO exitoso (had_handoff = true), al menos una gestión EFECTIVA
-     * (cualquier canal) y SIN ventas registradas (orders_count = 0 o sin métricas).
+     * ACTIVE: tiendas en onboarding activo (días 1–8 desde handoff_activated_at o
+     * desde onboarding_date si no hay handoff), sin órdenes registradas aún.
+     * No exige gestión previa para no excluir tiendas sin contactar.
      */
     @org.springframework.data.jpa.repository.Query(value =
         "SELECT s.* FROM stores s " +
         "WHERE s.active = true " +
         "AND s.user_id IN :farmerIds " +
-        "AND s.had_handoff = true " +
-        "AND s.onboarding_date IS NOT NULL " +
-        "AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) = 7 " +
-        "AND EXISTS ( " +
-        "  SELECT 1 FROM managements m " +
-        "  WHERE m.store_id = s.id AND m.result_type = 'EFECTIVA' " +
+        "AND ( " +
+        "  (s.handoff_activated_at IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.handoff_activated_at) BETWEEN 1 AND 8) " +
+        "  OR " +
+        "  (s.handoff_activated_at IS NULL AND s.onboarding_date IS NOT NULL AND DATEDIFF(CURRENT_DATE(), s.onboarding_date) BETWEEN 1 AND 8) " +
         ") " +
         "AND NOT EXISTS ( " +
         "  SELECT 1 FROM daily_metrics dm " +
         "  WHERE dm.store_id = s.id AND dm.orders_count > 0 " +
         ") " +
-        "ORDER BY s.store_name ASC", nativeQuery = true)
+        "ORDER BY COALESCE(s.handoff_activated_at, s.onboarding_date) ASC, s.store_name ASC",
+        nativeQuery = true)
     List<StoreEntity> findActive7DaysWithSuccessfulManagement(
         @org.springframework.data.repository.query.Param("farmerIds") List<Long> farmerIds);
 

@@ -31,15 +31,15 @@ const STATUS_COLOR = {
   COMPLETADO: { bg: 'rgba(34,197,94,0.12)',   color: '#16a34a', label: 'Completado' },
 }
 const BASE_TYPE_OPTS = [
-  { value: 'ACTIVE',    label: 'Active 7d' },
-  { value: 'ACTIVE_28', label: 'Active 8-28d' },
-  { value: 'AVA_8_14', label: 'AVA 8-14' },
-  { value: 'CHURN',    label: 'Churn' },
-  { value: 'RETENCION',label: 'Retención' },
+  { value: 'ACTIVE',       label: 'Active' },
+  { value: 'ACTIVE_28',    label: 'Active 8-28d' },
+  { value: 'AVA_8_14',    label: 'AVA 8-14' },
+  { value: 'CHURN',       label: 'Churn' },
+  { value: 'RETENCION',   label: 'Retención' },
   { value: 'PRIORIZACION', label: 'Priorización' },
 ]
 const BASE_TYPE_LABEL = {
-  CHURN: 'Churn', ACTIVE_F7D: 'Activos 7d', ACTIVE: 'Active 7d', ACTIVE_28: 'Active 8-28d',
+  CHURN: 'Churn', ACTIVE_F7D: 'Active', ACTIVE: 'Active', ACTIVE_28: 'Active 8-28d',
   RETENCION: 'Retención', AVA_8_14: 'AVA 8-14', PRIORIZACION: 'Priorización',
 }
 
@@ -790,95 +790,136 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
             )}
           </div>
 
-          {/* Preview de tiendas con checkboxes y buscador */}
+          {/* Preview de tiendas */}
           {preview && (() => {
-            const allPreviewStores = Object.values(preview).flatMap(({ stores }) => stores)
+            const allStores = Object.values(preview).flatMap(({ stores }) => stores)
             const q = storeSearch.toLowerCase()
-            const filtered = q
-              ? allPreviewStores.filter(s =>
-                  s.storeName?.toLowerCase().includes(q) || s.storeCode?.toLowerCase().includes(q))
-              : allPreviewStores
-            const totalSelected = selectedStoreIds.length
             const toggleStore = (id) => setSelStores(prev =>
               prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
             const toggleAll = () => setSelStores(
-              selectedStoreIds.length === allPreviewStores.length ? [] : allPreviewStores.map(s => s.id))
+              selectedStoreIds.length === allStores.length ? [] : allStores.map(s => s.id))
+
+            if (allStores.length === 0) return (
+              <div style={{ border: '1.5px dashed var(--border)', borderRadius: 12, padding: '28px 20px',
+                textAlign: 'center', background: 'var(--bg-secondary)' }}>
+                <p style={{ fontSize: 24, margin: 0 }}>🔍</p>
+                <p style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 14, margin: '8px 0 4px' }}>
+                  Sin tiendas para esta base
+                </p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: 0 }}>
+                  No hay tiendas que cumplan los criterios del tipo seleccionado para los farmers elegidos.
+                </p>
+              </div>
+            )
+
             return (
-              <div style={{ border: '2px solid rgba(59,130,246,0.35)', borderRadius: 12, overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
-                {/* Header */}
-                <div style={{ padding: '14px 18px', background: 'rgba(59,130,246,0.08)',
-                  borderBottom: '1px solid rgba(59,130,246,0.2)',
-                  display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Tiendas en la base
+              <div style={{ border: '1.5px solid var(--border)', borderRadius: 14, overflow: 'hidden',
+                background: 'var(--bg-card)' }}>
+
+                {/* Header barra resumen */}
+                <div style={{ padding: '12px 18px', background: 'var(--bg-secondary)',
+                  borderBottom: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {selectedStoreIds.length}
+                      <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}> / {allStores.length} tiendas seleccionadas</span>
                     </span>
-                    <span style={{ fontSize: 12, color: '#3b82f6', marginLeft: 10, fontWeight: 600 }}>
-                      {totalSelected} / {allPreviewStores.length} seleccionadas
-                    </span>
+                    {/* Barra de progreso de selección */}
+                    <div style={{ width: 80, height: 5, background: 'var(--bg-input)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 99, background: '#ff441f',
+                        width: `${allStores.length > 0 ? (selectedStoreIds.length / allStores.length) * 100 : 0}%`,
+                        transition: 'width 0.2s' }} />
+                    </div>
                   </div>
-                  <button onClick={toggleAll} style={{ fontSize: 12, fontWeight: 700,
-                    color: '#3b82f6', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.4)',
-                    borderRadius: 7, padding: '5px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {selectedStoreIds.length === allPreviewStores.length ? 'Desmarcar todas' : 'Marcar todas'}
-                  </button>
-                </div>
-                {/* Buscador */}
-                <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--border)',
-                  background: 'var(--bg-secondary)' }}>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                      fontSize: 14, color: 'var(--text-muted)', pointerEvents: 'none' }}>🔍</span>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {/* Buscador inline */}
                     <input
                       value={storeSearch}
                       onChange={e => setStoreSearch(e.target.value)}
-                      placeholder="Buscar tienda por nombre o código..."
-                      style={{ ...inputStyle, padding: '9px 12px 9px 34px', fontSize: 13, margin: 0,
-                        width: '100%', boxSizing: 'border-box' }}
+                      placeholder="🔍 Buscar tienda..."
+                      style={{ ...inputStyle, padding: '6px 12px', fontSize: 12, width: 180,
+                        margin: 0, height: 'auto' }}
                     />
+                    <button onClick={toggleAll} style={{ padding: '6px 14px', borderRadius: 7, fontSize: 12,
+                      fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg-input)',
+                      color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                      {selectedStoreIds.length === allStores.length ? 'Desmarcar todo' : 'Seleccionar todo'}
+                    </button>
                   </div>
-                  {q && (
-                    <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                      {filtered.length} resultado{filtered.length !== 1 ? 's' : ''} para "{storeSearch}"
-                    </p>
-                  )}
                 </div>
+
                 {/* Lista por farmer */}
-                <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+                <div style={{ maxHeight: 420, overflowY: 'auto' }}>
                   {Object.entries(preview).map(([fId, { name, stores }]) => {
-                    const visibleStores = q
+                    const visible = q
                       ? stores.filter(s => s.storeName?.toLowerCase().includes(q) || s.storeCode?.toLowerCase().includes(q))
                       : stores
-                    if (visibleStores.length === 0) return null
+                    if (visible.length === 0) return null
+                    const sel = visible.filter(s => selectedStoreIds.includes(s.id)).length
                     return (
-                      <div key={fId} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ padding: '8px 18px', background: 'rgba(0,0,0,0.04)',
-                          display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{name}</span>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)',
-                            background: 'var(--bg-input)', borderRadius: 20, padding: '1px 8px' }}>
-                            {visibleStores.filter(s => selectedStoreIds.includes(s.id)).length}/{visibleStores.length}
+                      <div key={fId}>
+                        {/* Cabecera farmer */}
+                        <div style={{ padding: '8px 18px', background: 'var(--bg-secondary)',
+                          borderBottom: '1px solid var(--border)',
+                          display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', top: 0, zIndex: 1 }}>
+                          <span style={{ fontSize: 16 }}>👤</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{name}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#ff441f',
+                            background: 'rgba(255,68,31,0.1)', borderRadius: 99, padding: '1px 8px' }}>
+                            {sel}/{visible.length}
                           </span>
                         </div>
-                        {visibleStores.map(s => (
-                          <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12,
-                            padding: '8px 18px 8px 30px', cursor: 'pointer',
-                            background: selectedStoreIds.includes(s.id) ? 'rgba(255,68,31,0.07)' : 'transparent',
-                            transition: 'background 0.1s', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                            <input type="checkbox" checked={selectedStoreIds.includes(s.id)}
-                              onChange={() => toggleStore(s.id)}
-                              style={{ accentColor: '#ff441f', width: 15, height: 15, flexShrink: 0 }} />
-                            <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>{s.storeName}</span>
-                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace',
-                              background: 'var(--bg-input)', padding: '2px 7px', borderRadius: 5 }}>{s.storeCode}</span>
-                          </label>
-                        ))}
+                        {/* Tabla de tiendas */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <tbody>
+                            {visible.map((s, i) => {
+                              const checked = selectedStoreIds.includes(s.id)
+                              return (
+                                <tr key={s.id}
+                                  onClick={() => toggleStore(s.id)}
+                                  style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)',
+                                    background: checked ? 'rgba(255,68,31,0.05)' : 'transparent',
+                                    transition: 'background 0.1s' }}
+                                  onMouseEnter={e => { if (!checked) e.currentTarget.style.background = 'var(--bg-secondary)' }}
+                                  onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent' }}>
+                                  <td style={{ width: 40, textAlign: 'center', paddingLeft: 14 }}>
+                                    <input type="checkbox" checked={checked} onChange={() => toggleStore(s.id)}
+                                      onClick={e => e.stopPropagation()}
+                                      style={{ accentColor: '#ff441f', width: 14, height: 14 }} />
+                                  </td>
+                                  <td style={{ padding: '10px 12px', fontWeight: 600, fontSize: 13,
+                                    color: 'var(--text-primary)' }}>
+                                    {s.storeName}
+                                  </td>
+                                  <td style={{ padding: '10px 8px', fontSize: 11, color: '#ff441f',
+                                    fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                    {s.storeCode}
+                                  </td>
+                                  <td style={{ padding: '10px 8px', fontSize: 11, color: 'var(--text-muted)',
+                                    whiteSpace: 'nowrap' }}>
+                                    {s.brandId || '—'}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                                    {checked
+                                      ? <span style={{ fontSize: 10, fontWeight: 700, color: '#16a34a',
+                                          background: 'rgba(34,197,94,0.1)', borderRadius: 99, padding: '2px 8px' }}>✓ Incluida</span>
+                                      : <span style={{ fontSize: 10, color: 'var(--text-muted)',
+                                          background: 'var(--bg-input)', borderRadius: 99, padding: '2px 8px' }}>Excluir</span>
+                                    }
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     )
                   })}
-                  {filtered.length === 0 && (
-                    <div style={{ padding: '28px 18px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                  {q && Object.values(preview).flatMap(({ stores }) =>
+                    stores.filter(s => s.storeName?.toLowerCase().includes(q) || s.storeCode?.toLowerCase().includes(q))
+                  ).length === 0 && (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                       Sin resultados para "{storeSearch}"
                     </div>
                   )}
