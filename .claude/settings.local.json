@@ -90,7 +90,23 @@
       "Bash(grep -rn \"ddl-auto\\\\|follow_up_last_30d\" src/main/resources/)",
       "Bash(grep -v \"//\\\\|import\\\\|export\")",
       "Bash(./mvnw -DskipTests clean dependency:list install -Pproduction -q)",
-      "Bash(./mvnw -DskipTests clean install -Pproduction -q)"
+      "Bash(./mvnw -DskipTests clean install -Pproduction -q)",
+      "Bash(copy \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\frontend\\\\dist\\\\assets\\\\images.png\" \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\\\\frontend\\\\src\\\\assets\\\\images.png\")",
+      "Bash(railway --version)",
+      "PowerShell(npm install *)",
+      "PowerShell(railway link *)",
+      "PowerShell(railway up *)",
+      "PowerShell(railway logs *)",
+      "PowerShell(railway service *)",
+      "PowerShell(Copy-Item *)",
+      "Bash(npx vercel *)",
+      "PowerShell(& \".\\\\mvnw.cmd\" compile -q 2>&1 | Select-Object -Last 20)",
+      "Bash(grep -v \"//\\\\|#\\\\|rgba\\\\|border\\\\|padding\\\\|margin\\\\|background\\\\|color\\\\|fontSize\\\\|fontWeight\\\\|border\\\\|border\")",
+      "PowerShell(cd \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\"; $mvn = \"C:\\\\Users\\\\camil\\\\.m2\\\\wrapper\\\\dists\\\\apache-maven-3.8.5-bin\\\\5i5jha092a3i37g0paqnfr15e0\\\\apache-maven-3.8.5\\\\bin\\\\mvn.cmd\"; & $mvn clean compile -q 2>&1 | Select-Object -Last 30)",
+      "PowerShell(cd \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\"; $mvn = \"C:\\\\Users\\\\camil\\\\.m2\\\\wrapper\\\\dists\\\\apache-maven-3.8.5-bin\\\\5i5jha092a3i37g0paqnfr15e0\\\\apache-maven-3.8.5\\\\bin\\\\mvn.cmd\"; & $mvn clean compile -q 2>&1 | Select-Object -Last 20)",
+      "PowerShell(cd \"C:\\\\Users\\\\camil\\\\rappi-automation\\\\rappi-automation\"; $mvn = \"C:\\\\Users\\\\camil\\\\.m2\\\\wrapper\\\\dists\\\\apache-maven-3.8.5-bin\\\\5i5jha092a3i37g0paqnfr15e0\\\\apache-maven-3.8.5\\\\bin\\\\mvn.cmd\"; & $mvn clean compile -q 2>&1 | Select-Object -Last 15)",
+      "Bash(xargs grep -l \"RequestMapping\\\\|RestController\")",
+      "Bash(xargs grep -l \"otros\\\\|backup\\\\|Telefono\")"
     ]
   }
 }

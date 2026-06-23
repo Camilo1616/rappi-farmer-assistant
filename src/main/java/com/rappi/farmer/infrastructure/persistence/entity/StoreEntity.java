@@ -32,6 +32,9 @@ public class StoreEntity {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
+    @Column(name = "backup_phone", length = 100)
+    private String backupPhone;
+
     @Column(length = 50)
     private String channel;
 

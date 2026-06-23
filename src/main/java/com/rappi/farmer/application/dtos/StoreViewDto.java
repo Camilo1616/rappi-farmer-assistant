@@ -56,4 +56,6 @@ public class StoreViewDto {
     private String channel;
     /** Fecha de credenciales de la tienda en la plataforma Rappi. */
     private LocalDate credentialsDate;
+    /** Teléfonos de respaldo (columna "OTROS TELEFONOS" del Excel). */
+    private String backupPhone;
 }

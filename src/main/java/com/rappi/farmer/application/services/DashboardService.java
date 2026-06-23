@@ -232,7 +232,7 @@ public class DashboardService {
                             s.getHadHandoff(), s.getLastLoginDate(), s.getDiasSinLogin(), s.getAgingStage(),
                             s.getChurnLabel(), s.getAvaLabel(), s.getFarmerEmail(), s.getFarmerId(),
                             s.getAvaMtd(), s.getAvaL4w(), s.getAvaL7d(), s.getDashboardSegment(),
-                            s.getLastContact(), s.getChannel(), s.getCredentialsDate());
+                            s.getLastContact(), s.getChannel(), s.getCredentialsDate(), s.getBackupPhone());
                 }).toList();
 
         return new DashboardDataDto(
@@ -424,7 +424,8 @@ public class DashboardService {
                 null,
                 null,
                 store.getChannel(),
-                store.getCredentialsDate()
+                store.getCredentialsDate(),
+                store.getBackupPhone()
         );
     }
 
@@ -552,6 +553,6 @@ public class DashboardService {
                 original.getAgingStage(), original.getChurnLabel(), original.getAvaLabel(),
                 original.getFarmerEmail(), original.getFarmerId(), original.getAvaMtd(), original.getAvaL4w(), original.getAvaL7d(),
                 original.getDashboardSegment(), original.getLastContact(), original.getChannel(),
-                original.getCredentialsDate());
+                original.getCredentialsDate(), original.getBackupPhone());
     }
 }

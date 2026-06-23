@@ -16,6 +16,7 @@ public class Store {
     private String brandId;
     private String storeName;
     private String phoneNumber;
+    private String backupPhone;
     private String channel;
     private LocalDate onboardingDate;
     private Boolean active;

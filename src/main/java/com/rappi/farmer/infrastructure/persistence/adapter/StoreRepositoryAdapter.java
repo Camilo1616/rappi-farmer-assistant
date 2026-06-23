@@ -189,6 +189,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
         entity.setBrandId(store.getBrandId());
         entity.setStoreName(store.getStoreName());
         entity.setPhoneNumber(store.getPhoneNumber());
+        entity.setBackupPhone(store.getBackupPhone());
         entity.setChannel(store.getChannel());
         entity.setOnboardingDate(store.getOnboardingDate());
         entity.setActive(store.getActive() != null ? store.getActive() : true);
@@ -217,7 +218,7 @@ public class StoreRepositoryAdapter implements StoreRepository {
         String farmerEmail = e.getUser() != null ? e.getUser().getEmail() : null;
         Store s = new Store(
                 e.getId(), e.getStoreCode(), e.getBrandId(), e.getStoreName(),
-                e.getPhoneNumber(), e.getChannel(), e.getOnboardingDate(),
+                e.getPhoneNumber(), e.getBackupPhone(), e.getChannel(), e.getOnboardingDate(),
                 e.getActive(), e.getConnectionPercentage(), e.getCurrentStatus(),
                 e.getHadHandoff(), e.getHandoffActivatedAt(), farmerId, e.getAging(),
                 e.getAgingStage(), e.getLastLoginDate(),

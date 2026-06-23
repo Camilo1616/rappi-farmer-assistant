@@ -907,6 +907,176 @@ function StepMessage({ message, onChange, selectedStores = [], onAiMessages, onM
   )
 }
 
+/* ── Modal de confirmación antes de enviar ── */
+function SendConfirmModal({ stores, allStores, aiMode, onConfirm, onCancel }) {
+  // phoneChoice: { [storeId]: 'primary' | 'backup' | 'custom' }
+  const [phoneChoice, setPhoneChoice] = useState(() => {
+    const init = {}
+    stores.forEach(s => { init[s.id] = 'primary' })
+    return init
+  })
+  // customPhone: { [storeId]: string } — teléfono editado manualmente
+  const [customPhone, setCustomPhone] = useState({})
+  const [editingId, setEditingId] = useState(null)
+
+  const resolvePhone = (s) => {
+    const c = phoneChoice[s.id]
+    if (c === 'custom') return customPhone[s.id] ?? s.phoneNumber ?? ''
+    if (c === 'backup') return s.backupPhone ?? ''
+    return s.phoneNumber ?? ''
+  }
+
+  const handleConfirm = () => {
+    const overrides = {}
+    stores.forEach(s => {
+      const phone = resolvePhone(s)
+      if (phone !== s.phoneNumber) overrides[s.id] = phone
+    })
+    onConfirm(overrides)
+  }
+
+  const readyCount = stores.filter(s => resolvePhone(s)).length
+
+  return createPortal(
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 10000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    }}>
+      <div style={{
+        background: '#1F2937', borderRadius: 16, padding: '24px 0 0',
+        width: '100%', maxWidth: 680, maxHeight: '85vh',
+        display: 'flex', flexDirection: 'column',
+        border: '1.5px solid #374151', boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '0 24px 16px', borderBottom: '1px solid #374151' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h3 style={{ color: '#F9FAFB', fontWeight: 700, fontSize: '1.1rem', margin: 0 }}>
+                📤 Confirmar envío
+              </h3>
+              <p style={{ color: '#9CA3AF', fontSize: 12, margin: '4px 0 0' }}>
+                {stores.length} tiendas seleccionadas · {readyCount} con número listo
+                {aiMode && ' · Mensajes personalizados IA'}
+              </p>
+            </div>
+            <button onClick={onCancel} style={{ background: 'none', border: 'none', color: '#6B7280', fontSize: 18, cursor: 'pointer' }}>✕</button>
+          </div>
+        </div>
+
+        {/* Tabla */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 24px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ color: '#6B7280', textAlign: 'left' }}>
+                <th style={{ padding: '6px 8px', fontWeight: 600, borderBottom: '1px solid #374151' }}>Tienda</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600, borderBottom: '1px solid #374151' }}>Store ID</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600, borderBottom: '1px solid #374151' }}>Brand ID</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600, borderBottom: '1px solid #374151', minWidth: 200 }}>Número a enviar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stores.map(s => {
+                const hasPrimary = !!s.phoneNumber
+                const hasBackup  = !!s.backupPhone
+                const choice     = phoneChoice[s.id]
+                const phone      = resolvePhone(s)
+                const isEditing  = editingId === s.id
+                return (
+                  <tr key={s.id} style={{ borderBottom: '1px solid #1F2937' }}>
+                    <td style={{ padding: '8px 8px', color: '#F9FAFB', fontWeight: 600 }}>{s.storeName}</td>
+                    <td style={{ padding: '8px 8px', color: '#9CA3AF' }}>{s.storeCode}</td>
+                    <td style={{ padding: '8px 8px', color: '#9CA3AF' }}>{s.brandId}</td>
+                    <td style={{ padding: '8px 8px' }}>
+                      {isEditing ? (
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <input
+                            autoFocus
+                            type="tel"
+                            value={customPhone[s.id] ?? phone}
+                            onChange={e => setCustomPhone(p => ({ ...p, [s.id]: e.target.value.replace(/\D/g, '') }))}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') { setPhoneChoice(c => ({ ...c, [s.id]: 'custom' })); setEditingId(null) }
+                              if (e.key === 'Escape') { setEditingId(null) }
+                            }}
+                            style={{ flex: 1, padding: '4px 8px', borderRadius: 6, fontSize: 11, background: '#111827', border: '1.5px solid #7C3AED', color: '#F9FAFB', outline: 'none' }}
+                          />
+                          <button onClick={() => { setPhoneChoice(c => ({ ...c, [s.id]: 'custom' })); setEditingId(null) }}
+                            style={{ padding: '3px 8px', borderRadius: 5, border: 'none', background: '#22C55E', color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>✓</button>
+                          <button onClick={() => setEditingId(null)}
+                            style={{ padding: '3px 6px', borderRadius: 5, border: 'none', background: 'transparent', color: '#6B7280', fontSize: 11, cursor: 'pointer' }}>✕</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                          {/* Principal */}
+                          <button
+                            onClick={() => setPhoneChoice(c => ({ ...c, [s.id]: 'primary' }))}
+                            style={{
+                              padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: hasPrimary ? 'pointer' : 'not-allowed',
+                              background: choice === 'primary' ? '#3B82F622' : 'transparent',
+                              border: `1.5px solid ${choice === 'primary' ? '#3B82F6' : '#374151'}`,
+                              color: choice === 'primary' ? '#3B82F6' : hasPrimary ? '#9CA3AF' : '#4B5563',
+                              opacity: hasPrimary ? 1 : 0.4,
+                            }}
+                            disabled={!hasPrimary}
+                            title={hasPrimary ? `Principal: ${s.phoneNumber}` : 'Sin número principal'}
+                          >
+                            📞 {hasPrimary ? s.phoneNumber : 'Sin número'}
+                          </button>
+                          {/* Respaldo */}
+                          {hasBackup && (
+                            <button
+                              onClick={() => setPhoneChoice(c => ({ ...c, [s.id]: 'backup' }))}
+                              style={{
+                                padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                background: choice === 'backup' ? '#F59E0B22' : 'transparent',
+                                border: `1.5px solid ${choice === 'backup' ? '#F59E0B' : '#374151'}`,
+                                color: choice === 'backup' ? '#F59E0B' : '#9CA3AF',
+                              }}
+                              title={`Respaldo: ${s.backupPhone}`}
+                            >
+                              📋 {s.backupPhone}
+                            </button>
+                          )}
+                          {/* Editar/custom */}
+                          {choice === 'custom' && customPhone[s.id] && (
+                            <span style={{ fontSize: 11, color: '#22C55E', fontWeight: 600 }}>✓ {customPhone[s.id]}</span>
+                          )}
+                          <button
+                            onClick={() => { setEditingId(s.id) }}
+                            style={{ padding: '2px 6px', borderRadius: 99, fontSize: 10, cursor: 'pointer', background: 'transparent', border: '1px solid #374151', color: '#6B7280' }}
+                            title="Editar número manualmente"
+                          >✏️</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #374151', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} style={{
+            padding: '9px 20px', borderRadius: 8, border: '1.5px solid #374151',
+            background: 'transparent', color: '#9CA3AF', fontWeight: 600, fontSize: 13, cursor: 'pointer',
+          }}>Cancelar</button>
+          <button onClick={handleConfirm} disabled={readyCount === 0} style={{
+            padding: '9px 24px', borderRadius: 8, border: 'none',
+            background: readyCount > 0 ? '#22C55E' : '#374151', color: '#fff',
+            fontWeight: 700, fontSize: 13, cursor: readyCount > 0 ? 'pointer' : 'not-allowed',
+          }}>
+            📤 Enviar a {readyCount} tienda{readyCount !== 1 ? 's' : ''}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 /* ── Progreso ── */
 function SendProgress({ progress, onClose, paused, onPause, onResume }) {
   const pct = progress.total > 0 ? Math.round((progress.procesados / progress.total) * 100) : 0
@@ -982,6 +1152,7 @@ export default function WhatsappPage() {
   const [historyKey,     setHistoryKey]     = useState(0)
   const [loggingOut,     setLoggingOut]     = useState(false)
   const [paused,         setPaused]         = useState(false)
+  const [showConfirm,    setShowConfirm]    = useState(false)
 
   const loadStatus = async () => {
     try {
@@ -1162,25 +1333,32 @@ export default function WhatsappPage() {
 
   const handleSend = () => {
     if (!selected.size || !message.trim() || !status.connected) return
-    const initial = { total: selected.size, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
-    progressStore.update({ sending: true, progress: initial })
-    sendMasivo(Array.from(selected), message,
-      () => {},
-      () => { loadStatus(); loadSentToday() },
-      () => {}
-    )
+    setShowConfirm(true)
   }
 
   const handleSendAi = () => {
     if (!aiMessages.length || !status.connected) return
-    const initial = { total: aiMessages.length, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
-    progressStore.update({ sending: true, progress: initial })
-    sendPersonalized(
-      aiMessages.map(m => ({ storeId: m.storeId, message: m.message })),
-      () => {},
-      () => { loadStatus(); loadSentToday() },
-      () => {}
-    )
+    setShowConfirm(true)
+  }
+
+  // phoneOverrides: { [storeId]: customPhone } — solo las tiendas con número distinto al principal
+  const handleConfirmedSend = (phoneOverrides) => {
+    setShowConfirm(false)
+    if (aiMessages.length > 0) {
+      const msgs = aiMessages.map(m => ({
+        storeId: m.storeId,
+        message: m.message,
+        ...(phoneOverrides[m.storeId] ? { phone: phoneOverrides[m.storeId] } : {}),
+      }))
+      const initial = { total: msgs.length, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
+      progressStore.update({ sending: true, progress: initial })
+      sendPersonalized(msgs, () => {}, () => { loadStatus(); loadSentToday() }, () => {})
+    } else {
+      const storeIds = Array.from(selected)
+      const initial = { total: storeIds.length, procesados:0, enviados:0, errores:0, storeName:'', status:'INICIANDO', finalizado:false, waitSeconds:0 }
+      progressStore.update({ sending: true, progress: initial })
+      sendMasivo(storeIds, message, phoneOverrides, () => {}, () => { loadStatus(); loadSentToday() }, () => {})
+    }
   }
 
   const handleTest = async () => {
@@ -1212,8 +1390,24 @@ export default function WhatsappPage() {
     )
   }
 
+  // Tiendas seleccionadas como array (deduplicado por id)
+  const selectedStoresList = [...new Map(
+    Object.values(dashStores).flat()
+      .filter(s => s && selected.has(s.id))
+      .map(s => [s.id, s])
+  ).values()]
+
   return (
     <div className={styles.page}>
+      {showConfirm && (
+        <SendConfirmModal
+          stores={selectedStoresList}
+          allStores={Object.values(dashStores).flat()}
+          aiMode={aiMessages.length > 0}
+          onConfirm={handleConfirmedSend}
+          onCancel={() => setShowConfirm(false)}
+        />
+      )}
       {showPhoneSetup && (
         <WaPhoneSetupModal onSave={opt => {
           setShowPhoneSetup(false)

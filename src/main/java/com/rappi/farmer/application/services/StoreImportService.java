@@ -201,6 +201,7 @@ public class StoreImportService {
         store.setStoreName(row.getStoreName());
         if (row.getBrandId() != null) store.setBrandId(row.getBrandId());
         store.setPhoneNumber(row.getPhoneNumber());
+        if (row.getBackupPhone() != null) store.setBackupPhone(row.getBackupPhone());
         store.setChannel(row.getChannel());
         store.setConnectionPercentage(row.getConnectionPercentage());
         store.setCurrentStatus(row.getCurrentStatus());

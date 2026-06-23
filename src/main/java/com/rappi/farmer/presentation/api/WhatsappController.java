@@ -134,13 +134,19 @@ public class WhatsappController {
                 .limit(Math.max(remaining, 0))
                 .map(id -> storeRepository.findById(id).orElse(null))
                 .filter(java.util.Objects::nonNull)
-                .map(store -> new StoreViewDto(
-                        store.getId(), store.getStoreCode(), store.getBrandId(), store.getStoreName(),
-                        store.getPhoneNumber(), 0, null,
-                        store.getConnectionPercentage(), store.getCurrentStatus(),
-                        null, null, null, store.getHadHandoff(), store.getLastLoginDate(),
-                        null, null, null, null, store.getFarmerEmail(), store.getFarmerId(),
-                        null, null, null, null, null, store.getChannel(), null))
+                .map(store -> {
+                    // Aplicar override de teléfono si el farmer eligió uno diferente
+                    String phone = request.phoneOverrides() != null && request.phoneOverrides().containsKey(store.getId())
+                            ? request.phoneOverrides().get(store.getId())
+                            : store.getPhoneNumber();
+                    return new StoreViewDto(
+                            store.getId(), store.getStoreCode(), store.getBrandId(), store.getStoreName(),
+                            phone, 0, null,
+                            store.getConnectionPercentage(), store.getCurrentStatus(),
+                            null, null, null, store.getHadHandoff(), store.getLastLoginDate(),
+                            null, null, null, null, store.getFarmerEmail(), store.getFarmerId(),
+                            null, null, null, null, null, store.getChannel(), null, store.getBackupPhone());
+                })
                 .toList();
 
         executor.submit(() -> {
@@ -184,7 +190,7 @@ public class WhatsappController {
                         store.getConnectionPercentage(), store.getCurrentStatus(),
                         null, null, null, store.getHadHandoff(), store.getLastLoginDate(),
                         null, null, null, null, store.getFarmerEmail(), store.getFarmerId(),
-                        null, null, null, null, null, store.getChannel(), null))
+                        null, null, null, null, null, store.getChannel(), null, store.getBackupPhone()))
                 .toList();
 
         executor.submit(() -> {
@@ -221,7 +227,8 @@ public class WhatsappController {
     }
 
     public record TestRequest(@NotBlank String phone, @NotBlank String message) {}
-    public record SendRequest(@NotEmpty List<Long> storeIds, @NotBlank String template) {}
+    public record SendRequest(@NotEmpty List<Long> storeIds, @NotBlank String template,
+                              Map<Long, String> phoneOverrides) {}
     public record StoreMessage(Long storeId, String message) {}
     public record SendPersonalizedRequest(@NotEmpty List<StoreMessage> storeMessages) {}
 }

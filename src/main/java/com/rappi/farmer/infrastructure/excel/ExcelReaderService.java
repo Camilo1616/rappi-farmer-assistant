@@ -32,6 +32,7 @@ public class ExcelReaderService {
     private static final String COL_BRAND_ID       = "COUNTRY BRAND ID";
     private static final String COL_STORE_NAME     = "STORE NAME";
     private static final String COL_PHONE          = "TELEFONO_PRINCIPAL";
+    private static final String COL_BACKUP_PHONE   = "OTROS TELEFONOS";
     private static final String COL_CHANNEL        = "CANAL";
     private static final String COL_ONBOARDING     = "Fecha inicio store";
     private static final String COL_CONNECTION     = "AVA_L4W";
@@ -87,6 +88,7 @@ public class ExcelReaderService {
                             .brandId(getString(row, cols, COL_BRAND_ID))
                             .storeName(getString(row, cols, COL_STORE_NAME))
                             .phoneNumber(getString(row, cols, COL_PHONE))
+                            .backupPhone(getString(row, cols, COL_BACKUP_PHONE))
                             .channel(getString(row, cols, COL_CHANNEL))
                             .onboardingDate(getDate(row, cols, COL_ONBOARDING))
                             .connectionPercentage(getPercentage(row, cols, COL_CONNECTION))

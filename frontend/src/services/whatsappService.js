@@ -63,7 +63,8 @@ export const sendPersonalized = (storeMessages, onProgress, onDone, onError) => 
 }
 
 // SSE — envío masivo con template único
-export const sendMasivo = (storeIds, template, onProgress, onDone, onError) => {
+// phoneOverrides: { [storeId]: customPhone } — opcional, sobreescribe el número de la tienda
+export const sendMasivo = (storeIds, template, phoneOverrides, onProgress, onDone, onError) => {
   const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
   progressStore.update({ sending: true })
   fetch(`${BASE}/whatsapp/send`, {
@@ -72,7 +73,7 @@ export const sendMasivo = (storeIds, template, onProgress, onDone, onError) => {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${localStorage.getItem('token')}`,
     },
-    body: JSON.stringify({ storeIds, template }),
+    body: JSON.stringify({ storeIds, template, phoneOverrides: phoneOverrides || {} }),
   }).then(res => readSseStream(res, onProgress, onDone, onError))
     .catch(err => { progressStore.update({ sending: false }); onError(err) })
 }
