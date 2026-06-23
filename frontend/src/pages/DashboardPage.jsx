@@ -5,7 +5,9 @@ import { useRealtime } from '../hooks/useRealtime'
 import { logout, heartbeat } from '../services/authService'
 import { clearStores, getImportStatus } from '../services/importService'
 import { getDashboard, getBasesForFarmer, updateBaseStatus,
-         getUnreadCount, getNotifications, markAllNotifRead } from '../services/dashboardService'
+         getUnreadCount, getNotifications, markAllNotifRead,
+         registerManagement } from '../services/dashboardService'
+import { createPortal } from 'react-dom'
 import { getStores } from '../services/storeService'
 import api from '../services/api'
 import AiAssistant from '../components/AiAssistant'
@@ -258,10 +260,10 @@ export default function DashboardPage() {
     })
   }
 
-  const handleBaseStatus = async (assignmentId, nextStatus) => {
+  const handleBaseStatus = async (assignmentId, nextStatus, comment) => {
     if (!nextStatus) return
     try {
-      await updateBaseStatus(assignmentId, nextStatus)
+      await updateBaseStatus(assignmentId, nextStatus, comment)
       await loadBases()
     } catch {}
   }
@@ -541,7 +543,7 @@ export default function DashboardPage() {
               ) : (
                 <div className={styles.sections}>
                   {bases.map(base => (
-                    <BaseCard key={base.id} base={base} onStatusChange={handleBaseStatus} />
+                    <BaseCard key={base.assignmentId} base={base} onStatusChange={handleBaseStatus} />
                   ))}
                 </div>
               )}
@@ -902,41 +904,188 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
 }
 
 /* ── Tarjeta de base asignada ── */
+const TIPOS = ['WHATSAPP','LLAMADA','SAC','SEGUIMIENTO','ACTIVACION']
+const RESULTADOS = ['EFECTIVA','NO_CONTACTO','NO_RESPONDE','PROBLEMA_TECNICO','REQUIERE_SEGUIMIENTO']
+const RESULTADO_LABEL = {
+  EFECTIVA: 'Efectiva',
+  NO_CONTACTO: 'No contacto',
+  NO_RESPONDE: 'No responde',
+  PROBLEMA_TECNICO: 'Problema técnico',
+  REQUIERE_SEGUIMIENTO: 'Requiere seguimiento',
+}
+
+function StoreContextMenu({ x, y, store, onClose }) {
+  const [step, setStep] = useState('tipo') // 'tipo' | 'form'
+  const [tipo, setTipo] = useState(null)
+  const [resultado, setResultado] = useState('')
+  const [comentario, setComentario] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [done, setDone] = useState(false)
+  const ref = useRef()
+
+  useEffect(() => {
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [onClose])
+
+  const handleTipo = (t) => { setTipo(t); setStep('form') }
+
+  const handleSave = async () => {
+    if (!resultado) return
+    setSaving(true)
+    try {
+      await registerManagement(store.id, { managementType: tipo, resultType: resultado, comments: comentario })
+      setDone(true)
+      setTimeout(onClose, 800)
+    } catch {
+      setSaving(false)
+    }
+  }
+
+  // ajustar posición para no salir de pantalla
+  const menuW = 220, menuH = step === 'tipo' ? 220 : 340
+  const px = Math.min(x, window.innerWidth - menuW - 10)
+  const py = Math.min(y, window.innerHeight - menuH - 10)
+
+  return createPortal(
+    <div ref={ref} className={styles.ctxMenu} style={{ left: px, top: py }}>
+      {done ? (
+        <div className={styles.ctxDone}>✓ Gestión registrada</div>
+      ) : step === 'tipo' ? (
+        <>
+          <div className={styles.ctxTitle}>{store.storeName}</div>
+          <div className={styles.ctxSub}>Selecciona tipo de gestión</div>
+          {TIPOS.map(t => (
+            <button key={t} className={styles.ctxItem} onClick={() => handleTipo(t)}>{t}</button>
+          ))}
+        </>
+      ) : (
+        <>
+          <div className={styles.ctxTitle}>{store.storeName}</div>
+          <div className={styles.ctxTipoBadge}>{tipo}</div>
+          <div className={styles.ctxFieldLabel}>Resultado *</div>
+          <select
+            className={styles.ctxSelect}
+            value={resultado}
+            onChange={e => setResultado(e.target.value)}
+          >
+            <option value="">— selecciona —</option>
+            {RESULTADOS.map(r => <option key={r} value={r}>{RESULTADO_LABEL[r]}</option>)}
+          </select>
+          <div className={styles.ctxFieldLabel}>Comentario</div>
+          <textarea
+            className={styles.ctxTextarea}
+            rows={3}
+            placeholder="Opcional..."
+            value={comentario}
+            onChange={e => setComentario(e.target.value)}
+          />
+          <div className={styles.ctxActions}>
+            <button className={styles.ctxBack} onClick={() => setStep('tipo')}>← Tipo</button>
+            <button
+              className={styles.ctxSave}
+              disabled={!resultado || saving}
+              onClick={handleSave}
+            >{saving ? '...' : 'Registrar'}</button>
+          </div>
+        </>
+      )}
+    </div>,
+    document.body
+  )
+}
+
 function BaseCard({ base, onStatusChange }) {
   const [open, setOpen] = useState(false)
+  const [comment, setComment] = useState(base.farmerComment ?? '')
+  const [saving, setSaving] = useState(false)
+  const [ctxMenu, setCtxMenu] = useState(null) // { x, y, store }
   const nextStatus = STATUS_NEXT[base.status] ?? null
   const { bg, color } = STATUS_COLOR[base.status] ?? {}
+  const isCompleted = base.status === 'COMPLETADO'
+
+  const handleAdvance = async (e) => {
+    e.stopPropagation()
+    if (!comment.trim()) return
+    setSaving(true)
+    try {
+      await onStatusChange(base.assignmentId, nextStatus, comment.trim())
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className={styles.baseCard}>
       <div className={styles.baseHeader} onClick={() => setOpen(o=>!o)}>
         <div className={styles.baseLeft}>
-          <span className={styles.baseType}>{base.baseType}</span>
+          <span className={styles.baseType}>{base.type ?? base.baseType}</span>
           <span className={styles.baseStoreCount}>{base.stores?.length ?? 0} tiendas</span>
           <span className={styles.baseStatusBadge} style={{ background: bg, color }}>{base.status?.replace(/_/g,' ')}</span>
         </div>
         <div className={styles.baseRight}>
-          {nextStatus && (
-            <button
-              className={styles.btnAdvance}
-              onClick={e => { e.stopPropagation(); onStatusChange(base.id, nextStatus) }}
-            >
-              Avanzar → {nextStatus.replace(/_/g,' ')}
-            </button>
-          )}
           <span className={styles.chevronSm}>{open ? '▲' : '▼'}</span>
         </div>
       </div>
 
-      {open && base.stores?.length > 0 && (
-        <div className={styles.baseStores}>
-          {base.stores.map(s => (
-            <div key={s.id} className={styles.baseStoreRow}>
-              <span className={styles.baseStoreName}>{s.storeName}</span>
-              <span className={styles.baseStoreCode}>{s.storeCode}</span>
+      {open && (
+        <>
+          {base.stores?.length > 0 && (
+            <div className={styles.baseStores}>
+              <div className={styles.baseStoresHint}>Click derecho en una tienda para tipificar</div>
+              {base.stores.map(s => (
+                <div
+                  key={s.id}
+                  className={styles.baseStoreRow}
+                  onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, store: s }) }}
+                  title="Click derecho para tipificar"
+                >
+                  <span className={styles.baseStoreName}>{s.storeName}</span>
+                  <span className={styles.baseStoreCode}>{s.storeCode}</span>
+                  <span className={styles.baseStoreCtxHint}>⋮</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+          {ctxMenu && (
+            <StoreContextMenu
+              x={ctxMenu.x}
+              y={ctxMenu.y}
+              store={ctxMenu.store}
+              onClose={() => setCtxMenu(null)}
+            />
+          )}
+
+          {/* Sección de comentario obligatorio */}
+          <div className={styles.baseCommentSection}>
+            <label className={styles.baseCommentLabel}>
+              Comentario {!isCompleted && <span style={{ color: 'var(--danger, #e53e3e)' }}>*</span>}
+            </label>
+            {isCompleted ? (
+              <p className={styles.baseCommentReadonly}>{comment || '—'}</p>
+            ) : (
+              <textarea
+                className={styles.baseCommentTextarea}
+                rows={3}
+                placeholder="Escribe un comentario sobre tu gestión de esta base (obligatorio para avanzar)..."
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+                onClick={e => e.stopPropagation()}
+              />
+            )}
+            {nextStatus && !isCompleted && (
+              <button
+                className={styles.btnAdvance}
+                disabled={!comment.trim() || saving}
+                onClick={handleAdvance}
+                style={{ marginTop: 8, opacity: comment.trim() ? 1 : 0.45 }}
+              >
+                {saving ? 'Guardando...' : `Avanzar → ${nextStatus.replace(/_/g,' ')}`}
+              </button>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

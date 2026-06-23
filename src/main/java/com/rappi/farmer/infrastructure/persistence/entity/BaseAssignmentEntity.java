@@ -33,4 +33,7 @@ public class BaseAssignmentEntity {
 
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
+
+    @Column(name = "farmer_comment", columnDefinition = "TEXT")
+    private String farmerComment;
 }

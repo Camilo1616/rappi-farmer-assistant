@@ -72,7 +72,7 @@ public class BaseController {
             }
             BaseAssignmentEntity assignment = new BaseAssignmentEntity(
                     null, saved.getId(), farmerId, "SIN_LEER",
-                    null, null, null, LocalDateTime.now());
+                    null, null, null, LocalDateTime.now(), null);
             assignmentRepo.save(assignment);
 
             // Notificar al farmer
@@ -147,6 +147,7 @@ public class BaseController {
             dto.put("status", a.getStatus());
             dto.put("assignedAt", a.getAssignedAt());
             dto.put("readAt", a.getReadAt());
+            dto.put("farmerComment", a.getFarmerComment());
             // IDs de tiendas guardadas en la base, filtradas por las que pertenecen al farmer
             List<Long> baseStoreIds = baseStoreRepo.findByBaseId(base.getId()).stream()
                     .map(com.rappi.farmer.infrastructure.persistence.entity.BaseStoreEntity::getStoreId)
@@ -187,6 +188,9 @@ public class BaseController {
         }
         if ("COMPLETADO".equals(req.status())) {
             assignment.setCompletedAt(LocalDateTime.now());
+        }
+        if (req.farmerComment() != null && !req.farmerComment().isBlank()) {
+            assignment.setFarmerComment(req.farmerComment());
         }
         assignmentRepo.save(assignment);
 
@@ -440,5 +444,5 @@ public class BaseController {
             String churnFilter,
             Integer activeDays) {}
 
-    public record StatusRequest(String status) {}
+    public record StatusRequest(String status, String farmerComment) {}
 }

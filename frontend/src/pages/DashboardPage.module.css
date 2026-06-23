@@ -1147,6 +1147,204 @@
 .baseStoreName { font-size: 13px; color: var(--text-primary); }
 .baseStoreCode { font-size: 11px; color: var(--text-muted); font-family: monospace; }
 
+.baseCommentSection {
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-input, rgba(0,0,0,0.04));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.baseCommentLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.baseCommentTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 72px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.baseCommentTextarea:focus { border-color: var(--primary, #FF441F); }
+.baseCommentTextarea::placeholder { color: var(--text-muted); }
+
+.baseCommentReadonly {
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.btnAdvance:disabled { cursor: not-allowed; }
+
+.baseStoresHint {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 6px 20px 2px;
+  font-style: italic;
+}
+
+.baseStoreCtxHint {
+  font-size: 14px;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+  cursor: context-menu;
+}
+.baseStoreRow:hover .baseStoreCtxHint { opacity: 1; }
+
+/* ── Context Menu de tipificación ── */
+.ctxMenu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+  min-width: 220px;
+  padding: 10px 0 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ctxTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 4px 16px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ctxSub {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 0 16px 8px;
+}
+
+.ctxItem {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.ctxItem:hover { background: var(--bg-input); }
+
+.ctxTipoBadge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255,68,31,0.12);
+  color: #FF6B4A;
+  padding: 2px 10px;
+  border-radius: 99px;
+  margin: 4px 16px 8px;
+  display: inline-block;
+  align-self: flex-start;
+}
+
+.ctxFieldLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 16px 4px;
+}
+
+.ctxSelect {
+  margin: 0 16px 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+.ctxTextarea {
+  margin: 0 16px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+}
+.ctxTextarea::placeholder { color: var(--text-muted); }
+
+.ctxActions {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px;
+  gap: 8px;
+}
+
+.ctxBack {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+}
+.ctxBack:hover { background: var(--bg-input); }
+
+.ctxSave {
+  flex: 1;
+  background: #FF441F;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.ctxSave:disabled { opacity: 0.4; cursor: not-allowed; }
+.ctxSave:not(:disabled):hover { opacity: 0.85; }
+
+.ctxDone {
+  padding: 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #48bb78;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    RESPONSIVE — Tablet (≤900px) y Mobile (≤640px)
    ══════════════════════════════════════════════════════════════════ */

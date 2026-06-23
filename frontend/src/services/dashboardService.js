@@ -3,8 +3,8 @@ import api from './api'
 export const getDashboard      = () => api.get('/dashboard')
 export const getLiderDashboard = () => api.get('/dashboard/lider')
 export const getBasesForFarmer = () => api.get('/bases/farmer')
-export const updateBaseStatus  = (assignmentId, status) =>
-  api.patch(`/bases/assignment/${assignmentId}/status`, { status })
+export const updateBaseStatus  = (assignmentId, status, farmerComment) =>
+  api.patch(`/bases/assignment/${assignmentId}/status`, { status, farmerComment })
 export const getNotifications       = () => api.get('/bases/notifications')
 export const getUnreadCount         = () => api.get('/bases/notifications/unread-count')
 export const markAllNotifRead       = () => api.post('/bases/notifications/mark-all-read')
