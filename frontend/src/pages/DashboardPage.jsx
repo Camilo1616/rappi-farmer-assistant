@@ -915,8 +915,7 @@ const RESULTADO_LABEL = {
 }
 
 function StoreContextMenu({ x, y, store, onClose }) {
-  const [step, setStep] = useState('tipo') // 'tipo' | 'form'
-  const [tipo, setTipo] = useState(null)
+  const [tipo, setTipo] = useState('')
   const [resultado, setResultado] = useState('')
   const [comentario, setComentario] = useState('')
   const [saving, setSaving] = useState(false)
@@ -929,65 +928,63 @@ function StoreContextMenu({ x, y, store, onClose }) {
     return () => document.removeEventListener('mousedown', close)
   }, [onClose])
 
-  const handleTipo = (t) => { setTipo(t); setStep('form') }
-
   const handleSave = async () => {
-    if (!resultado) return
+    if (!tipo || !resultado) return
     setSaving(true)
     try {
       await registerManagement(store.id, { managementType: tipo, resultType: resultado, comments: comentario })
       setDone(true)
-      setTimeout(onClose, 800)
+      setTimeout(onClose, 900)
     } catch {
       setSaving(false)
     }
   }
 
-  // ajustar posición para no salir de pantalla
-  const menuW = 220, menuH = step === 'tipo' ? 220 : 340
-  const px = Math.min(x, window.innerWidth - menuW - 10)
-  const py = Math.min(y, window.innerHeight - menuH - 10)
+  const px = Math.min(x, window.innerWidth - 290)
+  const py = Math.min(y, window.innerHeight - 400)
 
   return createPortal(
     <div ref={ref} className={styles.ctxMenu} style={{ left: px, top: py }}>
       {done ? (
         <div className={styles.ctxDone}>✓ Gestión registrada</div>
-      ) : step === 'tipo' ? (
-        <>
-          <div className={styles.ctxTitle}>{store.storeName}</div>
-          <div className={styles.ctxSub}>Selecciona tipo de gestión</div>
-          {TIPOS.map(t => (
-            <button key={t} className={styles.ctxItem} onClick={() => handleTipo(t)}>{t}</button>
-          ))}
-        </>
       ) : (
         <>
           <div className={styles.ctxTitle}>{store.storeName}</div>
-          <div className={styles.ctxTipoBadge}>{tipo}</div>
+          <div className={styles.ctxSub}>{store.storeCode}</div>
+
+          <div className={styles.ctxFieldLabel}>Tipo de gestión *</div>
+          <div className={styles.ctxChips}>
+            {TIPOS.map(t => (
+              <button
+                key={t}
+                className={`${styles.ctxChip} ${tipo === t ? styles.ctxChipActive : ''}`}
+                onClick={() => setTipo(t)}
+              >{t}</button>
+            ))}
+          </div>
+
           <div className={styles.ctxFieldLabel}>Resultado *</div>
-          <select
-            className={styles.ctxSelect}
-            value={resultado}
-            onChange={e => setResultado(e.target.value)}
-          >
+          <select className={styles.ctxSelect} value={resultado} onChange={e => setResultado(e.target.value)}>
             <option value="">— selecciona —</option>
             {RESULTADOS.map(r => <option key={r} value={r}>{RESULTADO_LABEL[r]}</option>)}
           </select>
+
           <div className={styles.ctxFieldLabel}>Comentario</div>
           <textarea
             className={styles.ctxTextarea}
-            rows={3}
+            rows={2}
             placeholder="Opcional..."
             value={comentario}
             onChange={e => setComentario(e.target.value)}
           />
+
           <div className={styles.ctxActions}>
-            <button className={styles.ctxBack} onClick={() => setStep('tipo')}>← Tipo</button>
+            <button className={styles.ctxBack} onClick={onClose}>Cancelar</button>
             <button
               className={styles.ctxSave}
-              disabled={!resultado || saving}
+              disabled={!tipo || !resultado || saving}
               onClick={handleSave}
-            >{saving ? '...' : 'Registrar'}</button>
+            >{saving ? 'Guardando...' : 'Registrar gestión'}</button>
           </div>
         </>
       )}
@@ -1032,20 +1029,34 @@ function BaseCard({ base, onStatusChange }) {
       {open && (
         <>
           {base.stores?.length > 0 && (
-            <div className={styles.baseStores}>
-              <div className={styles.baseStoresHint}>Click derecho en una tienda para tipificar</div>
-              {base.stores.map(s => (
-                <div
-                  key={s.id}
-                  className={styles.baseStoreRow}
-                  onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, store: s }) }}
-                  title="Click derecho para tipificar"
-                >
-                  <span className={styles.baseStoreName}>{s.storeName}</span>
-                  <span className={styles.baseStoreCode}>{s.storeCode}</span>
-                  <span className={styles.baseStoreCtxHint}>⋮</span>
-                </div>
-              ))}
+            <div className={styles.baseStoresTable}>
+              <div className={styles.baseStoresHint}>Click derecho en una fila para tipificar</div>
+              <table className={styles.storeTable}>
+                <thead>
+                  <tr>
+                    <th>Tienda</th>
+                    <th>Código</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th>Conexión</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {base.stores.map(s => (
+                    <tr
+                      key={s.id}
+                      onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, store: s }) }}
+                      title="Click derecho para tipificar"
+                    >
+                      <td>{s.storeName}</td>
+                      <td className={styles.tdCode}>{s.storeCode}</td>
+                      <td className={styles.tdMono}>{s.phoneNumber ?? '—'}</td>
+                      <td>{s.currentStatus ?? '—'}</td>
+                      <td>{s.connectionPercentage != null ? `${s.connectionPercentage}%` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
           {ctxMenu && (
