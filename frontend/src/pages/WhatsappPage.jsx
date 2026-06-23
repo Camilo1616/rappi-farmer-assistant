@@ -681,7 +681,7 @@ function StoreSelector({ sections, dashStores, selected, remaining, onToggle, on
 
 
 /* ── Conexión WhatsApp (Baileys) ── */
-function StepConnection({ status, qr, onRefresh, onStart, onLogout, loading, starting, loggingOut }) {
+function StepConnection({ status, qr, onRefresh, onStart, onLogout, loading, starting, loggingOut, sending }) {
   return (
     <div className={styles.stepCard}>
       <div className={styles.stepHeader}>
@@ -689,10 +689,10 @@ function StepConnection({ status, qr, onRefresh, onStart, onLogout, loading, sta
         <div>
           <div className={styles.stepTitle}>Conexión WhatsApp</div>
           <div className={styles.stepSub}>
-            {status.connected ? 'Sesión activa' : qr ? 'Escanea el QR con WhatsApp' : status.initializing ? 'Iniciando servicio...' : 'Servicio no iniciado'}
+            {sending ? '📤 Enviando mensajes...' : status.connected ? 'Sesión activa' : qr ? 'Escanea el QR con WhatsApp' : status.initializing ? 'Iniciando servicio...' : 'Servicio no iniciado'}
           </div>
         </div>
-        <div className={`${styles.statusDot} ${status.connected ? styles.dotGreen : qr ? styles.dotYellow : styles.dotRed}`} />
+        <div className={`${styles.statusDot} ${(status.connected || sending) ? styles.dotGreen : qr ? styles.dotYellow : styles.dotRed}`} />
       </div>
 
       <div className={styles.statusRow}>
@@ -1172,10 +1172,16 @@ export default function WhatsappPage() {
     .then(r => setSentTodayIds(new Set((r.data ?? []).map(s => s.id))))
     .catch(() => {})
 
+  // Ref para saber si estamos enviando sin capturar closure stale en el interval
+  const sendingRef = useRef(sending)
+  useEffect(() => { sendingRef.current = sending }, [sending])
+
   useEffect(() => {
     loadStatus(); loadDash(); loadSentToday()
     getMsgTemplates().then(r => setTemplates(r.data)).catch(() => {})
-    const iv = setInterval(loadStatus, 5000)
+    // No polleamos estado mientras se envía: el servicio Node está ocupado y puede
+    // devolver connected:false falsamente. Retomamos cuando termina el envío.
+    const iv = setInterval(() => { if (!sendingRef.current) loadStatus() }, 5000)
     // Refresca historial cada hora para que nuevos días aparezcan sin recargar
     const histIv = setInterval(() => setHistoryKey(k => k + 1), 60 * 60 * 1000)
     // Reconectar estado si el usuario salió y volvió (navegación o recarga)
@@ -1424,7 +1430,7 @@ export default function WhatsappPage() {
       <div className={styles.layout}>
         <div className={styles.leftCol}>
 
-          <StepConnection status={status} qr={qr} onRefresh={handleRefresh} onStart={handleStart} onLogout={handleLogout} loading={chromLoad} starting={starting} loggingOut={loggingOut} />
+          <StepConnection status={status} qr={qr} onRefresh={handleRefresh} onStart={handleStart} onLogout={handleLogout} loading={chromLoad} starting={starting} loggingOut={loggingOut} sending={sending} />
 
           {/* ── Secciones de tiendas ── */}
           <div className={styles.stepCard}>
