@@ -14,4 +14,6 @@ public interface BaseAssignmentJpaRepository extends JpaRepository<BaseAssignmen
 
     @Query("SELECT COUNT(a) FROM BaseAssignmentEntity a WHERE a.baseId = :baseId AND a.status = :status")
     long countByBaseIdAndStatus(@Param("baseId") Long baseId, @Param("status") String status);
+
+    void deleteByBaseId(Long baseId);
 }

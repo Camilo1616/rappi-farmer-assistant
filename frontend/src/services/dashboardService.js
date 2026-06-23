@@ -17,3 +17,4 @@ export const getFarmerManagements   = (farmerId) => api.get(`/dashboard/lider/fa
 export const getStoresByBaseType    = (type, farmerIds, params = {}) =>
   api.get('/stores/by-base-type', { params: { type, farmerIds, ...params } })
 export const getBaseStores          = (baseId) => api.get(`/bases/${baseId}/stores`)
+export const deleteBase             = (baseId) => api.delete(`/bases/${baseId}`)

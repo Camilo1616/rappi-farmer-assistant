@@ -291,6 +291,25 @@ public class BaseController {
         return ResponseEntity.ok(result);
     }
 
+    /** Eliminar una base — solo el líder que la creó puede borrarla */
+    @DeleteMapping("/{baseId}")
+    @Transactional
+    public ResponseEntity<?> deleteBase(@PathVariable Long baseId,
+            @RequestHeader("Authorization") String authHeader) {
+        Long liderId = resolveUserId(authHeader);
+        BaseEntity base = baseRepo.findById(baseId)
+                .orElseThrow(() -> new RuntimeException("Base no encontrada"));
+        if (!base.getLiderId().equals(liderId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "No tienes permiso para eliminar esta base"));
+        }
+        notifRepo.deleteByReferenceId(baseId);
+        assignmentRepo.deleteByBaseId(baseId);
+        baseStoreRepo.deleteByBaseId(baseId);
+        baseRepo.deleteById(baseId);
+        log.info("Base {} eliminada por líder {}", baseId, liderId);
+        return ResponseEntity.ok(Map.of("deleted", true));
+    }
+
     // ── Notificaciones ───────────────────────────────────────────────────────
 
     @GetMapping("/notifications")

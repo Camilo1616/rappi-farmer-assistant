@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getLiderDashboard, getBasesForLider, getNotifications, getUnreadCount,
-         markAllNotifRead, getBaseStores, getTodayManagements, getStoresByBaseType } from '../services/dashboardService'
+         markAllNotifRead, getBaseStores, getTodayManagements, getStoresByBaseType,
+         deleteBase } from '../services/dashboardService'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { logout } from '../services/authService'
@@ -335,7 +336,7 @@ function EquipoTab({ farmers, managements, sort, setSort }) {
 }
 
 /* ─── Módulo Bases ──────────────────────────────────────────────────── */
-function BasesTab({ bases, farmers, baseStoresData, baseStoresLoading, expandedBase, setExpandedBase, onBaseCreated }) {
+function BasesTab({ bases, farmers, baseStoresData, baseStoresLoading, expandedBase, setExpandedBase, onBaseCreated, onBaseDeleted }) {
   const [showForm, setShowForm] = useState(false)
 
   return (
@@ -377,13 +378,31 @@ function BasesTab({ bases, farmers, baseStoresData, baseStoresLoading, expandedB
           baseStoresData={baseStoresData} baseStoresLoading={baseStoresLoading}
           expanded={expandedBase === base.id}
           onToggle={() => setExpandedBase(expandedBase === base.id ? null : base.id)}
+          onDeleted={onBaseDeleted}
         />
       ))}
     </div>
   )
 }
 
-function BaseCard({ base, baseStoresData, baseStoresLoading, expanded, onToggle }) {
+function BaseCard({ base, baseStoresData, baseStoresLoading, expanded, onToggle, onDeleted }) {
+  const [deleting, setDeleting] = useState(false)
+  const [confirm, setConfirm]   = useState(false)
+
+  const handleDelete = async (e) => {
+    e.stopPropagation()
+    if (!confirm) { setConfirm(true); return }
+    setDeleting(true)
+    try {
+      await deleteBase(base.id)
+      onDeleted?.()
+    } catch {
+      setDeleting(false)
+      setConfirm(false)
+    }
+  }
+
+  const cancelConfirm = (e) => { e.stopPropagation(); setConfirm(false) }
   const totalFarmers = base.farmersCount ?? 0
   const completadas  = base.completados  ?? 0
   const enProceso    = base.enProceso    ?? 0
@@ -417,10 +436,34 @@ function BaseCard({ base, baseStoresData, baseStoresLoading, expanded, onToggle 
             </span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
           {sinLeer > 0     && <Chip label={`${sinLeer} pendiente${sinLeer > 1 ? 's' : ''}`} scheme={STATUS_COLOR.SIN_LEER} />}
           {enProceso > 0   && <Chip label={`${enProceso} en proceso`} scheme={STATUS_COLOR.EN_PROCESO} />}
           {completadas > 0 && <Chip label={`${completadas} completado${completadas > 1 ? 's' : ''}`} scheme={STATUS_COLOR.COMPLETADO} />}
+          {/* Botón eliminar */}
+          {confirm ? (
+            <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
+              <button onClick={handleDelete} disabled={deleting} style={{
+                padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              }}>{deleting ? '...' : '¿Confirmar?'}</button>
+              <button onClick={cancelConfirm} style={{
+                padding: '4px 8px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                background: 'var(--bg-input)', color: 'var(--text-secondary)', border: '1px solid var(--border)',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>Cancelar</button>
+            </div>
+          ) : (
+            <button onClick={handleDelete} title="Eliminar base" style={{
+              padding: '4px 8px', borderRadius: 7, fontSize: 13, lineHeight: 1,
+              background: 'transparent', color: 'var(--text-muted)', border: '1px solid transparent',
+              cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.1)'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.borderColor = 'rgba(220,38,38,0.3)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'transparent' }}>
+              🗑
+            </button>
+          )}
         </div>
       </div>
 
@@ -1360,6 +1403,7 @@ export default function LiderDashboardPage() {
                   baseStoresData={baseStoresData} baseStoresLoading={baseStoresLoading}
                   expandedBase={expandedBase} setExpandedBase={setExpandedBase}
                   onBaseCreated={() => { load(); loadBases() }}
+                  onBaseDeleted={() => { load(); loadBases() }}
                 />
               )}
             </div>
