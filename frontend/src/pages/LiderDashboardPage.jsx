@@ -681,7 +681,7 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 2000,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 18,
-        width: '100%', maxWidth: 720, maxHeight: '92vh', overflow: 'hidden',
+        width: '100%', maxWidth: 1000, maxHeight: '96vh', overflow: 'hidden',
         display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
 
         {/* Header */}
@@ -867,8 +867,21 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
                         </div>
                         {/* Tabla de tiendas */}
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: 'var(--bg-input)' }}>
+                              <th style={{ width: 44, padding: '8px 14px' }} />
+                              <th style={{ padding: '8px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700,
+                                color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tienda</th>
+                              <th style={{ padding: '8px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700,
+                                color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Store ID</th>
+                              <th style={{ padding: '8px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700,
+                                color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Brand ID</th>
+                              <th style={{ padding: '8px 14px', textAlign: 'right', fontSize: 10, fontWeight: 700,
+                                color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Estado</th>
+                            </tr>
+                          </thead>
                           <tbody>
-                            {visible.map((s, i) => {
+                            {visible.map((s) => {
                               const checked = selectedStoreIds.includes(s.id)
                               return (
                                 <tr key={s.id}
@@ -877,30 +890,31 @@ function CrearBaseModal({ farmers, onClose, onCreated }) {
                                     background: checked ? 'rgba(255,68,31,0.05)' : 'transparent',
                                     transition: 'background 0.1s' }}
                                   onMouseEnter={e => { if (!checked) e.currentTarget.style.background = 'var(--bg-secondary)' }}
-                                  onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent' }}>
-                                  <td style={{ width: 40, textAlign: 'center', paddingLeft: 14 }}>
+                                  onMouseLeave={e => { if (!checked) e.currentTarget.style.background = checked ? 'rgba(255,68,31,0.05)' : 'transparent' }}>
+                                  <td style={{ width: 44, textAlign: 'center', paddingLeft: 14 }}>
                                     <input type="checkbox" checked={checked} onChange={() => toggleStore(s.id)}
                                       onClick={e => e.stopPropagation()}
-                                      style={{ accentColor: '#ff441f', width: 14, height: 14 }} />
+                                      style={{ accentColor: '#ff441f', width: 15, height: 15 }} />
                                   </td>
-                                  <td style={{ padding: '10px 12px', fontWeight: 600, fontSize: 13,
-                                    color: 'var(--text-primary)' }}>
+                                  <td style={{ padding: '12px 14px', fontWeight: 600, fontSize: 13,
+                                    color: 'var(--text-primary)', maxWidth: 260,
+                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {s.storeName}
                                   </td>
-                                  <td style={{ padding: '10px 8px', fontSize: 11, color: '#ff441f',
+                                  <td style={{ padding: '12px 14px', fontSize: 12, color: '#ff441f',
                                     fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                    {s.storeCode}
+                                    {s.storeCode || '—'}
                                   </td>
-                                  <td style={{ padding: '10px 8px', fontSize: 11, color: 'var(--text-muted)',
+                                  <td style={{ padding: '12px 14px', fontSize: 12, color: 'var(--text-secondary)',
                                     whiteSpace: 'nowrap' }}>
                                     {s.brandId || '—'}
                                   </td>
-                                  <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                                  <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                     {checked
-                                      ? <span style={{ fontSize: 10, fontWeight: 700, color: '#16a34a',
-                                          background: 'rgba(34,197,94,0.1)', borderRadius: 99, padding: '2px 8px' }}>✓ Incluida</span>
-                                      : <span style={{ fontSize: 10, color: 'var(--text-muted)',
-                                          background: 'var(--bg-input)', borderRadius: 99, padding: '2px 8px' }}>Excluir</span>
+                                      ? <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a',
+                                          background: 'rgba(34,197,94,0.12)', borderRadius: 99, padding: '3px 10px' }}>✓ Incluida</span>
+                                      : <span style={{ fontSize: 11, color: 'var(--text-muted)',
+                                          background: 'var(--bg-input)', borderRadius: 99, padding: '3px 10px' }}>Excluir</span>
                                     }
                                   </td>
                                 </tr>
