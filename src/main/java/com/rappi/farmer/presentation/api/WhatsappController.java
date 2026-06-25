@@ -102,9 +102,11 @@ public class WhatsappController {
     public ResponseEntity<?> getQr() {
         Long userId = currentUserId();
         String qr   = whatsappService.obtenerQr(userId);
-        if (qr == null) return ResponseEntity.ok(Map.of("qr", (Object) null,
-                "connected", whatsappService.estaConectado(userId)));
-        return ResponseEntity.ok(Map.of("qr", qr, "connected", false));
+        boolean connected = whatsappService.estaConectado(userId);
+        Map<String, Object> resp2 = new java.util.HashMap<>();
+        resp2.put("qr", qr);
+        resp2.put("connected", connected);
+        return ResponseEntity.ok(resp2);
     }
 
     @GetMapping("/wait-connection")
