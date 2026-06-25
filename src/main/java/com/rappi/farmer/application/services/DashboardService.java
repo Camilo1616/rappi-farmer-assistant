@@ -78,6 +78,16 @@ public class DashboardService {
                             .collect(Collectors.toMap(Management::getStoreId, Management::getResultType,
                                     (a, b) -> a));
                     dto = withTodayManagements(dto, todayMgmt);
+                    // Recalcular lastContact siempre — el snapshot puede ser de antes del fix
+                    List<Long> snapStoreIds = allStoreIdsFromDto(dto);
+                    if (!snapStoreIds.isEmpty()) {
+                        Map<Long, String> lcMap = managementRepository
+                                .findRecentByStoreIds(snapStoreIds, LocalDateTime.now().minusDays(90))
+                                .stream()
+                                .collect(Collectors.toMap(Management::getStoreId,
+                                        m -> formatLastContact(m.getManagementDate()), (a, b) -> a));
+                        dto = withLastContacts(dto, lcMap);
+                    }
                     log.debug("Dashboard servido desde snapshot para userId={}", userId);
                     return dto;
                 } catch (Exception e) {
@@ -229,6 +239,42 @@ public class DashboardService {
         }
 
         return result;
+    }
+
+    private List<Long> allStoreIdsFromDto(DashboardDataDto dto) {
+        List<Long> ids = new ArrayList<>();
+        for (List<StoreViewDto> list : java.util.List.of(
+                dto.getOnboardingCritical(), dto.getAliados(), dto.getChurnRisk(),
+                dto.getAva(), dto.getHealthy(), dto.getSelfOnboarding(), dto.getInsideSales())) {
+            if (list != null) list.forEach(s -> ids.add(s.getId()));
+        }
+        return ids;
+    }
+
+    private DashboardDataDto withLastContacts(DashboardDataDto dto, Map<Long, String> lcMap) {
+        java.util.function.Function<List<StoreViewDto>, List<StoreViewDto>> patch = list ->
+                list == null ? list : list.stream().map(s -> {
+                    String lc = lcMap.get(s.getId());
+                    if (lc == null) return s;
+                    return new StoreViewDto(s.getId(), s.getStoreCode(), s.getBrandId(), s.getStoreName(),
+                            s.getPhoneNumber(), s.getAging(), s.getOrdersL4W(), s.getConnectionPercentage(),
+                            s.getCurrentStatus(), s.getTendencia(), s.getTodayManagementResult(), s.getSegmento(),
+                            s.getHadHandoff(), s.getLastLoginDate(), s.getDiasSinLogin(), s.getAgingStage(),
+                            s.getChurnLabel(), s.getAvaLabel(), s.getFarmerEmail(), s.getFarmerId(),
+                            s.getAvaMtd(), s.getAvaL4w(), s.getAvaL7d(), s.getDashboardSegment(),
+                            lc, s.getChannel(), s.getCredentialsDate(), s.getBackupPhone());
+                }).toList();
+        return new DashboardDataDto(
+                patch.apply(dto.getOnboardingCritical()), patch.apply(dto.getAliados()),
+                patch.apply(dto.getChurnRisk()), patch.apply(dto.getAva()),
+                patch.apply(dto.getHealthy()), patch.apply(dto.getRecommended()),
+                patch.apply(dto.getSelfOnboarding()), patch.apply(dto.getInsideSales()),
+                dto.getRecontactosW2() != null ? dto.getRecontactosW2() : new ArrayList<>(),
+                dto.getOnboardingCount(), dto.getAliadosCount(), dto.getChurnCount(),
+                dto.getAvaCount(), dto.getHealthyCount(), dto.getRecommendedCount(),
+                dto.getTotalCount(), dto.getSelfOnboardingCount(), dto.getInsideSalesCount(), 0,
+                dto.isNeedsRefresh(), dto.getLastImportDate()
+        );
     }
 
     /** Actualiza el campo todayManagementResult en todos los dtos del snapshot con las gestiones en tiempo real. */

@@ -71,12 +71,13 @@ function AiChat({ store, onGestionar }) {
     setLoading(true)
     try {
       const r = await api.post('/ai/followup-chat', { storeId: store.id, history: [], message: '' })
-      const reply = r.data?.reply ?? '—'
+      const reply = r.data?.reply ?? r.data?.error ?? '—'
       const aiMsg = { role: 'assistant', content: reply }
       setMessages([aiMsg])
       setHistory([aiMsg])
     } catch (e) {
-      setMessages([{ role: 'assistant', content: 'No se pudo cargar el resumen. Escríbeme una pregunta.' }])
+      const errMsg = e?.response?.data?.error || e?.message || 'Error al conectar con la IA'
+      setMessages([{ role: 'assistant', content: `⚠️ ${errMsg}\n\nPuedes revisar el historial de gestiones en la pestaña "Historial".` }])
     } finally { setLoading(false) }
   }
 
