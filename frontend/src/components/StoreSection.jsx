@@ -60,7 +60,7 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                 : <th>Conexión</th>
               }
               <th>Estado</th>
-              <th>Gestión hoy</th>
+              <th>Última gestión</th>
             </tr>
           </thead>
           <tbody>
@@ -145,14 +145,9 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                           style={{ background: rs?.bg ?? 'rgba(34,197,94,0.1)', color: rs?.color ?? '#22C55E' }}>
                           {rs?.label ?? s.todayManagementResult}
                         </span>
-                      : <button
-                          onClick={() => onFollowUp?.(s)}
-                          style={{
-                            padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,68,31,0.3)',
-                            background: 'rgba(255,68,31,0.08)', color: '#FF441F',
-                            fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-                          }}
-                        >Follow Up</button>
+                      : s.lastContact
+                        ? <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.lastContact}</span>
+                        : <span className={styles.dash}>Sin gestiones</span>
                     }
                   </td>
                 </tr>

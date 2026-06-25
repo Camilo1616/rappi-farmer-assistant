@@ -191,7 +191,16 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
   const inputRef  = useRef(null)
   const timerRef  = useRef(null)
 
-  useEffect(() => { if (!selected) inputRef.current?.focus() }, [selected])
+  // Si viene con tienda pre-seleccionada, mostrarla en el panel izquierdo
+  useEffect(() => {
+    if (initialStore) {
+      setSelected(initialStore)
+      setResults([initialStore])
+      setQuery(initialStore.storeName ?? '')
+    } else {
+      inputRef.current?.focus()
+    }
+  }, [])
 
   useEffect(() => {
     clearTimeout(timerRef.current)
