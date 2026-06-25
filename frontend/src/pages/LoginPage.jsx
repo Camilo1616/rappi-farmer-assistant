@@ -43,62 +43,12 @@ export default function LoginPage() {
         <div className={styles.orb + ' ' + styles.orb2} />
         <div className={styles.orb + ' ' + styles.orb3} />
 
-        {/* Brand */}
-        <div className={styles.leftBrand}>
-          <span className={styles.brandDot} />
-          <span className={styles.brandName}>Rappi Farmer Assistant</span>
-        </div>
-
-        {/* Contenido central */}
-        <div className={styles.leftContent}>
-          <div className={styles.leftEyebrow}>
-            <span className={styles.eyebrowDot} />
-            Account Manager · Herramienta interna
+        <div className={styles.leftCenter}>
+          <div className={styles.leftBrandMark}>
+            <span className={styles.brandMarkDot} />
+            <span className={styles.brandMarkName}>Rappi Farmer Assistant</span>
           </div>
-
-          <h1 className={styles.leftHeadline}>
-            Tu cartera,<br />
-            bajo <em>control</em><br />
-            total.
-          </h1>
-
-          <p className={styles.leftDesc}>
-            Prioriza, gestiona y activa restaurantes sin perder el hilo.
-            Diseñado para el ritmo real de un AM de Rappi.
-          </p>
-
-          <div className={styles.chips}>
-            {[
-              { icon: '⚡', label: 'WhatsApp masivo con plantillas dinámicas' },
-              { icon: '📊', label: 'Dashboard de prioridades en tiempo real' },
-              { icon: '🗂️', label: 'Seguimiento de onboarding día a día' },
-              { icon: '🔔', label: 'Alertas de churn y Aliados < 60%' },
-            ].map(({ icon, label }) => (
-              <div key={label} className={styles.chip}>
-                <span className={styles.chipIcon}>{icon}</span>
-                <span className={styles.chipLabel}>{label}</span>
-                <span className={styles.chipArrow}>→</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className={styles.leftStats}>
-          <div className={styles.stat}>
-            <span className={styles.statVal}>500<span className={styles.statValAccent}>+</span></span>
-            <span className={styles.statLabel}>Restaurantes</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.stat}>
-            <span className={styles.statVal}>35</span>
-            <span className={styles.statLabel}>WA / día</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.stat}>
-            <span className={styles.statVal}>8</span>
-            <span className={styles.statLabel}>Días críticos</span>
-          </div>
+          <p className={styles.brandMarkSub}>Account Manager · Herramienta interna</p>
         </div>
       </div>
 
@@ -108,8 +58,10 @@ export default function LoginPage() {
 
           <div className={styles.logo}>
             <span className={styles.logoDot} />
-            <span className={styles.logoText}>rappi</span>
-            <span className={styles.logoSub}>farmers</span>
+            <div className={styles.logoWords}>
+              <span className={styles.logoText}>rappi</span>
+              <span className={styles.logoSub}>farmers</span>
+            </div>
           </div>
 
           <h2 className={styles.title}>Bienvenido de vuelta</h2>
