@@ -19,9 +19,11 @@ import java.util.Map;
 @Service
 public class AiService {
 
-    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-    /** Modelo rápido con límite de tokens/min 3x mayor que versatile. */
-    private static final String MODEL    = "llama-3.1-8b-instant";
+    private static final String GROQ_URL  = "https://api.groq.com/openai/v1/chat/completions";
+    /** Modelo rápido para WhatsApp/recomendaciones. */
+    private static final String MODEL     = "llama-3.1-8b-instant";
+    /** Modelo con mejor seguimiento de instrucciones para follow-up chat. */
+    private static final String MODEL_FU  = "llama-3.3-70b-versatile";
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -543,7 +545,7 @@ public class AiService {
         }
         messages.add(Map.of("role", "user", "content", effectiveMessage));
 
-        return callGroqMessages(messages, 0.5, 500);
+        return callGroqMessages(messages, 0.4, 600, MODEL_FU);
     }
 
     private static final int MAX_GESTIONES_CONTEXT = 20;
@@ -645,10 +647,14 @@ public class AiService {
     // ── HTTP a Groq ───────────────────────────────────────────────────────────
 
     private String callGroqMessages(List<Map<String, String>> messages, double temperature, int maxTokens) {
+        return callGroqMessages(messages, temperature, maxTokens, MODEL);
+    }
+
+    private String callGroqMessages(List<Map<String, String>> messages, double temperature, int maxTokens, String model) {
         if (apiKey == null || apiKey.isBlank())
             throw new IllegalStateException("IA no disponible: configura GROQ_API_KEY");
         Map<String, Object> body = Map.of(
-                "model", MODEL, "temperature", temperature,
+                "model", model, "temperature", temperature,
                 "max_tokens", maxTokens, "messages", messages);
         return executeWithRetry(body);
     }
