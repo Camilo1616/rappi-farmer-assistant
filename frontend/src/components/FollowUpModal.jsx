@@ -1,8 +1,44 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { globalSearchStores } from '../services/storeService'
 import api from '../services/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import GestionFlowModal from './GestionFlowModal'
 import styles from './FollowUpModal.module.css'
+
+function Md({ children }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        table: ({ children: c }) => (
+          <div style={{ overflowX: 'auto', marginBottom: 8 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>{c}</table>
+          </div>
+        ),
+        thead: ({ children: c }) => <thead>{c}</thead>,
+        tbody: ({ children: c }) => <tbody>{c}</tbody>,
+        tr:    ({ children: c }) => <tr>{c}</tr>,
+        th: ({ children: c }) => (
+          <th style={{ textAlign: 'left', padding: '4px 6px', borderBottom: '2px solid rgba(255,68,31,0.35)', color: '#FF441F', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{c}</th>
+        ),
+        td: ({ children: c }) => (
+          <td style={{ padding: '4px 6px', borderBottom: '1px solid rgba(128,128,128,0.12)', fontSize: 11, color: 'var(--text-primary)', verticalAlign: 'top' }}>{c}</td>
+        ),
+        p:      ({ children: c }) => <p style={{ margin: '0 0 5px 0', lineHeight: 1.5, fontSize: 12 }}>{c}</p>,
+        ul:     ({ children: c }) => <ul style={{ margin: '0 0 5px 0', paddingLeft: 16, fontSize: 12 }}>{c}</ul>,
+        ol:     ({ children: c }) => <ol style={{ margin: '0 0 5px 0', paddingLeft: 16, fontSize: 12 }}>{c}</ol>,
+        li:     ({ children: c }) => <li style={{ marginBottom: 2 }}>{c}</li>,
+        strong: ({ children: c }) => <strong style={{ fontWeight: 700 }}>{c}</strong>,
+        code:   ({ children: c }) => <code style={{ background: 'rgba(0,0,0,0.06)', borderRadius: 3, padding: '1px 4px', fontSize: 10, fontFamily: 'monospace' }}>{c}</code>,
+        h3:     ({ children: c }) => <h3 style={{ fontSize: 12, fontWeight: 700, margin: '7px 0 3px 0' }}>{c}</h3>,
+        h4:     ({ children: c }) => <h4 style={{ fontSize: 11, fontWeight: 700, margin: '5px 0 2px 0' }}>{c}</h4>,
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  )
+}
 
 const COUNTRY_MAP = {
   CO: { name: 'Colombia',           flag: '🇨🇴' },
@@ -178,7 +214,9 @@ function AiChat({ store, onGestionar }) {
             {messages.map((m, i) => (
               <div key={i} className={m.role === 'user' ? styles.msgUser : styles.msgAi}>
                 {m.role === 'assistant' && <span className={styles.aiLabel}>IA</span>}
-                <p className={styles.msgText}>{m.content}</p>
+                <div className={styles.msgText}>
+                  {m.role === 'assistant' ? <Md>{m.content}</Md> : m.content}
+                </div>
               </div>
             ))}
             {loading && (
