@@ -356,16 +356,6 @@ app.post('/logout', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[WA] Servicio multi-sesión escuchando en puerto ${PORT}`)
-  restorePersistedSessions()
-
-  // Watchdog: cada 5 minutos revisa sesiones desconectadas y las reinicia
-  setInterval(() => {
-    for (const [sessionId, s] of sessions.entries()) {
-      if (!s.connected && !s.initializing) {
-        console.log(`[WA:${sessionId}] Watchdog: sesión inactiva, reconectando...`)
-        deleteChromiumLocks(AUTH_DIR, sessionId)
-        initSession(sessionId)
-      }
-    }
-  }, 5 * 60 * 1000)
+  // Las sesiones se inicializan bajo demanda cuando cada farmer accede a /status.
+  // No restaurar todas al arrancar — lanzar 10+ Chromium simultáneos colapsa el container.
 })
