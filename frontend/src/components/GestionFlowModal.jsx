@@ -231,7 +231,7 @@ export default function GestionFlowModal({ store, onClose, onSaved }) {
           )}
 
           {/* Comentario */}
-          {(contactado === 'no' || (contactado === 'si' && medio && (medio !== 'Videollamada' || (!meetError && meetLink)))) && (
+          {(contactado === 'no' || (contactado === 'si' && medio)) && (
             <div className={styles.field}>
               <label className={styles.label}>
                 Comentario <span className={styles.required}>*</span>
