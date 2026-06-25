@@ -728,12 +728,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 18px;
+  padding: 6px 14px;
   background: rgba(255,68,31,0.1);
   color: #FF441F;
   border: 1px solid rgba(255,68,31,0.3);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;

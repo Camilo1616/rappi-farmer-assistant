@@ -429,6 +429,12 @@ export default function DashboardPage() {
           <button className={styles.hamburger} onClick={() => setSidebarMobileOpen(o => !o)} aria-label="Menú">☰</button>
           <h1 className={styles.pageTitle}>{NAV_ITEMS.find(n=>n.key===activeNav)?.label}</h1>
           <div className={styles.topbarRight}>
+            <button
+              className={styles.btnFollowUp}
+              onClick={() => { setFollowUpStore(null); setFollowUpOpen(true) }}
+            >
+              Follow Up
+            </button>
             <span className={styles.liveIndicator}><span className={styles.liveDot}/> En vivo</span>
             <span className={styles.date}>{getTodayLabel()}</span>
 
@@ -756,12 +762,6 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
       {/* Barra de acciones + buscador */}
       <div className={styles.tableToolbar}>
         <div className={styles.toolbarLeft}>
-          <button
-            className={styles.btnFollowUp}
-            onClick={() => { setFollowUpStore(null); setFollowUpOpen(true) }}
-          >
-            Follow Up
-          </button>
           {activeTab === 'onboardingCritical' && (
             <>
               <button className={styles.btnHoReport} onClick={openConsolidadoHO} disabled={hoSyncing}>
