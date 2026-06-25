@@ -120,6 +120,17 @@ public class DashboardService {
                         (existing, replacement) -> existing  // conserva la primera (más reciente por ORDER BY)
                 ));
 
+        // Mapa storeId → fecha de última gestión (últimos 90 días) para la columna "Última gestión"
+        List<Long> storeIds = stores.stream().map(Store::getId).toList();
+        Map<Long, String> lastContactMap = managementRepository
+                .findRecentByStoreIds(storeIds, LocalDateTime.now().minusDays(90))
+                .stream()
+                .collect(Collectors.toMap(
+                        Management::getStoreId,
+                        m -> formatLastContact(m.getManagementDate()),
+                        (existing, replacement) -> existing  // ya vienen ORDER BY DESC, queda la más reciente
+                ));
+
         List<StoreViewDto> onboardingCritical = new ArrayList<>();
         List<StoreViewDto> aliados            = new ArrayList<>();
         List<StoreViewDto> churnRisk          = new ArrayList<>();
@@ -131,7 +142,7 @@ public class DashboardService {
         for (Store store : stores) {
             DailyMetric metric = metricsMap.get(store.getId());
             int aging = calcAgingEfectivo(store);
-            StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()));
+            StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()), lastContactMap.get(store.getId()));
             boolean isSelf = store.getChannel() != null
                     && store.getChannel().toLowerCase().contains("self");
             // IS = canal exacto "Inside Sales" + HO=NO (o nulo) + lastFollowUp nulo + followUpLast30d=NO + cargada ≤7 días
@@ -388,7 +399,7 @@ public class DashboardService {
         return null;
     }
 
-    private StoreViewDto toViewDto(Store store, DailyMetric metric, int aging, String managementResult) {
+    private StoreViewDto toViewDto(Store store, DailyMetric metric, int aging, String managementResult, String lastContact) {
         Integer orders = metric != null ? metric.getOrdersCount() : null;
         BigDecimal connection = metric != null && metric.getConnectionPercentage() != null
                 ? metric.getConnectionPercentage()
@@ -422,11 +433,16 @@ public class DashboardService {
                 metric != null ? toPercent(metric.getConnectionPercentage()) : null,
                 metric != null ? toPercent(metric.getAvaL7d()) : null,
                 null,
-                null,
+                lastContact,
                 store.getChannel(),
                 store.getCredentialsDate(),
                 store.getBackupPhone()
         );
+    }
+
+    private String formatLastContact(LocalDateTime dt) {
+        if (dt == null) return null;
+        return dt.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"));
     }
 
     /**
