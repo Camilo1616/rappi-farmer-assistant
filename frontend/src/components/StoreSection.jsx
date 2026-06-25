@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { registerManagement } from '../services/dashboardService'
 import MiniSparkline from './MiniSparkline'
 import styles from './StoreSection.module.css'
 
@@ -27,54 +25,7 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-/* ── Botones de gestión rápida — sin modal, sin preguntas ── */
-function QuickGestion({ store, onDone }) {
-  const [saving, setSaving] = useState(null)  // 'EFECTIVA' | 'NO_CONTACTO' | null
-
-  const register = async (resultType) => {
-    setSaving(resultType)
-    try {
-      const managementType = resultType === 'EFECTIVA' ? 'SEGUIMIENTO' : 'SEGUIMIENTO'
-      await registerManagement(store.id, { managementType, resultType, comments: '' })
-      onDone?.()
-    } catch {
-      setSaving(null)
-    }
-  }
-
-  return (
-    <div style={{ display: 'flex', gap: 6 }}>
-      <button
-        onClick={() => register('EFECTIVA')}
-        disabled={!!saving}
-        style={{
-          padding: '4px 10px', borderRadius: 6, border: '1px solid #22C55E40',
-          background: saving === 'EFECTIVA' ? '#22C55E' : 'rgba(34,197,94,0.1)',
-          color: saving === 'EFECTIVA' ? '#fff' : '#22C55E',
-          fontSize: 11, fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
-          transition: 'all 0.15s',
-        }}
-      >
-        {saving === 'EFECTIVA' ? '...' : '✅ Efectiva'}
-      </button>
-      <button
-        onClick={() => register('NO_CONTACTO')}
-        disabled={!!saving}
-        style={{
-          padding: '4px 10px', borderRadius: 6, border: '1px solid #F9731640',
-          background: saving === 'NO_CONTACTO' ? '#F97316' : 'rgba(249,115,22,0.1)',
-          color: saving === 'NO_CONTACTO' ? '#fff' : '#F97316',
-          fontSize: 11, fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
-          transition: 'all 0.15s',
-        }}
-      >
-        {saving === 'NO_CONTACTO' ? '...' : '📵 No contacto'}
-      </button>
-    </div>
-  )
-}
-
-export default function StoreSection({ title, color, icon, stores, onRefresh, hideHeader = false, isChurn = false, isAva = false }) {
+export default function StoreSection({ title, color, icon, stores, onRefresh, hideHeader = false, isChurn = false, isAva = false, onFollowUp }) {
   if (!stores?.length) return (
     <div className={styles.empty}>Sin tiendas en esta sección</div>
   )
@@ -188,14 +139,20 @@ export default function StoreSection({ title, color, icon, stores, onRefresh, hi
                       : <span className={styles.dash}>—</span>}
                   </td>
 
-                  {/* Gestión hoy — botones rápidos o badge si ya está gestionada */}
                   <td>
                     {yaGestionada
                       ? <span className={styles.tag}
                           style={{ background: rs?.bg ?? 'rgba(34,197,94,0.1)', color: rs?.color ?? '#22C55E' }}>
                           {rs?.label ?? s.todayManagementResult}
                         </span>
-                      : <QuickGestion store={s} onDone={onRefresh} />
+                      : <button
+                          onClick={() => onFollowUp?.(s)}
+                          style={{
+                            padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,68,31,0.3)',
+                            background: 'rgba(255,68,31,0.08)', color: '#FF441F',
+                            fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >Follow Up</button>
                     }
                   </td>
                 </tr>

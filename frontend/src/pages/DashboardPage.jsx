@@ -12,6 +12,7 @@ import { getStores } from '../services/storeService'
 import api from '../services/api'
 import AiAssistant from '../components/AiAssistant'
 import StoreSection from '../components/StoreSection'
+import FollowUpModal from '../components/FollowUpModal'
 import StoreTable from '../components/StoreTable'
 import MetricCard from '../components/MetricCard'
 import ExcelUpload from '../components/ExcelUpload'
@@ -627,6 +628,8 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
   const [hoOpen, setHoOpen]               = useState(false)
   const [hoData, setHoData]               = useState([])
   const [hoMeetConectado, setHoMeetConectado] = useState(false)
+  const [followUpOpen, setFollowUpOpen]   = useState(false)
+  const [followUpStore, setFollowUpStore] = useState(null)
 
   const openConsolidadoHO = async () => {
     setHoSyncing(true)
@@ -753,6 +756,12 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
       {/* Barra de acciones + buscador */}
       <div className={styles.tableToolbar}>
         <div className={styles.toolbarLeft}>
+          <button
+            className={styles.btnFollowUp}
+            onClick={() => { setFollowUpStore(null); setFollowUpOpen(true) }}
+          >
+            Follow Up
+          </button>
           {activeTab === 'onboardingCritical' && (
             <>
               <button className={styles.btnHoReport} onClick={openConsolidadoHO} disabled={hoSyncing}>
@@ -797,6 +806,7 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
           hideHeader
           isChurn={activeTab === 'churnRisk'}
           isAva={activeTab === 'ava' || activeTab === 'healthy'}
+          onFollowUp={s => { setFollowUpStore(s); setFollowUpOpen(true) }}
         />
       )}
 
@@ -1085,6 +1095,14 @@ function BaseCard({ base, onStatusChange }) {
           )}
 
         </>
+      )}
+
+      {followUpOpen && (
+        <FollowUpModal
+          initialStore={followUpStore}
+          onClose={() => { setFollowUpOpen(false); setFollowUpStore(null) }}
+          onSaved={() => { onRefresh(); setFollowUpOpen(false); setFollowUpStore(null) }}
+        />
       )}
     </div>
   )

@@ -302,8 +302,55 @@ public class AiController {
         }
     }
 
+    /**
+     * Chat de follow-up de una tienda específica.
+     * Alimenta a la IA con el historial completo de comentarios dejados para esa tienda.
+     * En la primera llamada (history vacío) genera automáticamente un resumen.
+     */
+    @PostMapping("/followup-chat")
+    public ResponseEntity<?> followUpChat(@RequestBody FollowUpChatRequest request) {
+        if (!aiService.isAvailable()) {
+            return ResponseEntity.status(503).body(Map.of("error", "IA no disponible"));
+        }
+        Store store = storeRepository.findById(request.storeId()).orElse(null);
+        if (store == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "Tienda no encontrada"));
+        }
+        List<Management> gestiones = managementRepository.findAllByStoreId(request.storeId());
+        try {
+            String reply = aiService.followUpChat(store, gestiones, request.history(), request.message());
+            return ResponseEntity.ok(Map.of("reply", reply));
+        } catch (RateLimitException rle) {
+            return ResponseEntity.status(429).body(Map.of(
+                    "rateLimited", true,
+                    "retryAfterSeconds", rle.getRetryAfterSeconds()
+            ));
+        } catch (Exception e) {
+            log.error("Error en followup-chat IA storeId={}: {}", request.storeId(), e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** Devuelve todo el historial de gestiones de una tienda. */
+    @GetMapping("/followup-history/{storeId}")
+    public ResponseEntity<?> followUpHistory(@PathVariable Long storeId) {
+        List<Management> gestiones = managementRepository.findAllByStoreId(storeId);
+        List<Map<String, Object>> result = gestiones.stream().map(m -> {
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("id", m.getId());
+            map.put("date", m.getManagementDate());
+            map.put("managementType", m.getManagementType());
+            map.put("resultType", m.getResultType());
+            map.put("comments", m.getComments());
+            map.put("farmerName", m.getFarmerName());
+            return map;
+        }).toList();
+        return ResponseEntity.ok(result);
+    }
+
     public record ChatMessage(String role, String content) {}
     public record ChatRequest(List<ChatMessage> history, String message) {}
+    public record FollowUpChatRequest(Long storeId, List<ChatMessage> history, String message) {}
 
     public record GenerateMessageRequest(
             String storeName, int agingDays, String agingStage, String segment,

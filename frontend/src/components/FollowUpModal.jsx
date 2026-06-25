@@ -1,17 +1,197 @@
 import { useState, useEffect, useRef } from 'react'
 import { getStores } from '../services/storeService'
+import api from '../services/api'
 import GestionFlowModal from './GestionFlowModal'
 import styles from './FollowUpModal.module.css'
 
-export default function FollowUpModal({ onClose, onSaved }) {
-  const [query, setQuery]     = useState('')
-  const [results, setResults] = useState([])
+const RESULT_LABEL = {
+  EFECTIVA: { label: 'Efectiva', color: '#22C55E' },
+  NO_CONTACTO: { label: 'No contacto', color: '#F97316' },
+  NO_RESPONDE: { label: 'No responde', color: '#8B93A8' },
+  PROBLEMA_TECNICO: { label: 'Problema técnico', color: '#EF4444' },
+  REQUIERE_SEGUIMIENTO: { label: 'Seguimiento', color: '#3B82F6' },
+  BRAND_SYNC: { label: 'Brand sync', color: '#F59E0B' },
+}
+
+function HistoryBubble({ item }) {
+  const rs = RESULT_LABEL[item.resultType] ?? { label: item.resultType, color: '#8B93A8' }
+  const date = item.date ? new Date(item.date) : null
+  const dateStr = date ? date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+  return (
+    <div className={styles.histBubble}>
+      <div className={styles.histMeta}>
+        <span className={styles.histDate}>{dateStr}</span>
+        <span className={styles.histTag} style={{ color: rs.color, background: rs.color + '18' }}>{rs.label}</span>
+        {item.managementType && <span className={styles.histType}>{item.managementType}</span>}
+        {item.farmerName && <span className={styles.histFarmer}>{item.farmerName}</span>}
+      </div>
+      {item.comments && <p className={styles.histComment}>{item.comments}</p>}
+    </div>
+  )
+}
+
+function AiChat({ store, onGestionar }) {
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [selected, setSelected] = useState(null)
+  const [history, setHistory] = useState([])
+  const [gestion, setGestion] = useState(false)
+  const [historyLog, setHistoryLog] = useState([])
+  const [histLoading, setHistLoading] = useState(false)
+  const [tab, setTab] = useState('chat') // 'chat' | 'log'
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    setMessages([])
+    setHistory([])
+    setInput('')
+    setLoading(false)
+    setHistoryLog([])
+    setTab('chat')
+    if (store) {
+      loadSummary()
+      loadHistory()
+    }
+  }, [store?.id])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  const loadHistory = async () => {
+    setHistLoading(true)
+    try {
+      const r = await api.get(`/ai/followup-history/${store.id}`)
+      setHistoryLog(r.data ?? [])
+    } catch { setHistoryLog([]) }
+    finally { setHistLoading(false) }
+  }
+
+  const loadSummary = async () => {
+    setLoading(true)
+    try {
+      const r = await api.post('/ai/followup-chat', { storeId: store.id, history: [], message: '' })
+      const reply = r.data?.reply ?? '—'
+      const aiMsg = { role: 'assistant', content: reply }
+      setMessages([aiMsg])
+      setHistory([aiMsg])
+    } catch (e) {
+      setMessages([{ role: 'assistant', content: 'No se pudo cargar el resumen. Escríbeme una pregunta.' }])
+    } finally { setLoading(false) }
+  }
+
+  const send = async () => {
+    const text = input.trim()
+    if (!text || loading) return
+    const userMsg = { role: 'user', content: text }
+    setMessages(prev => [...prev, userMsg])
+    setInput('')
+    setLoading(true)
+    const newHistory = [...history, userMsg]
+    try {
+      const r = await api.post('/ai/followup-chat', { storeId: store.id, history: newHistory, message: text })
+      const reply = r.data?.reply ?? '—'
+      const aiMsg = { role: 'assistant', content: reply }
+      setMessages(prev => [...prev, aiMsg])
+      setHistory([...newHistory, aiMsg])
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Error al procesar — intenta de nuevo.' }])
+    } finally { setLoading(false) }
+  }
+
+  if (gestion) {
+    return (
+      <GestionFlowModal
+        store={store}
+        onClose={() => setGestion(false)}
+        onSaved={() => { setGestion(false); onGestionar?.() }}
+      />
+    )
+  }
+
+  return (
+    <div className={styles.chatPanel}>
+      {/* Store header */}
+      <div className={styles.chatStoreHeader}>
+        <div className={styles.chatStoreInitial}>{store.storeName?.charAt(0).toUpperCase() ?? '?'}</div>
+        <div className={styles.chatStoreInfo}>
+          <span className={styles.chatStoreName}>{store.storeName}</span>
+          <span className={styles.chatStoreMeta}>
+            {store.brandId && <b>Brand {store.brandId}</b>}
+            {store.storeCode && <span> · {store.storeCode}</span>}
+            {store.phoneNumber && <span> · {store.phoneNumber}</span>}
+          </span>
+        </div>
+        <button className={styles.gestionarBtn} onClick={() => setGestion(true)}>
+          Registrar gestión
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className={styles.tabs}>
+        <button className={`${styles.tab} ${tab === 'chat' ? styles.tabActive : ''}`} onClick={() => setTab('chat')}>
+          IA Asistente
+        </button>
+        <button className={`${styles.tab} ${tab === 'log' ? styles.tabActive : ''}`} onClick={() => setTab('log')}>
+          Historial ({historyLog.length})
+        </button>
+      </div>
+
+      {tab === 'log' ? (
+        <div className={styles.logPanel}>
+          {histLoading && <p className={styles.chatHint}>Cargando historial...</p>}
+          {!histLoading && historyLog.length === 0 && (
+            <p className={styles.chatHint}>Sin gestiones registradas para esta tienda.</p>
+          )}
+          {historyLog.map(item => <HistoryBubble key={item.id} item={item} />)}
+        </div>
+      ) : (
+        <>
+          <div className={styles.chatMessages}>
+            {messages.map((m, i) => (
+              <div key={i} className={m.role === 'user' ? styles.msgUser : styles.msgAi}>
+                {m.role === 'assistant' && <span className={styles.aiLabel}>IA</span>}
+                <p className={styles.msgText}>{m.content}</p>
+              </div>
+            ))}
+            {loading && (
+              <div className={styles.msgAi}>
+                <span className={styles.aiLabel}>IA</span>
+                <p className={styles.msgText} style={{ color: 'var(--text-muted)' }}>Analizando...</p>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className={styles.chatInput}>
+            <input
+              className={styles.chatInputField}
+              type="text"
+              placeholder="Pregúntame algo sobre esta tienda..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && send()}
+              disabled={loading}
+            />
+            <button className={styles.sendBtn} onClick={send} disabled={loading || !input.trim()}>
+              ↑
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+export default function FollowUpModal({ onClose, onSaved, initialStore }) {
+  const [query, setQuery]       = useState('')
+  const [results, setResults]   = useState([])
+  const [loading, setLoading]   = useState(false)
+  const [selected, setSelected] = useState(initialStore ?? null)
   const inputRef  = useRef(null)
   const timerRef  = useRef(null)
 
-  useEffect(() => { inputRef.current?.focus() }, [])
+  useEffect(() => { if (!selected) inputRef.current?.focus() }, [selected])
 
   useEffect(() => {
     clearTimeout(timerRef.current)
@@ -26,82 +206,81 @@ export default function FollowUpModal({ onClose, onSaved }) {
     return () => clearTimeout(timerRef.current)
   }, [query])
 
-  if (selected) {
-    return (
-      <GestionFlowModal
-        store={selected}
-        onClose={() => setSelected(null)}
-        onSaved={() => { setSelected(null); onSaved?.(); onClose() }}
-      />
-    )
-  }
-
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
-        <div className={styles.header}>
-          <div>
-            <p className={styles.title}>Follow up</p>
-            <p className={styles.sub}>Busca la tienda y registra la gestión</p>
+
+        {/* Panel izquierdo — búsqueda */}
+        <div className={styles.leftPanel}>
+          <div className={styles.leftHeader}>
+            <span className={styles.leftTitle}>Follow Up</span>
+            <button className={styles.closeBtn} onClick={onClose}>✕</button>
           </div>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+
+          <div className={styles.searchWrap}>
+            <span className={styles.searchIcon}>🔍</span>
+            <input
+              ref={inputRef}
+              className={styles.searchInput}
+              type="text"
+              placeholder="Nombre, código, Brand ID..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+            {query && <button className={styles.clearBtn} onClick={() => setQuery('')}>✕</button>}
+          </div>
+
+          <div className={styles.leftBody}>
+            {loading && <p className={styles.hint}>Cargando...</p>}
+            {!loading && !query.trim() && (
+              <p className={styles.hint}>Busca una tienda para iniciar el seguimiento</p>
+            )}
+            {!loading && query.trim() && results.length === 0 && (
+              <p className={styles.hint}>Sin resultados para "{query}"</p>
+            )}
+            {results.map(s => {
+              const isSelected = selected?.id === s.id
+              return (
+                <button
+                  key={s.id}
+                  className={`${styles.resultRow} ${isSelected ? styles.resultRowActive : ''}`}
+                  onClick={() => setSelected(s)}
+                >
+                  <div className={styles.rowMain}>
+                    <span className={styles.storeName}>{s.storeName}</span>
+                    {s.todayManagementResult && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                        background: 'rgba(34,197,94,0.1)', color: '#22C55E', marginLeft: 4,
+                      }}>✓ Gestionada</span>
+                    )}
+                  </div>
+                  <div className={styles.rowMeta}>
+                    {s.brandId && <span className={styles.metaTag}>Brand: {s.brandId}</span>}
+                    {s.storeCode && <span className={styles.metaTag}>{s.storeCode}</span>}
+                    {s.phoneNumber && <span className={styles.metaTag}>📞 {s.phoneNumber}</span>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        <div className={styles.searchWrap}>
-          <span className={styles.searchIcon}>🔍</span>
-          <input
-            ref={inputRef}
-            className={styles.searchInput}
-            type="text"
-            placeholder="Nombre, código, Brand ID o teléfono..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-          />
-          {query && <button className={styles.clearBtn} onClick={() => setQuery('')}>✕</button>}
+        {/* Panel derecho — chat IA */}
+        <div className={styles.rightPanel}>
+          {!selected ? (
+            <div className={styles.emptyChat}>
+              <span className={styles.emptyChatIcon}>💬</span>
+              <p>Selecciona una tienda para ver el historial y chatear con la IA</p>
+            </div>
+          ) : (
+            <AiChat
+              store={selected}
+              onGestionar={() => { onSaved?.(); onClose() }}
+            />
+          )}
         </div>
 
-        <div className={styles.body}>
-          {loading && <p className={styles.hint}>Cargando tiendas...</p>}
-          {!loading && !query.trim() && (
-            <p className={styles.hint}>Escribe el nombre, código, Brand ID o teléfono</p>
-          )}
-          {!loading && query.trim() && results.length === 0 && (
-            <p className={styles.hint}>Sin resultados para "{query}"</p>
-          )}
-          {results.map(s => {
-            const isBrandSync = s.todayManagementResult === 'BRAND_SYNC'
-            const yaGestionada = !!s.todayManagementResult
-            return (
-              <button
-                key={s.id}
-                className={styles.resultRow}
-                onClick={() => !yaGestionada && setSelected(s)}
-                disabled={yaGestionada}
-                style={yaGestionada ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-              >
-                <div className={styles.rowMain}>
-                  <span className={styles.storeName}>{s.storeName}</span>
-                  <span className={styles.storeCode}>{s.storeCode}</span>
-                  {isBrandSync && (
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: '99px', marginLeft: '6px' }}>
-                      ⚡ Asociada al follow up de su brand
-                    </span>
-                  )}
-                  {yaGestionada && !isBrandSync && (
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#22C55E', background: 'rgba(34,197,94,0.1)', padding: '2px 8px', borderRadius: '99px', marginLeft: '6px' }}>
-                      ✓ Gestionada hoy
-                    </span>
-                  )}
-                </div>
-                <div className={styles.rowMeta}>
-                  {s.brandId && <span className={styles.metaTag}>Brand: {s.brandId}</span>}
-                  {s.phoneNumber && <span className={styles.metaTag}>📞 {s.phoneNumber}</span>}
-                  {s.agingStage && <span className={styles.metaTag}>{s.agingStage}</span>}
-                </div>
-              </button>
-            )
-          })}
-        </div>
       </div>
     </div>
   )

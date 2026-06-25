@@ -117,6 +117,12 @@ public class ManagementRepositoryAdapter implements ManagementRepository {
     }
 
     @Override
+    public List<Management> findAllByStoreId(Long storeId) {
+        return managementJpaRepository.findAllByStoreId(storeId)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public void deleteByStoreId(Long storeId) {
         managementJpaRepository.deleteByStoreId(storeId);
     }

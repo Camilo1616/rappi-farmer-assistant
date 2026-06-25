@@ -488,6 +488,82 @@ public class AiService {
             });
     }
 
+    /**
+     * Chat de follow-up enfocado en una tienda específica.
+     * La IA recibe el historial completo de gestiones/comentarios de esa tienda.
+     * Si history está vacío genera un resumen automático de los comentarios.
+     */
+    public String followUpChat(Store store, List<com.rappi.farmer.domain.entities.Management> gestiones,
+                               List<AiController.ChatMessage> history, String userMessage) {
+        String storeContext = buildFollowUpContext(store, gestiones);
+
+        String systemPrompt = """
+                Eres el asistente de seguimiento de un Account Manager (AM) de Rappi Colombia.
+                Tienes acceso al historial completo de gestiones registradas para esta tienda.
+
+                GLOSARIO:
+                - HO: Handoff = activación del restaurante en Rappi Aliados. Sin HO no puede recibir pedidos.
+                - AVA%: porcentaje de conexión con Rappi Aliados. Meta mínima: 60%.
+                - EFECTIVA: gestión donde se contactó exitosamente al aliado.
+                - NO_CONTACTO: intento de contacto sin respuesta.
+                - Palancas: acciones comerciales (Ads, Markdown, Catálogo, Churn, Sprints, etc.).
+
+                REGLAS:
+                - Responde en español colombiano informal, directo y accionable.
+                - Usa los comentarios del historial para dar respuestas precisas.
+                - Cuando cites un comentario, menciona la fecha.
+                - Si te preguntan qué pasó en una fecha o quién habló, revisa el historial.
+                - Sugiere la próxima acción basada en el contexto real de la tienda.
+                - Máximo 350 palabras. Sin relleno.
+                """ + storeContext;
+
+        boolean isFirstMessage = (history == null || history.isEmpty());
+        String effectiveMessage = isFirstMessage
+                ? "Por favor dame un resumen ejecutivo de lo que ha pasado con esta tienda: últimos contactos, problemas identificados, palancas trabajadas y cuál debería ser mi próxima acción."
+                : userMessage;
+
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", systemPrompt));
+        if (history != null) {
+            for (AiController.ChatMessage m : history) {
+                messages.add(Map.of("role", m.role(), "content", m.content()));
+            }
+        }
+        messages.add(Map.of("role", "user", "content", effectiveMessage));
+
+        return callGroqMessages(messages, 0.5, 600);
+    }
+
+    private String buildFollowUpContext(Store store, List<com.rappi.farmer.domain.entities.Management> gestiones) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n\n=== TIENDA EN SEGUIMIENTO ===\n");
+        sb.append("Nombre: ").append(store.getStoreName()).append("\n");
+        sb.append("Store Code: ").append(store.getStoreCode()).append("\n");
+        if (store.getBrandId() != null)       sb.append("Brand ID: ").append(store.getBrandId()).append("\n");
+        if (store.getPhoneNumber() != null)   sb.append("Teléfono: ").append(store.getPhoneNumber()).append("\n");
+        if (store.getConnectionPercentage() != null) sb.append("AVA%: ").append(store.getConnectionPercentage()).append("%\n");
+        if (store.getCurrentStatus() != null) sb.append("Estado: ").append(store.getCurrentStatus()).append("\n");
+        sb.append("HO: ").append(Boolean.TRUE.equals(store.getHadHandoff()) ? "Sí" : "No").append("\n");
+
+        sb.append("\n=== HISTORIAL DE GESTIONES (").append(gestiones.size()).append(" registros) ===\n");
+        if (gestiones.isEmpty()) {
+            sb.append("Sin gestiones registradas aún.\n");
+        } else {
+            for (com.rappi.farmer.domain.entities.Management m : gestiones) {
+                sb.append("---\n");
+                if (m.getManagementDate() != null) {
+                    sb.append("Fecha: ").append(m.getManagementDate().toLocalDate()).append("\n");
+                }
+                sb.append("Tipo: ").append(m.getManagementType()).append(" | Resultado: ").append(m.getResultType()).append("\n");
+                if (m.getFarmerName() != null) sb.append("Farmer: ").append(m.getFarmerName()).append("\n");
+                if (m.getComments() != null && !m.getComments().isBlank()) {
+                    sb.append("Comentario: ").append(m.getComments()).append("\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
+
     /** No-op: el caché de recomendación vive solo en BD (ver AiController). */
     public void clearRecommendationCache(Long userId) {}
 
