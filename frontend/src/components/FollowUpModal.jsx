@@ -38,7 +38,7 @@ function AiChat({ store, onGestionar }) {
   const [gestion, setGestion] = useState(false)
   const [historyLog, setHistoryLog] = useState([])
   const [histLoading, setHistLoading] = useState(false)
-  const [tab, setTab] = useState('chat') // 'chat' | 'log'
+  const [tab, setTab] = useState('log') // 'log' | 'chat'
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -47,10 +47,10 @@ function AiChat({ store, onGestionar }) {
     setInput('')
     setLoading(false)
     setHistoryLog([])
-    setTab('chat')
+    setTab('log')
     if (store) {
-      loadSummary()
       loadHistory()
+      loadSummary() // carga IA en background
     }
   }, [store?.id])
 
@@ -130,19 +130,24 @@ function AiChat({ store, onGestionar }) {
 
       {/* Tabs */}
       <div className={styles.tabs}>
-        <button className={`${styles.tab} ${tab === 'chat' ? styles.tabActive : ''}`} onClick={() => setTab('chat')}>
-          IA Asistente
-        </button>
         <button className={`${styles.tab} ${tab === 'log' ? styles.tabActive : ''}`} onClick={() => setTab('log')}>
           Historial ({historyLog.length})
+        </button>
+        <button className={`${styles.tab} ${tab === 'chat' ? styles.tabActive : ''}`} onClick={() => setTab('chat')}>
+          IA Asistente {loading ? '⏳' : messages.length > 0 ? '●' : ''}
         </button>
       </div>
 
       {tab === 'log' ? (
         <div className={styles.logPanel}>
-          {histLoading && <p className={styles.chatHint}>Cargando historial...</p>}
+          {histLoading && (
+            <p className={styles.chatHint}>Cargando gestiones...</p>
+          )}
           {!histLoading && historyLog.length === 0 && (
-            <p className={styles.chatHint}>Sin gestiones registradas para esta tienda.</p>
+            <div className={styles.emptyChat}>
+              <span className={styles.emptyChatIcon}>📋</span>
+              <p>Sin gestiones registradas para esta tienda aún.</p>
+            </div>
           )}
           {historyLog.map(item => <HistoryBubble key={item.id} item={item} />)}
         </div>
@@ -280,8 +285,8 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
         <div className={styles.rightPanel}>
           {!selected ? (
             <div className={styles.emptyChat}>
-              <span className={styles.emptyChatIcon}>💬</span>
-              <p>Selecciona una tienda para ver el historial y chatear con la IA</p>
+              <span className={styles.emptyChatIcon}>🔍</span>
+              <p>Busca una tienda por nombre, código o Brand ID en el panel izquierdo</p>
             </div>
           ) : (
             <AiChat
