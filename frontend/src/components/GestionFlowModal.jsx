@@ -97,9 +97,9 @@ export default function GestionFlowModal({ store, onClose, onSaved }) {
         ? 'NO_CONTACTO'
         : medio === 'WhatsApp'     ? 'WHATSAPP'
         : medio === 'Llamada'      ? 'LLAMADA'
-        : medio === 'Videollamada' ? 'LLAMADA'
-        : medio === 'Correo'       ? 'SEGUIMIENTO'
-        : 'SEGUIMIENTO'
+        : medio === 'Videollamada' ? 'VIDEO_LLAMADA'
+        : medio === 'Correo'       ? 'CORREO'
+        : 'OTRO'
 
       const resultType = contactado === 'no' ? 'NO_CONTACTO' : 'EFECTIVA'
 
