@@ -217,11 +217,23 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
   const [loading, setLoading]     = useState(false)
   const [selected, setSelected]   = useState(initialStore ?? null)
   const [countryFilter, setCountryFilter] = useState(null)
-  const inputRef  = useRef(null)
-  const timerRef  = useRef(null)
+  const [countryDropOpen, setCountryDropOpen] = useState(false)
+  const inputRef      = useRef(null)
+  const timerRef      = useRef(null)
+  const countryBtnRef = useRef(null)
 
-  // Países fijos — siempre visibles para filtrar antes de buscar
   const ALL_COUNTRIES = Object.keys(COUNTRY_MAP)
+
+  // Cierra el dropdown al hacer click fuera
+  useEffect(() => {
+    if (!countryDropOpen) return
+    const handler = e => {
+      if (countryBtnRef.current && !countryBtnRef.current.contains(e.target))
+        setCountryDropOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [countryDropOpen])
 
   const filteredResults = useMemo(() => {
     if (!countryFilter) return results
@@ -278,27 +290,43 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
             {query && <button className={styles.clearBtn} onClick={() => setQuery('')}>✕</button>}
           </div>
 
-          {/* Filtros de país — siempre visibles */}
-          <div className={styles.countryBar}>
+          {/* Selector de país — dropdown */}
+          <div className={styles.countryRow} ref={countryBtnRef}>
             <button
-              className={`${styles.countryChip} ${!countryFilter ? styles.countryChipActive : ''}`}
-              onClick={() => setCountryFilter(null)}
+              className={styles.countryBtn}
+              onClick={() => setCountryDropOpen(o => !o)}
             >
-              🌎
+              <span>{countryFilter ? COUNTRY_MAP[countryFilter].flag : '🌎'}</span>
+              <span className={styles.countryBtnLabel}>
+                {countryFilter ? COUNTRY_MAP[countryFilter].name : 'Todos los países'}
+              </span>
+              <span className={styles.countryBtnArrow}>{countryDropOpen ? '▲' : '▼'}</span>
             </button>
-            {ALL_COUNTRIES.map(code => {
-              const c = COUNTRY_MAP[code]
-              return (
+
+            {countryDropOpen && (
+              <div className={styles.countryDropdown}>
                 <button
-                  key={code}
-                  className={`${styles.countryChip} ${countryFilter === code ? styles.countryChipActive : ''}`}
-                  onClick={() => setCountryFilter(countryFilter === code ? null : code)}
-                  title={c.name}
+                  className={`${styles.countryOption} ${!countryFilter ? styles.countryOptionActive : ''}`}
+                  onClick={() => { setCountryFilter(null); setCountryDropOpen(false) }}
                 >
-                  {c.flag}
+                  <span>🌎</span>
+                  <span>Todos los países</span>
                 </button>
-              )
-            })}
+                {ALL_COUNTRIES.map(code => {
+                  const c = COUNTRY_MAP[code]
+                  return (
+                    <button
+                      key={code}
+                      className={`${styles.countryOption} ${countryFilter === code ? styles.countryOptionActive : ''}`}
+                      onClick={() => { setCountryFilter(code); setCountryDropOpen(false) }}
+                    >
+                      <span>{c.flag}</span>
+                      <span>{c.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           <div className={styles.leftBody}>
