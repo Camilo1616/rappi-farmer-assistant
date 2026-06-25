@@ -281,7 +281,7 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
           </div>
 
           {/* Filtros de país */}
-          {availableCountries.length > 1 && (
+          {availableCountries.length > 0 && (
             <div className={styles.countryBar}>
               <button
                 className={`${styles.countryChip} ${!countryFilter ? styles.countryChipActive : ''}`}
