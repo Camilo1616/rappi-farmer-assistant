@@ -7,7 +7,6 @@ import styles from './FollowUpModal.module.css'
 const COUNTRY_MAP = {
   CO: { name: 'Colombia',           flag: '🇨🇴' },
   MX: { name: 'México',             flag: '🇲🇽' },
-  BR: { name: 'Brasil',             flag: '🇧🇷' },
   AR: { name: 'Argentina',          flag: '🇦🇷' },
   CL: { name: 'Chile',              flag: '🇨🇱' },
   PE: { name: 'Perú',               flag: '🇵🇪' },
