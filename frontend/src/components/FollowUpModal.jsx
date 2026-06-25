@@ -168,19 +168,14 @@ function AiChat({ store, onGestionar }) {
       setHistory([aiMsg])
     } catch (e) {
       const data = e?.response?.data
-      if (e?.response?.status === 429 && data?.rateLimited) {
-        const secs = data.retryAfterSeconds ?? 30
-        startRetry(secs, loadSummary)
-      } else {
-        const errMsg = data?.error || e?.message || 'Error al conectar con la IA'
-        setMessages([{ role: 'assistant', content: `⚠️ ${errMsg}` }])
-      }
+      const secs = (e?.response?.status === 429 && data?.rateLimited)
+        ? (data.retryAfterSeconds ?? 30) : 20
+      startRetry(secs, loadSummary)
     } finally { setLoading(false) }
   }
 
-  const send = async () => {
-    const text = input.trim()
-    if (!text || loading || retryCountdown > 0) return
+  const sendText = async (text) => {
+    if (!text || loading) return
     const userMsg = { role: 'user', content: text }
     setMessages(prev => [...prev, userMsg])
     setInput('')
@@ -194,15 +189,18 @@ function AiChat({ store, onGestionar }) {
       setHistory([...newHistory, aiMsg])
     } catch (e) {
       const data = e?.response?.data
-      if (e?.response?.status === 429 && data?.rateLimited) {
-        const secs = data.retryAfterSeconds ?? 30
-        setMessages(prev => prev.slice(0, -1)) // quita el mensaje del user para reintentarlo
-        setInput(text)
-        startRetry(secs, () => send())
-      } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Error al procesar — intenta de nuevo.' }])
-      }
+      const secs = (e?.response?.status === 429 && data?.rateLimited)
+        ? (data.retryAfterSeconds ?? 30) : 20
+      setMessages(prev => prev.slice(0, -1))
+      setInput(text)
+      startRetry(secs, () => sendText(text))
     } finally { setLoading(false) }
+  }
+
+  const send = () => {
+    const text = input.trim()
+    if (!text || loading || retryCountdown > 0) return
+    sendText(text)
   }
 
   if (gestion) {

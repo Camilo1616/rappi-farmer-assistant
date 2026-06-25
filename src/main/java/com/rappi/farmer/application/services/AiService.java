@@ -20,10 +20,9 @@ import java.util.Map;
 public class AiService {
 
     private static final String GROQ_URL  = "https://api.groq.com/openai/v1/chat/completions";
-    /** Modelo rápido para WhatsApp/recomendaciones. */
+    /** Modelo rápido con límite de tokens/min 3x mayor que versatile. */
     private static final String MODEL     = "llama-3.1-8b-instant";
-    /** Modelo con mejor seguimiento de instrucciones para follow-up chat. */
-    private static final String MODEL_FU  = "llama-3.3-70b-versatile";
+    private static final String MODEL_FU  = "llama-3.1-8b-instant";
 
     private final String apiKey;
     private final RestTemplate restTemplate = new RestTemplate();
