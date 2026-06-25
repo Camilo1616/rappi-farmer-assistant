@@ -1,8 +1,30 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { getStores } from '../services/storeService'
 import api from '../services/api'
 import GestionFlowModal from './GestionFlowModal'
 import styles from './FollowUpModal.module.css'
+
+const COUNTRY_MAP = {
+  CO: { name: 'Colombia',           flag: '🇨🇴' },
+  MX: { name: 'México',             flag: '🇲🇽' },
+  BR: { name: 'Brasil',             flag: '🇧🇷' },
+  AR: { name: 'Argentina',          flag: '🇦🇷' },
+  CL: { name: 'Chile',              flag: '🇨🇱' },
+  PE: { name: 'Perú',               flag: '🇵🇪' },
+  EC: { name: 'Ecuador',            flag: '🇪🇨' },
+  UY: { name: 'Uruguay',            flag: '🇺🇾' },
+  CR: { name: 'Costa Rica',         flag: '🇨🇷' },
+  BO: { name: 'Bolivia',            flag: '🇧🇴' },
+  PY: { name: 'Paraguay',           flag: '🇵🇾' },
+  DO: { name: 'Rep. Dominicana',    flag: '🇩🇴' },
+  PA: { name: 'Panamá',             flag: '🇵🇦' },
+}
+
+function getCountryCode(storeCode) {
+  if (!storeCode) return null
+  const prefix = storeCode.slice(0, 2).toUpperCase()
+  return COUNTRY_MAP[prefix] ? prefix : null
+}
 
 const RESULT_LABEL = {
   EFECTIVA: { label: 'Efectiva', color: '#22C55E' },
@@ -190,12 +212,25 @@ function AiChat({ store, onGestionar }) {
 }
 
 export default function FollowUpModal({ onClose, onSaved, initialStore }) {
-  const [query, setQuery]       = useState('')
-  const [results, setResults]   = useState([])
-  const [loading, setLoading]   = useState(false)
-  const [selected, setSelected] = useState(initialStore ?? null)
+  const [query, setQuery]         = useState('')
+  const [results, setResults]     = useState([])
+  const [loading, setLoading]     = useState(false)
+  const [selected, setSelected]   = useState(initialStore ?? null)
+  const [countryFilter, setCountryFilter] = useState(null) // null = todos
   const inputRef  = useRef(null)
   const timerRef  = useRef(null)
+
+  // Países presentes en los resultados actuales
+  const availableCountries = useMemo(() => {
+    const codes = new Set(results.map(s => getCountryCode(s.storeCode)).filter(Boolean))
+    return [...codes].sort()
+  }, [results])
+
+  // Resultados filtrados por país seleccionado
+  const filteredResults = useMemo(() => {
+    if (!countryFilter) return results
+    return results.filter(s => getCountryCode(s.storeCode) === countryFilter)
+  }, [results, countryFilter])
 
   // Al abrir: si viene con tienda pre-seleccionada úsala; si no, cargar lista de tiendas recientes
   useEffect(() => {
@@ -261,13 +296,40 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
             {query && <button className={styles.clearBtn} onClick={() => setQuery('')}>✕</button>}
           </div>
 
+          {/* Filtros de país */}
+          {availableCountries.length > 1 && (
+            <div className={styles.countryBar}>
+              <button
+                className={`${styles.countryChip} ${!countryFilter ? styles.countryChipActive : ''}`}
+                onClick={() => setCountryFilter(null)}
+              >
+                🌎 Todos
+              </button>
+              {availableCountries.map(code => {
+                const c = COUNTRY_MAP[code]
+                return (
+                  <button
+                    key={code}
+                    className={`${styles.countryChip} ${countryFilter === code ? styles.countryChipActive : ''}`}
+                    onClick={() => setCountryFilter(countryFilter === code ? null : code)}
+                    title={c.name}
+                  >
+                    {c.flag} {code}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           <div className={styles.leftBody}>
             {loading && <p className={styles.hint}>Cargando tiendas...</p>}
-            {!loading && results.length === 0 && (
+            {!loading && filteredResults.length === 0 && (
               <p className={styles.hint}>{query.trim() ? `Sin resultados para "${query}"` : 'Sin tiendas disponibles'}</p>
             )}
-            {results.map(s => {
+            {filteredResults.map(s => {
               const isSelected = selected?.id === s.id
+              const cc = getCountryCode(s.storeCode)
+              const countryInfo = cc ? COUNTRY_MAP[cc] : null
               return (
                 <button
                   key={s.id}
@@ -275,6 +337,7 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
                   onClick={() => setSelected(s)}
                 >
                   <div className={styles.rowMain}>
+                    {countryInfo && <span className={styles.storeFlag} title={countryInfo.name}>{countryInfo.flag}</span>}
                     <span className={styles.storeName}>{s.storeName}</span>
                     {s.todayManagementResult && (
                       <span style={{

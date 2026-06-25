@@ -86,6 +86,47 @@
 }
 .clearBtn:hover { color: var(--text-primary); }
 
+/* ── Country filter bar ── */
+.countryBar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.countryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--border-subtle);
+  background: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.countryChip:hover {
+  border-color: #FF441F;
+  color: #FF441F;
+}
+.countryChipActive {
+  background: rgba(255,68,31,0.1);
+  border-color: #FF441F;
+  color: #FF441F;
+}
+
+.storeFlag {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
 .leftBody {
   overflow-y: auto;
   flex: 1;
