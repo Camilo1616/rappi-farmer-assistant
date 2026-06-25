@@ -172,6 +172,10 @@ export default function DashboardPage() {
   const [bases, setBases]           = useState([])
   const [basesLoading, setBasesLoading] = useState(false)
 
+  // Follow Up modal (nivel raíz para que el botón de topbar lo pueda abrir)
+  const [followUpOpen, setFollowUpOpen]   = useState(false)
+  const [followUpStore, setFollowUpStore] = useState(null)
+
   // Notificaciones
   const [unread, setUnread]         = useState(0)
   const [notifs, setNotifs]         = useState([])
@@ -518,6 +522,7 @@ export default function DashboardPage() {
               onRefresh={loadDash}
               onGoToExcel={() => goTo('excel')}
               sidebarSegment={sidebarSegment}
+              onOpenFollowUp={(s) => { setFollowUpStore(s ?? null); setFollowUpOpen(true) }}
             />
           )}
 
@@ -604,6 +609,14 @@ export default function DashboardPage() {
           )
         })}
       </nav>
+
+      {followUpOpen && (
+        <FollowUpModal
+          initialStore={followUpStore}
+          onClose={() => { setFollowUpOpen(false); setFollowUpStore(null) }}
+          onSaved={() => { loadDash(); setFollowUpOpen(false); setFollowUpStore(null) }}
+        />
+      )}
     </div>
   )
 }
@@ -619,7 +632,7 @@ const SEGMENT_TO_TAB = {
   'Saludable':  'healthy',
 }
 
-function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount, churnCount, healthyCount, onRefresh, onGoToExcel, sidebarSegment }) {
+function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount, churnCount, healthyCount, onRefresh, onGoToExcel, sidebarSegment, onOpenFollowUp }) {
   const [activeTab, setActiveTab]       = useState(SECTIONS[0].key)
 
   useEffect(() => {
@@ -634,8 +647,6 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
   const [hoOpen, setHoOpen]               = useState(false)
   const [hoData, setHoData]               = useState([])
   const [hoMeetConectado, setHoMeetConectado] = useState(false)
-  const [followUpOpen, setFollowUpOpen]   = useState(false)
-  const [followUpStore, setFollowUpStore] = useState(null)
 
   const openConsolidadoHO = async () => {
     setHoSyncing(true)
@@ -806,7 +817,7 @@ function DashboardView({ firstName, dash, dashLoading, totalStores, onboardCount
           hideHeader
           isChurn={activeTab === 'churnRisk'}
           isAva={activeTab === 'ava' || activeTab === 'healthy'}
-          onFollowUp={s => { setFollowUpStore(s); setFollowUpOpen(true) }}
+          onFollowUp={s => onOpenFollowUp(s)}
         />
       )}
 
@@ -1097,13 +1108,6 @@ function BaseCard({ base, onStatusChange }) {
         </>
       )}
 
-      {followUpOpen && (
-        <FollowUpModal
-          initialStore={followUpStore}
-          onClose={() => { setFollowUpOpen(false); setFollowUpStore(null) }}
-          onSaved={() => { onRefresh(); setFollowUpOpen(false); setFollowUpStore(null) }}
-        />
-      )}
     </div>
   )
 }
