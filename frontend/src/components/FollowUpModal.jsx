@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { getStores } from '../services/storeService'
+import { globalSearchStores } from '../services/storeService'
 import api from '../services/api'
 import GestionFlowModal from './GestionFlowModal'
 import styles from './FollowUpModal.module.css'
@@ -216,35 +216,26 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
   const [results, setResults]     = useState([])
   const [loading, setLoading]     = useState(false)
   const [selected, setSelected]   = useState(initialStore ?? null)
-  const [countryFilter, setCountryFilter] = useState(null) // null = todos
+  const [countryFilter, setCountryFilter] = useState(null)
   const inputRef  = useRef(null)
   const timerRef  = useRef(null)
 
-  // Países presentes en los resultados actuales
   const availableCountries = useMemo(() => {
     const codes = new Set(results.map(s => getCountryCode(s.storeCode)).filter(Boolean))
     return [...codes].sort()
   }, [results])
 
-  // Resultados filtrados por país seleccionado
   const filteredResults = useMemo(() => {
     if (!countryFilter) return results
     return results.filter(s => getCountryCode(s.storeCode) === countryFilter)
   }, [results, countryFilter])
 
-  // Al abrir: si viene con tienda pre-seleccionada úsala; si no, cargar lista de tiendas recientes
   useEffect(() => {
     if (initialStore) {
       setSelected(initialStore)
       setResults([initialStore])
       setQuery(initialStore.storeName ?? '')
     } else {
-      // Cargar tiendas al abrir para que el panel izquierdo no quede vacío
-      setLoading(true)
-      getStores({})
-        .then(r => setResults(r.data ?? []))
-        .catch(() => setResults([]))
-        .finally(() => setLoading(false))
       inputRef.current?.focus()
     }
   }, [])
@@ -252,19 +243,12 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
   useEffect(() => {
     clearTimeout(timerRef.current)
     if (!query.trim()) {
-      // Sin búsqueda: recargar lista completa
-      setLoading(true)
-      timerRef.current = setTimeout(() => {
-        getStores({})
-          .then(r => setResults(r.data ?? []))
-          .catch(() => setResults([]))
-          .finally(() => setLoading(false))
-      }, 150)
-      return () => clearTimeout(timerRef.current)
+      setResults([])
+      return
     }
     setLoading(true)
     timerRef.current = setTimeout(() => {
-      getStores({ q: query.trim() })
+      globalSearchStores(query.trim())
         .then(r => setResults(r.data ?? []))
         .catch(() => setResults([]))
         .finally(() => setLoading(false))
@@ -289,7 +273,7 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
               ref={inputRef}
               className={styles.searchInput}
               type="text"
-              placeholder="Nombre, código, Brand ID..."
+              placeholder="Busca cualquier tienda en Rappi Farmer..."
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
@@ -322,34 +306,42 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
           )}
 
           <div className={styles.leftBody}>
-            {loading && <p className={styles.hint}>Cargando tiendas...</p>}
-            {!loading && filteredResults.length === 0 && (
-              <p className={styles.hint}>{query.trim() ? `Sin resultados para "${query}"` : 'Sin tiendas disponibles'}</p>
+            {loading && <p className={styles.hint}>Buscando...</p>}
+            {!loading && !query.trim() && (
+              <div className={styles.emptySearch}>
+                <span style={{ fontSize: 28 }}>🌎</span>
+                <p>Busca por nombre, código o Brand ID en cualquier país</p>
+              </div>
+            )}
+            {!loading && query.trim() && filteredResults.length === 0 && (
+              <p className={styles.hint}>Sin resultados para "{query}"</p>
             )}
             {filteredResults.map(s => {
               const isSelected = selected?.id === s.id
               const cc = getCountryCode(s.storeCode)
               const countryInfo = cc ? COUNTRY_MAP[cc] : null
+              const lastFU = s.lastFollowUp
+                ? new Date(s.lastFollowUp).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                : null
               return (
                 <button
                   key={s.id}
-                  className={`${styles.resultRow} ${isSelected ? styles.resultRowActive : ''}`}
+                  className={`${styles.resultRow} ${isSelected ? styles.resultRowActive : ''} ${s.active === false ? styles.resultRowInactive : ''}`}
                   onClick={() => setSelected(s)}
                 >
                   <div className={styles.rowMain}>
                     {countryInfo && <span className={styles.storeFlag} title={countryInfo.name}>{countryInfo.flag}</span>}
                     <span className={styles.storeName}>{s.storeName}</span>
-                    {s.todayManagementResult && (
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
-                        background: 'rgba(34,197,94,0.1)', color: '#22C55E', marginLeft: 4,
-                      }}>✓ Gestionada</span>
-                    )}
+                    {s.active === false && <span className={styles.inactiveBadge}>Inactiva</span>}
                   </div>
                   <div className={styles.rowMeta}>
-                    {s.brandId && <span className={styles.metaTag}>Brand: {s.brandId}</span>}
                     {s.storeCode && <span className={styles.metaTag}>{s.storeCode}</span>}
-                    {s.phoneNumber && <span className={styles.metaTag}>📞 {s.phoneNumber}</span>}
+                    {s.brandId && <span className={styles.metaTag}>Brand: {s.brandId}</span>}
+                  </div>
+                  <div className={styles.rowInfo}>
+                    {s.farmerEmail && <span className={styles.farmerEmail} title="Farmer asignado">👤 {s.farmerEmail}</span>}
+                    {lastFU && <span className={styles.lastFU}>Último FU: {lastFU}</span>}
+                    {!lastFU && <span className={styles.lastFU} style={{ color: '#F97316' }}>Sin follow up</span>}
                   </div>
                 </button>
               )

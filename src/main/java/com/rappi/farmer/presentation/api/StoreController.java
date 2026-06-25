@@ -38,6 +38,24 @@ public class StoreController {
         return ResponseEntity.ok(stores);
     }
 
+    /** Búsqueda global cross-cartera para Follow Up — devuelve datos clave de cualquier tienda cargada. */
+    @GetMapping("/global-search")
+    public ResponseEntity<List<GlobalStoreResult>> globalSearch(@RequestParam(required = false, defaultValue = "") String q) {
+        List<com.rappi.farmer.domain.entities.Store> stores = q.isBlank()
+                ? List.of()
+                : storeRepository.searchByCodeOrName(q);
+        List<GlobalStoreResult> result = stores.stream()
+                .map(s -> new GlobalStoreResult(
+                        s.getId(), s.getStoreCode(), s.getStoreName(), s.getBrandId(),
+                        s.getPhoneNumber(), s.getFarmerEmail(), s.getLastFollowUp(), s.getActive()))
+                .toList();
+        return ResponseEntity.ok(result);
+    }
+
+    public record GlobalStoreResult(
+            Long id, String storeCode, String storeName, String brandId,
+            String phoneNumber, String farmerEmail, java.time.LocalDate lastFollowUp, Boolean active) {}
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getStore(@PathVariable Long id) {
         return storeDetailService.findById(id)
