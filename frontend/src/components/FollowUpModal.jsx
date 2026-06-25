@@ -220,10 +220,8 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
   const inputRef  = useRef(null)
   const timerRef  = useRef(null)
 
-  const availableCountries = useMemo(() => {
-    const codes = new Set(results.map(s => getCountryCode(s.storeCode)).filter(Boolean))
-    return [...codes].sort()
-  }, [results])
+  // Países fijos — siempre visibles para filtrar antes de buscar
+  const ALL_COUNTRIES = Object.keys(COUNTRY_MAP)
 
   const filteredResults = useMemo(() => {
     if (!countryFilter) return results
@@ -280,30 +278,28 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
             {query && <button className={styles.clearBtn} onClick={() => setQuery('')}>✕</button>}
           </div>
 
-          {/* Filtros de país */}
-          {availableCountries.length > 0 && (
-            <div className={styles.countryBar}>
-              <button
-                className={`${styles.countryChip} ${!countryFilter ? styles.countryChipActive : ''}`}
-                onClick={() => setCountryFilter(null)}
-              >
-                🌎 Todos
-              </button>
-              {availableCountries.map(code => {
-                const c = COUNTRY_MAP[code]
-                return (
-                  <button
-                    key={code}
-                    className={`${styles.countryChip} ${countryFilter === code ? styles.countryChipActive : ''}`}
-                    onClick={() => setCountryFilter(countryFilter === code ? null : code)}
-                    title={c.name}
-                  >
-                    {c.flag} {code}
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          {/* Filtros de país — siempre visibles */}
+          <div className={styles.countryBar}>
+            <button
+              className={`${styles.countryChip} ${!countryFilter ? styles.countryChipActive : ''}`}
+              onClick={() => setCountryFilter(null)}
+            >
+              🌎
+            </button>
+            {ALL_COUNTRIES.map(code => {
+              const c = COUNTRY_MAP[code]
+              return (
+                <button
+                  key={code}
+                  className={`${styles.countryChip} ${countryFilter === code ? styles.countryChipActive : ''}`}
+                  onClick={() => setCountryFilter(countryFilter === code ? null : code)}
+                  title={c.name}
+                >
+                  {c.flag}
+                </button>
+              )
+            })}
+          </div>
 
           <div className={styles.leftBody}>
             {loading && <p className={styles.hint}>Buscando...</p>}
