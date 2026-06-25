@@ -111,7 +111,10 @@ function AiChat({ store, onGestionar }) {
   const [historyLog, setHistoryLog] = useState([])
   const [histLoading, setHistLoading] = useState(false)
   const [tab, setTab] = useState('log') // 'log' | 'chat'
+  const [retryCountdown, setRetryCountdown] = useState(0) // segundos restantes rate limit
+  const [pendingRetry, setPendingRetry] = useState(null)  // fn a ejecutar cuando expire
   const bottomRef = useRef(null)
+  const countdownRef = useRef(null)
 
   useEffect(() => {
     setMessages([])
@@ -129,6 +132,22 @@ function AiChat({ store, onGestionar }) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  const startRetry = (seconds, retryFn) => {
+    clearInterval(countdownRef.current)
+    setRetryCountdown(seconds)
+    setPendingRetry(() => retryFn)
+    countdownRef.current = setInterval(() => {
+      setRetryCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current)
+          setPendingRetry(fn => { if (fn) fn(); return null })
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
 
   const loadHistory = async () => {
     setHistLoading(true)
@@ -148,14 +167,20 @@ function AiChat({ store, onGestionar }) {
       setMessages([aiMsg])
       setHistory([aiMsg])
     } catch (e) {
-      const errMsg = e?.response?.data?.error || e?.message || 'Error al conectar con la IA'
-      setMessages([{ role: 'assistant', content: `⚠️ ${errMsg}\n\nPuedes revisar el historial de gestiones en la pestaña "Historial".` }])
+      const data = e?.response?.data
+      if (e?.response?.status === 429 && data?.rateLimited) {
+        const secs = data.retryAfterSeconds ?? 30
+        startRetry(secs, loadSummary)
+      } else {
+        const errMsg = data?.error || e?.message || 'Error al conectar con la IA'
+        setMessages([{ role: 'assistant', content: `⚠️ ${errMsg}` }])
+      }
     } finally { setLoading(false) }
   }
 
   const send = async () => {
     const text = input.trim()
-    if (!text || loading) return
+    if (!text || loading || retryCountdown > 0) return
     const userMsg = { role: 'user', content: text }
     setMessages(prev => [...prev, userMsg])
     setInput('')
@@ -167,8 +192,16 @@ function AiChat({ store, onGestionar }) {
       const aiMsg = { role: 'assistant', content: reply }
       setMessages(prev => [...prev, aiMsg])
       setHistory([...newHistory, aiMsg])
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Error al procesar — intenta de nuevo.' }])
+    } catch (e) {
+      const data = e?.response?.data
+      if (e?.response?.status === 429 && data?.rateLimited) {
+        const secs = data.retryAfterSeconds ?? 30
+        setMessages(prev => prev.slice(0, -1)) // quita el mensaje del user para reintentarlo
+        setInput(text)
+        startRetry(secs, () => send())
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Error al procesar — intenta de nuevo.' }])
+      }
     } finally { setLoading(false) }
   }
 
@@ -234,10 +267,22 @@ function AiChat({ store, onGestionar }) {
                 </div>
               </div>
             ))}
-            {loading && (
+            {loading && retryCountdown === 0 && (
               <div className={styles.msgAi}>
                 <span className={styles.aiLabel}>IA</span>
                 <p className={styles.msgText} style={{ color: 'var(--text-muted)' }}>Analizando...</p>
+              </div>
+            )}
+            {retryCountdown > 0 && (
+              <div className={styles.msgAi}>
+                <span className={styles.aiLabel}>IA</span>
+                <div className={styles.rateLimitMsg}>
+                  <span className={styles.rateLimitIcon}>⏳</span>
+                  <div>
+                    <p className={styles.rateLimitText}>Muchas consultas simultáneas — reintentando automáticamente</p>
+                    <p className={styles.rateLimitSecs}>en {retryCountdown}s</p>
+                  </div>
+                </div>
               </div>
             )}
             <div ref={bottomRef} />
@@ -251,10 +296,10 @@ function AiChat({ store, onGestionar }) {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && send()}
-              disabled={loading}
+              disabled={loading || retryCountdown > 0}
             />
-            <button className={styles.sendBtn} onClick={send} disabled={loading || !input.trim()}>
-              ↑
+            <button className={styles.sendBtn} onClick={send} disabled={loading || retryCountdown > 0 || !input.trim()}>
+              {retryCountdown > 0 ? retryCountdown : '↑'}
             </button>
           </div>
         </>
