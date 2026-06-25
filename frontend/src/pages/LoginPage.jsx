@@ -5,10 +5,10 @@ import { useAuth } from '../context/AuthContext'
 import styles from './LoginPage.module.css'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error,    setError]    = useState('')
+  const [loading,  setLoading]  = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [showForgot,   setShowForgot]   = useState(false)
   const { setUser } = useAuth()
@@ -35,137 +35,57 @@ export default function LoginPage() {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.page}>
+      {/* Glow de fondo */}
+      <div className={styles.glow} />
 
-      {/* Panel izquierdo decorativo */}
-      <div className={styles.left}>
-        <div className={styles.orb + ' ' + styles.orb1} />
-        <div className={styles.orb + ' ' + styles.orb2} />
-        <div className={styles.orb + ' ' + styles.orb3} />
-
-        {/* Brand */}
-        <div className={styles.leftBrand}>
-          <span className={styles.brandDot} />
-          <span className={styles.brandName}>Rappi Farmer Assistant</span>
+      <div className={styles.card}>
+        {/* Logo */}
+        <div className={styles.logo}>
+          <span className={styles.logoDot} />
+          <span className={styles.logoText}>rappi</span>
+          <span className={styles.logoSub}>farmers</span>
         </div>
 
-        {/* Headline central */}
-        <div className={styles.leftContent}>
-          <div className={styles.leftBadge}>Account Manager · Herramienta interna</div>
-          <h1 className={styles.leftHeadline}>
-            Tu cartera,<br />
-            bajo <em>control</em><br />
-            total.
-          </h1>
-          <p className={styles.leftSub}>
-            Prioriza, gestiona y activa restaurantes sin perder el hilo.
-            Diseñado para el ritmo real de un AM de Rappi.
-          </p>
+        <h1 className={styles.title}>Bienvenido</h1>
+        <p className={styles.sub}>Ingresa con tu cuenta @rappi.com</p>
 
-          {/* Feature pills */}
-          <div className={styles.featureList}>
-            <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>⚡</span>
-              <span>WhatsApp masivo con plantillas dinámicas</span>
-            </div>
-            <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>📊</span>
-              <span>Dashboard de prioridades en tiempo real</span>
-            </div>
-            <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>🗂️</span>
-              <span>Seguimiento de onboarding día a día</span>
-            </div>
-            <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>🔔</span>
-              <span>Alertas de churn y Aliados &lt; 60 %</span>
-            </div>
-          </div>
-        </div>
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <input
+            type="email"
+            className={styles.input}
+            placeholder="nombre@rappi.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            autoFocus
+          />
+          <input
+            type="password"
+            className={styles.input}
+            placeholder="Contraseña"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+          />
 
-        {/* Footer stats */}
-        <div className={styles.leftFooter}>
-          <div className={styles.stat}>
-            <span className={styles.statValue}>500<span className={styles.statPlus}>+</span></span>
-            <span className={styles.statLabel}>Restaurantes</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.stat}>
-            <span className={styles.statValue}>40</span>
-            <span className={styles.statLabel}>WhatsApp / día</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.stat}>
-            <span className={styles.statValue}>8</span>
-            <span className={styles.statLabel}>Días críticos</span>
-          </div>
-        </div>
-      </div>
+          {error && <div className={styles.error}>{error}</div>}
 
-      {/* Panel derecho: formulario */}
-      <div className={styles.right}>
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Bienvenido de vuelta</h2>
-            <p className={styles.cardSub}>Ingresa con tu cuenta @rappi.com</p>
-          </div>
+          <button type="submit" className={styles.btn} disabled={loading}>
+            {loading ? <span className={styles.spinner} /> : null}
+            {loading ? 'Verificando...' : 'Ingresar'}
+          </button>
+        </form>
 
-          <form className={styles.form} onSubmit={handleSubmit}>
-            <div className={styles.field}>
-              <label htmlFor="email" className={styles.label}>Correo</label>
-              <div className={styles.inputWrapper}>
-                <span className={styles.inputIcon}>✉</span>
-                <input
-                  id="email"
-                  type="email"
-                  className={styles.input}
-                  placeholder="nombre@rappi.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <div className={styles.field}>
-              <label htmlFor="password" className={styles.label}>Contraseña</label>
-              <div className={styles.inputWrapper}>
-                <span className={styles.inputIcon}>🔒</span>
-                <input
-                  id="password"
-                  type="password"
-                  className={styles.input}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <div className={styles.error}>
-                <span>⚠</span> {error}
-              </div>
-            )}
-
-            <button type="submit" className={styles.btn} disabled={loading}>
-              {loading && <span className={styles.spinner} />}
-              {loading ? 'Verificando...' : 'Ingresar'}
-            </button>
-
-            <button type="button" className={styles.forgotLink}
-              onClick={() => setShowForgot(true)}>
-              ¿Olvidaste tu contraseña?
-            </button>
-          </form>
-
-          <div className={styles.divider}><span>¿Eres nuevo?</span></div>
-
-          <button className={styles.btnRegister} onClick={() => setShowRegister(true)}>
-            ✨ Crear cuenta
+        <div className={styles.links}>
+          <button className={styles.link} onClick={() => setShowForgot(true)}>
+            ¿Olvidaste tu contraseña?
+          </button>
+          <span className={styles.linkDivider}>·</span>
+          <button className={styles.link} onClick={() => setShowRegister(true)}>
+            Crear cuenta
           </button>
         </div>
       </div>
@@ -179,6 +99,8 @@ export default function LoginPage() {
     </div>
   )
 }
+
+/* ─── Modal de registro ────────────────────────────────────────────────────── */
 
 const MX_ZONES = [
   { code: 'MX-CS', label: 'Center South' },
@@ -203,9 +125,7 @@ function RegisterModal({ onSuccess, onClose }) {
   const [emailExists,   setEmailExists]   = useState(false)
   const [checkingEmail, setCheckingEmail] = useState(false)
   const [liderCode,     setLiderCode]     = useState('')
-  // Paso 3 — líder MX
   const [selectedZones, setSelectedZones] = useState([])
-  // Paso 3 — farmer MX
   const [lidersList,    setLidersList]    = useState([])
   const [farmLiderId,   setFarmLiderId]   = useState('')
   const [loadingLiders, setLoadingLiders] = useState(false)
@@ -215,7 +135,6 @@ function RegisterModal({ onSuccess, onClose }) {
   const isMX      = country === 'MX'
   const totalSteps = isMX ? 3 : 2
 
-  // Cargar líderes de MX cuando el farmer pasa al paso 3
   useEffect(() => {
     if (step === 3 && isMX && !isLider) {
       setLoadingLiders(true)
@@ -252,7 +171,6 @@ function RegisterModal({ onSuccess, onClose }) {
     finally { setResending(false) }
   }
 
-  // Paso 2: verificar PIN. Si es MX → ir a paso 3. Si no → registrar directamente.
   const handleVerifyPin = (e) => {
     e.preventDefault(); setError('')
     if (pin.length !== 6) { setError('El código debe tener 6 dígitos'); return }
@@ -262,21 +180,12 @@ function RegisterModal({ onSuccess, onClose }) {
   const handleRegister = async (extraData = {}) => {
     setLoading(true); setError('')
     try {
-      const data = await register({
-        fullName, email, password,
-        countryCode: country,
-        pin,
-        liderCode: liderCode || undefined,
-        ...extraData,
-      })
+      const data = await register({ fullName, email, password, countryCode: country, pin, liderCode: liderCode || undefined, ...extraData })
       onSuccess(data)
     } catch (err) {
       setError(err.response?.data?.message || 'Código incorrecto o error al crear la cuenta')
-      if (err.response?.status === 400 && err.response?.data?.message?.toLowerCase().includes('código')) {
-        setStep(2) // volver al PIN si el código es incorrecto
-      }
-    } finally {
-      setLoading(false) }
+      if (err.response?.status === 400 && err.response?.data?.message?.toLowerCase().includes('código')) setStep(2)
+    } finally { setLoading(false) }
   }
 
   const handleFinishMX = (e) => {
@@ -311,7 +220,6 @@ function RegisterModal({ onSuccess, onClose }) {
           <button className={styles.modalClose} onClick={onClose}>✕</button>
         </div>
 
-        {/* ── Paso 1: datos personales ── */}
         {step === 1 && (
           <form className={styles.modalForm} onSubmit={handleSendPin}>
             <div className={styles.modalField}>
@@ -335,12 +243,11 @@ function RegisterModal({ onSuccess, onClose }) {
             </div>
             <div className={styles.modalField}>
               <label className={styles.modalLabel}>
-                Código de líder <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem' }}>(opcional — déjalo vacío si eres Farmer)</span>
+                Código de líder <span style={{ fontWeight: 400, color: '#8B6F5E', fontSize: '0.78rem' }}>(opcional)</span>
               </label>
               <input className={styles.modalInput} type="password"
                 placeholder="Solo si eres Líder de equipo"
-                value={liderCode} onChange={e => setLiderCode(e.target.value)}
-                autoComplete="off" />
+                value={liderCode} onChange={e => setLiderCode(e.target.value)} autoComplete="off" />
             </div>
             <div className={styles.modalField}>
               <label className={styles.modalLabel}>Contraseña</label>
@@ -367,17 +274,16 @@ function RegisterModal({ onSuccess, onClose }) {
             {error && <div className={styles.modalError}>⚠ {error}</div>}
             <button type="submit" className={styles.modalBtn}
               disabled={loading || !fullName || !email || !password || !confirmPwd || emailExists}>
-              {loading ? 'Enviando código...' : '📧 Enviar código de verificación'}
+              {loading ? 'Enviando código...' : 'Enviar código de verificación'}
             </button>
           </form>
         )}
 
-        {/* ── Paso 2: verificar PIN ── */}
         {step === 2 && (
           <form className={styles.modalForm} onSubmit={handleVerifyPin}>
             <div className={styles.pinInfo}>
               <span className={styles.pinIcon}>📬</span>
-              <p>Enviamos un código de 6 dígitos a<br /><strong>{email}</strong></p>
+              <p>Código enviado a<br /><strong>{email}</strong></p>
               <p className={styles.pinSub}>Expira en 10 minutos</p>
             </div>
             <div className={styles.modalField}>
@@ -389,7 +295,7 @@ function RegisterModal({ onSuccess, onClose }) {
             </div>
             {error && <div className={styles.modalError}>⚠ {error}</div>}
             <button type="submit" className={styles.modalBtn} disabled={loading || pin.length !== 6}>
-              {loading ? 'Verificando...' : isMX ? 'Continuar →' : '✅ Crear cuenta'}
+              {loading ? 'Verificando...' : isMX ? 'Continuar →' : 'Crear cuenta'}
             </button>
             <button type="button" className={styles.btnResend} onClick={handleResend} disabled={resending}>
               {resending ? 'Reenviando...' : '¿No recibiste el código? Reenviar'}
@@ -397,7 +303,6 @@ function RegisterModal({ onSuccess, onClose }) {
           </form>
         )}
 
-        {/* ── Paso 3: solo para México ── */}
         {step === 3 && isMX && (
           <form className={styles.modalForm} onSubmit={handleFinishMX}>
             {isLider ? (
@@ -405,22 +310,20 @@ function RegisterModal({ onSuccess, onClose }) {
                 <div className={styles.pinInfo} style={{ textAlign: 'left' }}>
                   <span style={{ fontSize: '1.5rem' }}>🇲🇽</span>
                   <p style={{ margin: 0 }}>Selecciona las <strong>zonas de México</strong> que gestionas</p>
-                  <p className={styles.pinSub}>Puedes elegir una o varias</p>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {MX_ZONES.map(z => (
                     <label key={z.code} style={{
                       display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
                       borderRadius: 10, cursor: 'pointer',
-                      background: selectedZones.includes(z.code) ? 'rgba(255,68,31,0.12)' : 'rgba(255,255,255,0.04)',
-                      border: `1.5px solid ${selectedZones.includes(z.code) ? '#FF441F' : 'rgba(255,255,255,0.1)'}`,
-                      transition: 'all 0.15s',
+                      background: selectedZones.includes(z.code) ? 'rgba(255,68,31,0.12)' : 'rgba(255,255,255,0.03)',
+                      border: `1.5px solid ${selectedZones.includes(z.code) ? '#FF441F' : 'rgba(255,255,255,0.08)'}`,
                     }}>
                       <input type="checkbox" checked={selectedZones.includes(z.code)}
                         onChange={() => toggleZone(z.code)}
-                        style={{ width: 16, height: 16, accentColor: '#FF441F' }} />
-                      <span style={{ color: '#E5E7EB', fontWeight: 500 }}>{z.label}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#9CA3AF' }}>{z.code}</span>
+                        style={{ accentColor: '#FF441F' }} />
+                      <span style={{ color: '#E5D5C8', fontWeight: 500 }}>{z.label}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#8B6F5E' }}>{z.code}</span>
                     </label>
                   ))}
                 </div>
@@ -430,13 +333,12 @@ function RegisterModal({ onSuccess, onClose }) {
                 <div className={styles.pinInfo} style={{ textAlign: 'left' }}>
                   <span style={{ fontSize: '1.5rem' }}>🇲🇽</span>
                   <p style={{ margin: 0 }}>Selecciona tu <strong>líder de zona</strong> en México</p>
-                  <p className={styles.pinSub}>Tu líder supervisará tu cartera y te asignará bases</p>
                 </div>
                 {loadingLiders ? (
-                  <p style={{ color: '#9CA3AF', textAlign: 'center' }}>Cargando líderes...</p>
+                  <p style={{ color: '#8B6F5E', textAlign: 'center' }}>Cargando líderes...</p>
                 ) : lidersList.length === 0 ? (
-                  <p style={{ color: '#F59E0B', textAlign: 'center', fontSize: '0.85rem' }}>
-                    No hay líderes registrados en MX aún. Continúa sin asignar líder.
+                  <p style={{ color: '#FF8A60', textAlign: 'center', fontSize: '0.85rem' }}>
+                    No hay líderes registrados en MX aún.
                   </p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -444,17 +346,16 @@ function RegisterModal({ onSuccess, onClose }) {
                       <label key={l.id} style={{
                         display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
                         borderRadius: 10, cursor: 'pointer',
-                        background: farmLiderId === String(l.id) ? 'rgba(255,68,31,0.12)' : 'rgba(255,255,255,0.04)',
-                        border: `1.5px solid ${farmLiderId === String(l.id) ? '#FF441F' : 'rgba(255,255,255,0.1)'}`,
-                        transition: 'all 0.15s',
+                        background: farmLiderId === String(l.id) ? 'rgba(255,68,31,0.12)' : 'rgba(255,255,255,0.03)',
+                        border: `1.5px solid ${farmLiderId === String(l.id) ? '#FF441F' : 'rgba(255,255,255,0.08)'}`,
                       }}>
                         <input type="radio" name="lider" value={l.id}
                           checked={farmLiderId === String(l.id)}
                           onChange={e => setFarmLiderId(e.target.value)}
                           style={{ accentColor: '#FF441F' }} />
                         <div>
-                          <div style={{ color: '#E5E7EB', fontWeight: 500 }}>{l.name}</div>
-                          <div style={{ color: '#9CA3AF', fontSize: '0.72rem' }}>{l.zones || 'MX'}</div>
+                          <div style={{ color: '#E5D5C8', fontWeight: 500 }}>{l.name}</div>
+                          <div style={{ color: '#8B6F5E', fontSize: '0.72rem' }}>{l.zones || 'MX'}</div>
                         </div>
                       </label>
                     ))}
@@ -464,10 +365,10 @@ function RegisterModal({ onSuccess, onClose }) {
             )}
             {error && <div className={styles.modalError}>⚠ {error}</div>}
             <button type="submit" className={styles.modalBtn} disabled={loading}>
-              {loading ? 'Creando cuenta...' : '✅ Crear cuenta'}
+              {loading ? 'Creando cuenta...' : 'Crear cuenta'}
             </button>
             <button type="button" className={styles.btnResend} onClick={() => { setStep(2); setError('') }}>
-              ← Volver al código
+              ← Volver
             </button>
           </form>
         )}
@@ -475,6 +376,8 @@ function RegisterModal({ onSuccess, onClose }) {
     </div>
   )
 }
+
+/* ─── Modal recuperar contraseña ───────────────────────────────────────────── */
 
 function ForgotPasswordModal({ onClose }) {
   const [step,       setStep]       = useState(1)
@@ -533,12 +436,12 @@ function ForgotPasswordModal({ onClose }) {
         {success ? (
           <div className={styles.modalForm} style={{alignItems:'center',textAlign:'center',gap:16}}>
             <span style={{fontSize:'2.5rem'}}>✅</span>
-            <p style={{color:'#D1D5DB',margin:0}}>Contraseña actualizada correctamente</p>
+            <p style={{color:'#C8B4A8',margin:0}}>Contraseña actualizada correctamente</p>
             <button className={styles.modalBtn} onClick={onClose}>Ir al login</button>
           </div>
         ) : step === 1 ? (
           <form className={styles.modalForm} onSubmit={handleSendPin}>
-            <p style={{color:'#9CA3AF',fontSize:'0.85rem',margin:0}}>
+            <p style={{color:'#8B6F5E',fontSize:'0.85rem',margin:0}}>
               Ingresa tu correo registrado y te enviaremos un código.
             </p>
             <div className={styles.modalField}>
@@ -548,7 +451,7 @@ function ForgotPasswordModal({ onClose }) {
             </div>
             {error && <div className={styles.modalError}>⚠ {error}</div>}
             <button type="submit" className={styles.modalBtn} disabled={loading || !email}>
-              {loading ? 'Enviando...' : '📧 Enviar código'}
+              {loading ? 'Enviando...' : 'Enviar código'}
             </button>
           </form>
         ) : step === 2 ? (
@@ -567,7 +470,7 @@ function ForgotPasswordModal({ onClose }) {
             </div>
             {error && <div className={styles.modalError}>⚠ {error}</div>}
             <button type="submit" className={styles.modalBtn} disabled={pin.length !== 6}>
-              Verificar código →
+              Verificar →
             </button>
           </form>
         ) : (
@@ -593,7 +496,7 @@ function ForgotPasswordModal({ onClose }) {
             </div>
             {error && <div className={styles.modalError}>⚠ {error}</div>}
             <button type="submit" className={styles.modalBtn} disabled={loading || !newPwd || !confirmPwd}>
-              {loading ? 'Guardando...' : '🔐 Cambiar contraseña'}
+              {loading ? 'Guardando...' : 'Cambiar contraseña'}
             </button>
           </form>
         )}

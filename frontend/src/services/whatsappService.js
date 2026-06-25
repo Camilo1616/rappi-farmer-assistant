@@ -22,7 +22,11 @@ async function readSseStream(response, onProgress, onDone, onError) {
     let buffer = ''
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        // Stream terminó sin finalizado:true — limpiar estado
+        progressStore.update({ sending: false })
+        break
+      }
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
       buffer = lines.pop()

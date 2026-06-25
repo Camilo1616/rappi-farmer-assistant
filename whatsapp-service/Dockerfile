@@ -34,6 +34,11 @@ COPY index.js .
 ENV AUTH_DIR=/app/auth_info
 ENV NODE_ENV=production
 
+# Crear el directorio de sesiones para que Railway pueda montarlo como volumen persistente
+RUN mkdir -p /app/auth_info
+
+VOLUME ["/app/auth_info"]
+
 EXPOSE 3000
 
 CMD ["node", "index.js"]

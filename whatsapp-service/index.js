@@ -138,8 +138,14 @@ function initSession(sessionId) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--single-process',
         '--disable-gpu',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-sync',
+        '--metrics-recording-only',
+        '--mute-audio',
+        '--no-default-browser-check',
+        '--safebrowsing-disable-auto-update',
       ],
     },
   })
@@ -298,13 +304,27 @@ app.post('/send', async (req, res) => {
   }
 
   try {
+    // Verificar estado real del cliente antes de intentar enviar
+    const state = await s.client.getState().catch(() => null)
+    if (state !== 'CONNECTED') {
+      console.warn(`[WA:${sessionId}] Estado del cliente: ${state} — marcando como desconectado`)
+      s.connected = false
+      return res.status(503).json({ error: `WhatsApp no conectado (estado: ${state})`, sessionId })
+    }
+
     const chatId = await resolveWhatsappId(s.client, phone)
     if (!chatId) {
       console.log(`[WA:${sessionId}] Número no encontrado en WA:`, phone)
       return res.json({ result: 'NUMERO_INVALIDO', phone })
     }
-    await s.client.sendMessage(chatId, message)
-    console.log(`[WA:${sessionId}] Enviado a`, phone, '→', chatId)
+
+    const msg = await s.client.sendMessage(chatId, message)
+    // Esperar ACK de servidor (1 = enviado al servidor de WA, no solo encolado localmente)
+    if (msg && msg.id) {
+      console.log(`[WA:${sessionId}] Enviado a ${phone} → ${chatId} (id: ${msg.id._serialized})`)
+    } else {
+      console.warn(`[WA:${sessionId}] sendMessage no devolvió id — posible fallo silencioso`)
+    }
     res.json({ result: 'ENVIADO', phone })
   } catch (err) {
     console.error(`[WA:${sessionId}] Error enviando a`, phone, '—', err.message)
