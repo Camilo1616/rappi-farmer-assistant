@@ -47,7 +47,7 @@ public class StoreDeleteService {
     public void deleteStore(Long storeId) {
         priorityBaseStoreJpaRepository.deleteByStoreId(storeId);
         priorityJpaRepository.deleteByStoreId(storeId);
-        managementRepository.deleteByStoreId(storeId);
+        // No se borran gestiones — el historial es permanente aunque la tienda se elimine
         whatsappMessageRepository.deleteByStoreId(storeId);
         dailyMetricRepository.deleteByStoreId(storeId);
         entityManager.flush();

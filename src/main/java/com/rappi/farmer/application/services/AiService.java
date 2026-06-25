@@ -510,18 +510,19 @@ public class AiService {
                 - NO_CONTACTO: intento de contacto sin respuesta.
                 - Palancas: acciones comerciales (Ads, Markdown, Catálogo, Churn, Sprints, etc.).
 
-                REGLAS:
+                REGLAS CRÍTICAS:
+                - EL COMENTARIO DEL FARMER ES LA FUENTE MÁS IMPORTANTE. Es lo que realmente pasó en la gestión. Cítalo textualmente cuando sea relevante.
+                - Las palancas son acciones comerciales trabajadas — mencionarlas siempre en contexto con el comentario que las acompañó.
+                - Identifica PROBLEMAS RECURRENTES: si el aliado menciona el mismo problema en varias gestiones, resáltalo.
                 - Responde en español colombiano informal, directo y accionable.
-                - Usa los comentarios del historial para dar respuestas precisas.
-                - Cuando cites un comentario, menciona la fecha.
-                - Si te preguntan qué pasó en una fecha o quién habló, revisa el historial.
-                - Sugiere la próxima acción basada en el contexto real de la tienda.
-                - Máximo 350 palabras. Sin relleno.
+                - Cuando cites un comentario, menciona la fecha y quién la registró (farmerName si está disponible).
+                - Sugiere la próxima acción basada en lo que el farmer escribió, no solo en los datos técnicos.
+                - Máximo 400 palabras. Sin relleno. Sin inventar información que no esté en el historial.
                 """ + storeContext;
 
         boolean isFirstMessage = (history == null || history.isEmpty());
         String effectiveMessage = isFirstMessage
-                ? "Por favor dame un resumen ejecutivo de lo que ha pasado con esta tienda: últimos contactos, problemas identificados, palancas trabajadas y cuál debería ser mi próxima acción."
+                ? "Dame un resumen de esta tienda enfocado en: 1) Los COMENTARIOS reales que dejaron los farmers en cada gestión (cítalos textualmente). 2) PROBLEMAS RECURRENTES que el aliado haya mencionado. 3) Palancas trabajadas y su contexto según los comentarios. 4) Mi próxima acción concreta basada en lo que realmente pasó."
                 : userMessage;
 
         List<Map<String, String>> messages = new ArrayList<>();
@@ -540,8 +541,8 @@ public class AiService {
         return callGroqMessages(messages, 0.5, 500);
     }
 
-    private static final int MAX_GESTIONES_CONTEXT = 15;
-    private static final int MAX_COMMENT_CHARS     = 200;
+    private static final int MAX_GESTIONES_CONTEXT = 20;
+    private static final int MAX_COMMENT_CHARS     = 700;
     private static final int MAX_HISTORY_TURNS     = 6;
 
     private String buildFollowUpContext(Store store, List<com.rappi.farmer.domain.entities.Management> gestiones) {
@@ -559,14 +560,19 @@ public class AiService {
 
         sb.append("GESTIONES (").append(total).append(" total, mostrando ").append(recientes.size()).append(" más recientes):\n");
         if (recientes.isEmpty()) {
-            sb.append("Sin gestiones.\n");
+            sb.append("Sin gestiones registradas.\n");
         } else {
             for (com.rappi.farmer.domain.entities.Management m : recientes) {
                 String fecha = m.getManagementDate() != null ? m.getManagementDate().toLocalDate().toString() : "?";
+                String farmer = m.getFarmerName() != null && !m.getFarmerName().isBlank() ? " [" + m.getFarmerName() + "]" : "";
                 String comentario = m.getComments() != null && !m.getComments().isBlank()
                         ? m.getComments().substring(0, Math.min(m.getComments().length(), MAX_COMMENT_CHARS))
-                        : "";
-                sb.append(fecha).append(" [").append(m.getResultType()).append("] ").append(comentario).append("\n");
+                        : "(sin comentario)";
+                sb.append(fecha)
+                  .append(" [").append(m.getManagementType()).append("] ")
+                  .append("[").append(m.getResultType()).append("]")
+                  .append(farmer)
+                  .append(" — ").append(comentario).append("\n");
             }
         }
         return sb.toString();

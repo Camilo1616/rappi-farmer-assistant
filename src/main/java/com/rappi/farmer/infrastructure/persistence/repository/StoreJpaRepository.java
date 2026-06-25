@@ -29,11 +29,12 @@ public interface StoreJpaRepository extends JpaRepository<StoreEntity, Long> {
         @org.springframework.data.repository.query.Param("q") String q);
 
     @org.springframework.data.jpa.repository.Query(
-        "SELECT s FROM StoreEntity s WHERE s.user.id = :userId AND s.active = true AND (" +
+        "SELECT s FROM StoreEntity s WHERE s.user.id = :userId AND (" +
         "  LOWER(s.storeCode)    LIKE LOWER(CONCAT('%',:q,'%')) OR " +
         "  LOWER(s.storeName)    LIKE LOWER(CONCAT('%',:q,'%')) OR " +
         "  LOWER(s.brandId)      LIKE LOWER(CONCAT('%',:q,'%')) OR " +
-        "  LOWER(s.phoneNumber)  LIKE LOWER(CONCAT('%',:q,'%')))")
+        "  LOWER(s.phoneNumber)  LIKE LOWER(CONCAT('%',:q,'%')))" +
+        " ORDER BY s.active DESC")
     List<StoreEntity> searchByAnyFieldAndUser(
         @org.springframework.data.repository.query.Param("q") String q,
         @org.springframework.data.repository.query.Param("userId") Long userId);
