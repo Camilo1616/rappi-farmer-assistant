@@ -562,6 +562,45 @@
   white-space: pre-wrap;
 }
 
+/* ── History table ── */
+.histTableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.histTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.histTable th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.histTable td {
+  padding: 9px 10px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+
+.histTable tr:last-child td { border-bottom: none; }
+.histTable tr:hover td { background: var(--border-subtle); }
+
+.histTdDate { white-space: nowrap; color: var(--text-muted); font-size: 11px; }
+.histTdType { white-space: nowrap; font-size: 11px; }
+.histTdFarmer { white-space: nowrap; color: var(--text-muted); font-size: 11px; }
+.histTdComment { max-width: 220px; font-size: 12px; line-height: 1.45; }
+
 @media (max-width: 700px) {
   .modal { flex-direction: column; height: 95vh; }
   .leftPanel { width: 100%; height: 220px; border-right: none; border-bottom: 1px solid var(--border-subtle); }

@@ -70,19 +70,46 @@ const RESULT_LABEL = {
   BRAND_SYNC: { label: 'Brand sync', color: '#F59E0B' },
 }
 
-function HistoryBubble({ item }) {
-  const rs = RESULT_LABEL[item.resultType] ?? { label: item.resultType, color: '#8B93A8' }
-  const date = item.date ? new Date(item.date) : null
-  const dateStr = date ? date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+function HistoryTable({ items }) {
+  if (!items.length) return (
+    <div className={styles.emptyChat}>
+      <span className={styles.emptyChatIcon}>📋</span>
+      <p>Sin gestiones registradas para esta tienda aún.</p>
+    </div>
+  )
   return (
-    <div className={styles.histBubble}>
-      <div className={styles.histMeta}>
-        <span className={styles.histDate}>{dateStr}</span>
-        <span className={styles.histTag} style={{ color: rs.color, background: rs.color + '18' }}>{rs.label}</span>
-        {item.managementType && <span className={styles.histType}>{item.managementType}</span>}
-        {item.farmerName && <span className={styles.histFarmer}>{item.farmerName}</span>}
-      </div>
-      {item.comments && <p className={styles.histComment}>{item.comments}</p>}
+    <div className={styles.histTableWrap}>
+      <table className={styles.histTable}>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Resultado</th>
+            <th>Farmer</th>
+            <th>Comentario</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map(item => {
+            const rs = RESULT_LABEL[item.resultType] ?? { label: item.resultType, color: '#8B93A8' }
+            const date = item.date ? new Date(item.date) : null
+            const dateStr = date ? date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'
+            return (
+              <tr key={item.id}>
+                <td className={styles.histTdDate}>{dateStr}</td>
+                <td className={styles.histTdType}>{item.managementType ?? '—'}</td>
+                <td>
+                  <span className={styles.histTag} style={{ color: rs.color, background: rs.color + '18' }}>
+                    {rs.label}
+                  </span>
+                </td>
+                <td className={styles.histTdFarmer}>{item.farmerName ?? '—'}</td>
+                <td className={styles.histTdComment}>{item.comments ?? '—'}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -197,16 +224,10 @@ function AiChat({ store, onGestionar }) {
 
       {tab === 'log' ? (
         <div className={styles.logPanel}>
-          {histLoading && (
-            <p className={styles.chatHint}>Cargando gestiones...</p>
-          )}
-          {!histLoading && historyLog.length === 0 && (
-            <div className={styles.emptyChat}>
-              <span className={styles.emptyChatIcon}>📋</span>
-              <p>Sin gestiones registradas para esta tienda aún.</p>
-            </div>
-          )}
-          {historyLog.map(item => <HistoryBubble key={item.id} item={item} />)}
+          {histLoading
+            ? <p className={styles.chatHint}>Cargando gestiones...</p>
+            : <HistoryTable items={historyLog} />
+          }
         </div>
       ) : (
         <>
