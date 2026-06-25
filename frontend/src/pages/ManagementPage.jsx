@@ -5,15 +5,15 @@ import ConfirmModal from '../components/ConfirmModal'
 import Pagination from '../components/Pagination'
 import styles from './ManagementPage.module.css'
 
-const TIPOS = ['WHATSAPP', 'LLAMADA', 'SAC', 'SEGUIMIENTO', 'ACTIVACION']
+const TIPOS = ['WHATSAPP', 'LLAMADA', 'VIDEO_LLAMADA', 'CORREO']
 const RESULTADOS = ['EFECTIVA', 'NO_CONTACTO']
 
 const TIPO_LABEL = {
-  WHATSAPP:    { label: 'WhatsApp',    color: '#22C55E', bg: 'rgba(34,197,94,0.12)' },
-  LLAMADA:     { label: 'Llamada',     color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
-  SAC:         { label: 'SAC',         color: '#A855F7', bg: 'rgba(168,85,247,0.12)' },
-  SEGUIMIENTO: { label: 'Seguimiento', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
-  ACTIVACION:  { label: 'Activación',  color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
+  WHATSAPP:      { label: 'WhatsApp',     color: '#22C55E', bg: 'rgba(34,197,94,0.12)' },
+  LLAMADA:       { label: 'Llamada',      color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+  VIDEO_LLAMADA: { label: 'Videollamada', color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
+  CORREO:        { label: 'Correo',       color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
+  NO_CONTACTO:   { label: 'No contacto',  color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
 }
 const RESULT_LABEL = {
   EFECTIVA:              { label: 'Efectiva',             color: '#22C55E', icon: '✅' },
