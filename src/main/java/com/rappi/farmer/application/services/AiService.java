@@ -204,62 +204,19 @@ public class AiService {
 
         String context = buildStoreContext(stores);
 
-        String systemPrompt = """
-                Eres el asistente estratégico de un Account Manager (AM) de Rappi Colombia.
-                Analizas la cartera de restaurantes y priorizas las acciones del día.
-                Respondes SIEMPRE en JSON válido, sin texto adicional, sin markdown, sin comillas extra.
-                NUNCA menciones si la cartera es "del día anterior" ni comentes sobre la fecha de carga de datos.
-                Los datos son los vigentes que el AM cargó esta mañana — tratar siempre como datos de HOY.
-                """;
+        String systemPrompt = "Asistente AM Rappi Colombia. Responde SOLO JSON válido, sin markdown ni texto extra.";
 
         String userPrompt = String.format("""
-                HOY ES: %s
-                ÚLTIMA CARGA DEL EXCEL: %s (estos son los datos vigentes de la cartera — NO comentar sobre la fecha de carga)
+                HOY: %s. CARTERA:
+                HO=activación Aliados. AVA%%=conexión mensual(meta>60%%). IS=visita física hoy. Aging=días en programa.
 
-                Eres el asistente de un Account Manager (AM) de Rappi Colombia que gestiona la activación y retención de restaurantes aliados.
+                JSON sin markdown:
+                {"message":"2 oraciones: tiendas críticas hoy y foco principal.",
+                 "priorities":[{"storeCode":"...","storeName":"...","priority":"ALTA|MEDIA|BAJA","reason":"...","action":"..."}]}
 
-                GLOSARIO IMPORTANTE:
-                - HO (Handoff): activación del restaurante en la app Rappi Aliados. Sin HO el restaurante NO puede recibir pedidos.
-                - AVA MTD %%: porcentaje de conexión mensual con Rappi Aliados. Meta mínima: 60%%.
-                - IS: estado "In Store" — el AM visitó o va a visitar la tienda físicamente hoy. Máxima urgencia.
-                - Aging: días desde que el restaurante entró al programa. Ventana crítica: días 1-14.
-                - FU30d: si el restaurante tuvo algún seguimiento en los últimos 30 días (SI/NO).
-                - UltimoFU: hace cuántos días fue el último follow-up.
-                - Gestionar: campo de acción sugerida del sistema (IS, WhatsApp, Llamada, etc.).
+                Reglas: IS>1-7dHO=NO>8-14dHO=NO>8-14dAVA<60>CHURN>AVA<40. Máx 25 en priorities. Solo tiendas de la lista. Sin inventar.
 
-                REGLAS DE PRIORIZACIÓN:
-                1. IS (días 1-14): ACCIÓN HOY — visita en tienda programada, coordinar activación en sitio.
-                2. Aging 1-7 días HO=NO: ALTA urgencia — contactar para activar Rappi Aliados inmediatamente.
-                3. Aging 1-7 días HO=SI: verificar que ya esté recibiendo pedidos y AVA > 0%%.
-                4. Aging 8-14 días HO=NO: ALTA urgencia — se perdió la ventana ideal, recuperar activación.
-                5. Aging 8-14 días AVA < 60%%: ALTA — reforzar uso de app Rappi Aliados.
-                6. Churn activo: retención urgente, preguntar por problemas y ofrecer solución concreta.
-                7. AVA < 40%% fuera de ventana: MEDIA — monitoreo de conexión.
-                8. FU30d=NO con >7 días sin contacto: MEDIA — check-in mínimo.
-
-                Devuelve ÚNICAMENTE este JSON válido (sin markdown, sin texto extra):
-                {
-                  "message": "Resumen estratégico para HOY (%s): cuántas tiendas en ventana crítica, cuántas IS, y el foco principal. 2-3 oraciones directas y motivadoras. NO mencionar fecha de carga ni día anterior.",
-                  "priorities": [
-                    {
-                      "storeCode": "PE...",
-                      "storeName": "Nombre del restaurante",
-                      "priority": "ALTA|MEDIA|BAJA",
-                      "reason": "Por qué es urgente hoy (menciona aging, HO, AVA o estado específico)",
-                      "action": "Acción concreta y específica para hacer HOY"
-                    }
-                  ]
-                }
-
-                ⚠️ REGLAS OBLIGATORIAS:
-                1. INCLUYE SIEMPRE el 100%% de las tiendas de "ONBOARDING 1-7 DÍAS" y "ONBOARDING 8-14 DÍAS" — son ventana crítica y NO se pueden omitir.
-                2. Completa con tiendas IS, Churn y AVA hasta llegar a máximo 30 en "priorities".
-                3. SOLO incluye tiendas que aparezcan EXACTAMENTE en la CARTERA SEGMENTADA de abajo.
-                4. NO inventes códigos. NO incluyas tiendas que no estén en la lista.
-                Ordena de más a menos urgente.
-
-                CARTERA SEGMENTADA:
-                """, today, lastUpload, today) + context;
+                """, today, lastUpload) + context;
 
         String raw = callGroq(systemPrompt, userPrompt, 0.3, 4000);
 
@@ -432,63 +389,39 @@ public class AiService {
             resto.add(s);
         }
 
-        // Onboarding 1-14 y IS: TODOS (son pocos y son la prioridad máxima)
-        appendSegment(sb, "🔴 PRIORIDAD MÁXIMA — IS (acción HOY)",
-                isStores, Integer.MAX_VALUE, today,
-                "Visita en tienda programada. Deben ser contactadas HOY sin falta.");
-        appendSegment(sb, "🔴 ONBOARDING 1-7 DÍAS (ventana crítica)",
-                seg17, Integer.MAX_VALUE, today,
-                "Primeros 7 días = los más críticos. HO=NO significa que el Handoff (activación) no ocurrió.");
-        appendSegment(sb, "🟠 ONBOARDING 8-14 DÍAS (ventana AVA/Aliados)",
-                seg814, Integer.MAX_VALUE, today,
-                "Meta AVA > 60%. Si AVA baja o HO=NO actuar urgente.");
+        appendCompact(sb, "IS",    isStores, 5,  today);
+        appendCompact(sb, "1-7d",  seg17,    8,  today);
+        appendCompact(sb, "8-14d", seg814,   8,  today);
+        appendCompact(sb, "CHURN", churn,    5,  today);
+        appendCompact(sb, "AVA<40",avaLow,   5,  today);
 
-        // Churn y AVA: máximo 8 cada uno para no saturar el contexto
-        appendSegment(sb, "🔴 CHURN ACTIVO",
-                churn, 8, today,
-                "Riesgo de abandonar Rappi. Retención urgente.");
-        appendSegment(sb, "🟡 AVA BAJA (< 40%)",
-                avaLow, 8, today,
-                "Conexión Rappi Aliados por debajo del objetivo.");
-
-        if (!resto.isEmpty()) {
-            sb.append("\n📋 Otras tiendas activas: ").append(resto.size())
-              .append(" (estables, solo si hay tiempo)\n");
-        }
+        if (!resto.isEmpty())
+            sb.append("ESTABLES:").append(resto.size()).append("\n");
 
         return sb.toString();
     }
 
-    private void appendSegment(StringBuilder sb, String title, List<Store> stores,
-                                int max, LocalDate today, String contexto) {
+    /** Formato ultra-compacto: CODE|Nombre|Aging|HO|AVA|Estado|FU */
+    private void appendCompact(StringBuilder sb, String title, List<Store> stores, int max, LocalDate today) {
         if (stores.isEmpty()) return;
-        sb.append("\n--- ").append(title).append(" ---\n");
-        sb.append("Contexto: ").append(contexto).append("\n");
-        sb.append("Columnas: Código | Nombre | Canal | Aging | HO | FechaHO | AVA% | Estado | UltimoFU | FU30d | Gestionar | UltimoLogin | CredsFecha\n");
-
+        sb.append("\n[").append(title).append(" total=").append(stores.size()).append("]\n");
         stores.stream()
             .sorted((a, b) -> Integer.compare(urgencyScore(b), urgencyScore(a)))
             .limit(max)
             .forEach(s -> {
-                long diasSinFu = s.getLastFollowUp() != null
+                long fu = s.getLastFollowUp() != null
                     ? java.time.temporal.ChronoUnit.DAYS.between(s.getLastFollowUp(), today) : -1;
-
-                sb.append(s.getStoreCode()).append(" | ")
-                  .append(s.getStoreName() != null ? s.getStoreName() : "-").append(" | ")
-                  .append(s.getChannel() != null ? s.getChannel() : "-").append(" | ")
-                  .append(resolveAging(s) < 999 ? resolveAging(s) + "d" : "-").append(" | ")
-                  .append(Boolean.TRUE.equals(s.getHadHandoff()) ? "HO=SI" : "HO=NO").append(" | ")
-                  .append(s.getHandoffActivatedAt() != null ? s.getHandoffActivatedAt() : "sin-HO").append(" | ")
-                  .append(s.getConnectionPercentage() != null
-                      ? s.getConnectionPercentage().toPlainString() + "%" : "AVA=-").append(" | ")
-                  .append(s.getCurrentStatus() != null ? s.getCurrentStatus() : "-").append(" | ")
-                  .append(diasSinFu >= 0 ? diasSinFu + "d-sin-FU" : "sin-FU").append(" | ")
-                  .append(s.getFollowUpLast30d() != null ? "FU30=" + s.getFollowUpLast30d() : "FU30=-").append(" | ")
-                  .append(s.getGestionar() != null ? s.getGestionar() : "-").append(" | ")
-                  .append(s.getLastLoginDate() != null ? "login=" + s.getLastLoginDate() : "sin-login").append(" | ")
-                  .append(s.getCredentialsDate() != null ? "creds=" + s.getCredentialsDate() : "sin-creds")
+                sb.append(s.getStoreCode() != null ? s.getStoreCode() : "-").append("|")
+                  .append(s.getStoreName() != null ? s.getStoreName() : "-").append("|")
+                  .append(resolveAging(s) < 999 ? resolveAging(s) + "d" : "-").append("|")
+                  .append(Boolean.TRUE.equals(s.getHadHandoff()) ? "HO=SI" : "HO=NO").append("|")
+                  .append(s.getConnectionPercentage() != null ? s.getConnectionPercentage().toPlainString() + "%" : "-").append("|")
+                  .append(s.getCurrentStatus() != null ? s.getCurrentStatus() : "-").append("|")
+                  .append(fu >= 0 ? fu + "dFU" : "sinFU").append("|")
+                  .append(s.getGestionar() != null ? s.getGestionar() : "-")
                   .append("\n");
             });
+        if (stores.size() > max) sb.append("...+").append(stores.size() - max).append(" más\n");
     }
 
     /**
@@ -501,29 +434,9 @@ public class AiService {
         String storeContext = buildFollowUpContext(store, gestiones);
 
         String systemPrompt = """
-                Eres el asistente de seguimiento de un Account Manager (AM) de Rappi Colombia.
-                Tienes acceso al historial completo de gestiones registradas para esta tienda.
-
-                GLOSARIO:
-                - HO: Handoff = activación en Rappi Aliados. Sin HO no puede recibir pedidos.
-                - AVA%: conexión mensual con Rappi Aliados. Meta mínima: 60%.
-                - EFECTIVA: contacto exitoso con el aliado.
-                - NO_CONTACTO: intento sin respuesta.
-                - Palancas: acciones comerciales (Ads, Markdown, Catálogo, Churn, Sprints, etc.).
-
-                FORMATO OBLIGATORIO — SIEMPRE usa markdown estructurado:
-                - Para problemas recurrentes: usa lista con **negrita** en el problema
-                - Para próxima acción: sección con ### y bullet points
-                - NUNCA repitas la tabla de gestiones — el farmer ya la ve en pantalla
-                - NUNCA escribas párrafos largos de texto corrido cuando una lista es más claro
-                - Usa **negrita** para resaltar datos clave
-
-                REGLAS DE CONTENIDO:
-                - EL COMENTARIO DEL FARMER ES LA FUENTE MÁS IMPORTANTE — cítalo textualmente al identificar problemas
-                - Identifica PROBLEMAS RECURRENTES: si el aliado menciona el mismo problema varias veces, resáltalo
-                - Menciona quién registró cada gestión (farmerName) cuando esté disponible
-                - Sugiere próxima acción basada en los comentarios reales, no solo en datos técnicos
-                - Máximo 450 palabras. Sin inventar información que no esté en el historial.
+                Asistente de seguimiento de tiendas Rappi. HO=activación Aliados. AVA%=conexión(meta>60%). EFECTIVA=contacto exitoso.
+                USA MARKDOWN: ### para títulos, **negrita** para datos clave, - para listas.
+                NO repitas la tabla de gestiones (el farmer ya la ve). Máx 300 palabras. Sin inventar.
                 """ + storeContext;
 
         boolean isFirstMessage = (history == null || history.isEmpty());
@@ -547,8 +460,8 @@ public class AiService {
         return callGroqMessages(messages, 0.4, 600, MODEL_FU);
     }
 
-    private static final int MAX_GESTIONES_CONTEXT = 20;
-    private static final int MAX_COMMENT_CHARS     = 700;
+    private static final int MAX_GESTIONES_CONTEXT = 8;
+    private static final int MAX_COMMENT_CHARS     = 180;
     private static final int MAX_HISTORY_TURNS     = 6;
 
     private String buildFollowUpContext(Store store, List<com.rappi.farmer.domain.entities.Management> gestiones) {
