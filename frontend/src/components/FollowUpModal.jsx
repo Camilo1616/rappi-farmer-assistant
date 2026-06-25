@@ -197,20 +197,36 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
   const inputRef  = useRef(null)
   const timerRef  = useRef(null)
 
-  // Si viene con tienda pre-seleccionada, mostrarla en el panel izquierdo
+  // Al abrir: si viene con tienda pre-seleccionada úsala; si no, cargar lista de tiendas recientes
   useEffect(() => {
     if (initialStore) {
       setSelected(initialStore)
       setResults([initialStore])
       setQuery(initialStore.storeName ?? '')
     } else {
+      // Cargar tiendas al abrir para que el panel izquierdo no quede vacío
+      setLoading(true)
+      getStores({})
+        .then(r => setResults(r.data ?? []))
+        .catch(() => setResults([]))
+        .finally(() => setLoading(false))
       inputRef.current?.focus()
     }
   }, [])
 
   useEffect(() => {
     clearTimeout(timerRef.current)
-    if (!query.trim()) { setResults([]); return }
+    if (!query.trim()) {
+      // Sin búsqueda: recargar lista completa
+      setLoading(true)
+      timerRef.current = setTimeout(() => {
+        getStores({})
+          .then(r => setResults(r.data ?? []))
+          .catch(() => setResults([]))
+          .finally(() => setLoading(false))
+      }, 150)
+      return () => clearTimeout(timerRef.current)
+    }
     setLoading(true)
     timerRef.current = setTimeout(() => {
       getStores({ q: query.trim() })
@@ -246,12 +262,9 @@ export default function FollowUpModal({ onClose, onSaved, initialStore }) {
           </div>
 
           <div className={styles.leftBody}>
-            {loading && <p className={styles.hint}>Cargando...</p>}
-            {!loading && !query.trim() && (
-              <p className={styles.hint}>Busca una tienda para iniciar el seguimiento</p>
-            )}
-            {!loading && query.trim() && results.length === 0 && (
-              <p className={styles.hint}>Sin resultados para "{query}"</p>
+            {loading && <p className={styles.hint}>Cargando tiendas...</p>}
+            {!loading && results.length === 0 && (
+              <p className={styles.hint}>{query.trim() ? `Sin resultados para "${query}"` : 'Sin tiendas disponibles'}</p>
             )}
             {results.map(s => {
               const isSelected = selected?.id === s.id
