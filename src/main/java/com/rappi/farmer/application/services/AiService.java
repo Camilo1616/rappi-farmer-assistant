@@ -312,14 +312,16 @@ public class AiService {
         List<Map<String, String>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
 
-        if (history != null) {
-            for (AiController.ChatMessage m : history) {
+        if (history != null && !history.isEmpty()) {
+            List<AiController.ChatMessage> trimmed = history.size() > 8
+                    ? history.subList(history.size() - 8, history.size()) : history;
+            for (AiController.ChatMessage m : trimmed) {
                 messages.add(Map.of("role", m.role(), "content", m.content()));
             }
         }
         messages.add(Map.of("role", "user", "content", userMessage));
 
-        return callGroqMessages(messages, 0.5, 600);
+        return callGroqMessages(messages, 0.5, 500);
     }
 
     /**
@@ -359,10 +361,10 @@ public class AiService {
                 churn.size(), avaLow.size(), resto.size()));
 
         appendChatSegment(sb, "IS", isStores, today, 3);
-        appendChatSegment(sb, "1-7d", seg17, today, 4);
-        appendChatSegment(sb, "8-14d", seg814, today, 4);
-        appendChatSegment(sb, "Churn", churn, today, 5);
-        appendChatSegment(sb, "AVA<60%", avaLow, today, 4);
+        appendChatSegment(sb, "1-7d", seg17, today, 5);
+        appendChatSegment(sb, "8-14d", seg814, today, 5);
+        appendChatSegment(sb, "Churn", churn, today, 4);
+        appendChatSegment(sb, "AVA<60%", avaLow, today, 3);
 
         if (!resto.isEmpty()) {
             sb.append("\n[ESTABLES: ").append(resto.size()).append(" tiendas — sin urgencia inmediata]\n");
@@ -524,41 +526,47 @@ public class AiService {
 
         List<Map<String, String>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
-        if (history != null) {
-            for (AiController.ChatMessage m : history) {
+        if (history != null && !history.isEmpty()) {
+            // Últimos MAX_HISTORY_TURNS turnos para no saturar el contexto
+            List<AiController.ChatMessage> trimmed = history.size() > MAX_HISTORY_TURNS
+                    ? history.subList(history.size() - MAX_HISTORY_TURNS, history.size())
+                    : history;
+            for (AiController.ChatMessage m : trimmed) {
                 messages.add(Map.of("role", m.role(), "content", m.content()));
             }
         }
         messages.add(Map.of("role", "user", "content", effectiveMessage));
 
-        return callGroqMessages(messages, 0.5, 600);
+        return callGroqMessages(messages, 0.5, 500);
     }
+
+    private static final int MAX_GESTIONES_CONTEXT = 15;
+    private static final int MAX_COMMENT_CHARS     = 200;
+    private static final int MAX_HISTORY_TURNS     = 6;
 
     private String buildFollowUpContext(Store store, List<com.rappi.farmer.domain.entities.Management> gestiones) {
         StringBuilder sb = new StringBuilder();
-        sb.append("\n\n=== TIENDA EN SEGUIMIENTO ===\n");
-        sb.append("Nombre: ").append(store.getStoreName()).append("\n");
-        sb.append("Store Code: ").append(store.getStoreCode()).append("\n");
-        if (store.getBrandId() != null)       sb.append("Brand ID: ").append(store.getBrandId()).append("\n");
-        if (store.getPhoneNumber() != null)   sb.append("Teléfono: ").append(store.getPhoneNumber()).append("\n");
-        if (store.getConnectionPercentage() != null) sb.append("AVA%: ").append(store.getConnectionPercentage()).append("%\n");
-        if (store.getCurrentStatus() != null) sb.append("Estado: ").append(store.getCurrentStatus()).append("\n");
-        sb.append("HO: ").append(Boolean.TRUE.equals(store.getHadHandoff()) ? "Sí" : "No").append("\n");
+        sb.append("\n\nTIENDA: ").append(store.getStoreName());
+        if (store.getStoreCode() != null)         sb.append(" | Código: ").append(store.getStoreCode());
+        if (store.getBrandId() != null)           sb.append(" | Brand: ").append(store.getBrandId());
+        if (store.getConnectionPercentage() != null) sb.append(" | AVA: ").append(store.getConnectionPercentage()).append("%");
+        if (store.getCurrentStatus() != null)     sb.append(" | Estado: ").append(store.getCurrentStatus());
+        sb.append(" | HO: ").append(Boolean.TRUE.equals(store.getHadHandoff()) ? "Sí" : "No").append("\n");
 
-        sb.append("\n=== HISTORIAL DE GESTIONES (").append(gestiones.size()).append(" registros) ===\n");
-        if (gestiones.isEmpty()) {
-            sb.append("Sin gestiones registradas aún.\n");
+        int total = gestiones.size();
+        List<com.rappi.farmer.domain.entities.Management> recientes = gestiones.stream()
+                .limit(MAX_GESTIONES_CONTEXT).toList();
+
+        sb.append("GESTIONES (").append(total).append(" total, mostrando ").append(recientes.size()).append(" más recientes):\n");
+        if (recientes.isEmpty()) {
+            sb.append("Sin gestiones.\n");
         } else {
-            for (com.rappi.farmer.domain.entities.Management m : gestiones) {
-                sb.append("---\n");
-                if (m.getManagementDate() != null) {
-                    sb.append("Fecha: ").append(m.getManagementDate().toLocalDate()).append("\n");
-                }
-                sb.append("Tipo: ").append(m.getManagementType()).append(" | Resultado: ").append(m.getResultType()).append("\n");
-                if (m.getFarmerName() != null) sb.append("Farmer: ").append(m.getFarmerName()).append("\n");
-                if (m.getComments() != null && !m.getComments().isBlank()) {
-                    sb.append("Comentario: ").append(m.getComments()).append("\n");
-                }
+            for (com.rappi.farmer.domain.entities.Management m : recientes) {
+                String fecha = m.getManagementDate() != null ? m.getManagementDate().toLocalDate().toString() : "?";
+                String comentario = m.getComments() != null && !m.getComments().isBlank()
+                        ? m.getComments().substring(0, Math.min(m.getComments().length(), MAX_COMMENT_CHARS))
+                        : "";
+                sb.append(fecha).append(" [").append(m.getResultType()).append("] ").append(comentario).append("\n");
             }
         }
         return sb.toString();
