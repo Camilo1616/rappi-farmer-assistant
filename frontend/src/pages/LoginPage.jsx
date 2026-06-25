@@ -36,57 +36,132 @@ export default function LoginPage() {
 
   return (
     <div className={styles.page}>
-      {/* Glow de fondo */}
-      <div className={styles.glow} />
 
-      <div className={styles.card}>
-        {/* Logo */}
-        <div className={styles.logo}>
-          <span className={styles.logoDot} />
-          <span className={styles.logoText}>rappi</span>
-          <span className={styles.logoSub}>farmers</span>
+      {/* ── Panel izquierdo ── */}
+      <div className={styles.left}>
+        <div className={styles.orb + ' ' + styles.orb1} />
+        <div className={styles.orb + ' ' + styles.orb2} />
+        <div className={styles.orb + ' ' + styles.orb3} />
+
+        {/* Brand */}
+        <div className={styles.leftBrand}>
+          <span className={styles.brandDot} />
+          <span className={styles.brandName}>Rappi Farmer Assistant</span>
         </div>
 
-        <h1 className={styles.title}>Bienvenido</h1>
-        <p className={styles.sub}>Ingresa con tu cuenta @rappi.com</p>
+        {/* Contenido central */}
+        <div className={styles.leftContent}>
+          <div className={styles.leftEyebrow}>
+            <span className={styles.eyebrowDot} />
+            Account Manager · Herramienta interna
+          </div>
 
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <input
-            type="email"
-            className={styles.input}
-            placeholder="nombre@rappi.com"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            autoFocus
-          />
-          <input
-            type="password"
-            className={styles.input}
-            placeholder="Contraseña"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
+          <h1 className={styles.leftHeadline}>
+            Tu cartera,<br />
+            bajo <em>control</em><br />
+            total.
+          </h1>
 
-          {error && <div className={styles.error}>{error}</div>}
+          <p className={styles.leftDesc}>
+            Prioriza, gestiona y activa restaurantes sin perder el hilo.
+            Diseñado para el ritmo real de un AM de Rappi.
+          </p>
 
-          <button type="submit" className={styles.btn} disabled={loading}>
-            {loading ? <span className={styles.spinner} /> : null}
-            {loading ? 'Verificando...' : 'Ingresar'}
-          </button>
-        </form>
+          <div className={styles.chips}>
+            {[
+              { icon: '⚡', label: 'WhatsApp masivo con plantillas dinámicas' },
+              { icon: '📊', label: 'Dashboard de prioridades en tiempo real' },
+              { icon: '🗂️', label: 'Seguimiento de onboarding día a día' },
+              { icon: '🔔', label: 'Alertas de churn y Aliados < 60%' },
+            ].map(({ icon, label }) => (
+              <div key={label} className={styles.chip}>
+                <span className={styles.chipIcon}>{icon}</span>
+                <span className={styles.chipLabel}>{label}</span>
+                <span className={styles.chipArrow}>→</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <div className={styles.links}>
-          <button className={styles.link} onClick={() => setShowForgot(true)}>
-            ¿Olvidaste tu contraseña?
-          </button>
-          <span className={styles.linkDivider}>·</span>
-          <button className={styles.link} onClick={() => setShowRegister(true)}>
+        {/* Stats */}
+        <div className={styles.leftStats}>
+          <div className={styles.stat}>
+            <span className={styles.statVal}>500<span className={styles.statValAccent}>+</span></span>
+            <span className={styles.statLabel}>Restaurantes</span>
+          </div>
+          <div className={styles.statDivider} />
+          <div className={styles.stat}>
+            <span className={styles.statVal}>35</span>
+            <span className={styles.statLabel}>WA / día</span>
+          </div>
+          <div className={styles.statDivider} />
+          <div className={styles.stat}>
+            <span className={styles.statVal}>8</span>
+            <span className={styles.statLabel}>Días críticos</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Panel derecho ── */}
+      <div className={styles.right}>
+        <div className={styles.card}>
+
+          <div className={styles.logo}>
+            <span className={styles.logoDot} />
+            <span className={styles.logoText}>rappi</span>
+            <span className={styles.logoSub}>farmers</span>
+          </div>
+
+          <h2 className={styles.title}>Bienvenido de vuelta</h2>
+          <p className={styles.sub}>Ingresa con tu cuenta @rappi.com</p>
+
+          <form className={styles.form} onSubmit={handleSubmit}>
+            <div className={styles.fieldWrap}>
+              <label className={styles.fieldLabel}>Correo</label>
+              <input
+                type="email"
+                className={styles.input}
+                placeholder="nombre@rappi.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                autoFocus
+              />
+            </div>
+
+            <div className={styles.fieldWrap}>
+              <label className={styles.fieldLabel}>Contraseña</label>
+              <input
+                type="password"
+                className={styles.input}
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </div>
+
+            <button type="button" className={styles.forgotInline}
+              onClick={() => setShowForgot(true)}>
+              ¿Olvidaste tu contraseña?
+            </button>
+
+            {error && <div className={styles.error}>{error}</div>}
+
+            <button type="submit" className={styles.btn} disabled={loading}>
+              {loading && <span className={styles.spinner} />}
+              {loading ? 'Verificando...' : 'Ingresar'}
+            </button>
+          </form>
+
+          <div className={styles.divider}>¿Eres nuevo?</div>
+
+          <button className={styles.btnRegister} onClick={() => setShowRegister(true)}>
             Crear cuenta
           </button>
+
         </div>
       </div>
 
