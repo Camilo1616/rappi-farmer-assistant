@@ -58,7 +58,6 @@ const NAV_ITEMS = [
   { icon: <IC d="M12 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" d2="M14 2v6h6" />,     color: '#8B5CF6', bg: 'rgba(139,92,246,0.13)',  label: 'Bases',     key: 'bases'      },
   { icon: <IC d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" d2="M17 8l-5-5-5 5M12 3v12" />,         color: '#10B981', bg: 'rgba(16,185,129,0.13)',  label: 'Importar',  key: 'excel'      },
   { icon: <IC d="M9 11l3 3L22 4" d2="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />, color: '#F59E0B', bg: 'rgba(245,158,11,0.13)',  label: 'Gestiones', key: 'management' },
-  { icon: <IC d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,                 color: '#22C55E', bg: 'rgba(34,197,94,0.13)',   label: 'Mensajes',  key: 'whatsapp'   },
   { icon: <IC d="M18 20V10M12 20V4M6 20v-6" />,                                                       color: '#06B6D4', bg: 'rgba(6,182,212,0.13)',   label: 'Reportes',  key: 'reports'    },
   { icon: <IC d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" d2="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />, color: '#94A3B8', bg: 'rgba(148,163,184,0.13)', label: 'Perfil',    key: 'profile'    },
 ]
@@ -297,7 +296,7 @@ export default function DashboardPage() {
   const healthyCount   = dash?.healthy?.length ?? 0
 
   // Ítems de la bottom nav (los más usados en mobile)
-  const BOTTOM_NAV = NAV_ITEMS.filter(n => ['dashboard','stores','management','whatsapp','excel'].includes(n.key))
+  const BOTTOM_NAV = NAV_ITEMS.filter(n => ['dashboard','stores','management','excel'].includes(n.key))
 
   return (
     <div className={styles.layout}>
@@ -574,7 +573,13 @@ export default function DashboardPage() {
           {activeNav === 'profile' && <ProfilePage />}
 
           {activeNav === 'management' && <ManagementPage />}
-          {activeNav === 'whatsapp'  && <WhatsappPage />}
+          {activeNav === 'whatsapp'  && (
+            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, color:'var(--text-muted)', padding:40 }}>
+              <span style={{ fontSize:48 }}>🚫</span>
+              <p style={{ fontSize:16, fontWeight:700, color:'var(--text-primary)', margin:0 }}>Módulo inhabilitado</p>
+              <p style={{ fontSize:13, margin:0, textAlign:'center', maxWidth:300 }}>El módulo de WhatsApp masivo está temporalmente desactivado.</p>
+            </div>
+          )}
 
           {activeNav === 'reports' && <ReportsPage />}
 
