@@ -504,25 +504,30 @@ public class AiService {
                 Tienes acceso al historial completo de gestiones registradas para esta tienda.
 
                 GLOSARIO:
-                - HO: Handoff = activación del restaurante en Rappi Aliados. Sin HO no puede recibir pedidos.
-                - AVA%: porcentaje de conexión con Rappi Aliados. Meta mínima: 60%.
-                - EFECTIVA: gestión donde se contactó exitosamente al aliado.
-                - NO_CONTACTO: intento de contacto sin respuesta.
+                - HO: Handoff = activación en Rappi Aliados. Sin HO no puede recibir pedidos.
+                - AVA%: conexión mensual con Rappi Aliados. Meta mínima: 60%.
+                - EFECTIVA: contacto exitoso con el aliado.
+                - NO_CONTACTO: intento sin respuesta.
                 - Palancas: acciones comerciales (Ads, Markdown, Catálogo, Churn, Sprints, etc.).
 
-                REGLAS CRÍTICAS:
-                - EL COMENTARIO DEL FARMER ES LA FUENTE MÁS IMPORTANTE. Es lo que realmente pasó en la gestión. Cítalo textualmente cuando sea relevante.
-                - Las palancas son acciones comerciales trabajadas — mencionarlas siempre en contexto con el comentario que las acompañó.
-                - Identifica PROBLEMAS RECURRENTES: si el aliado menciona el mismo problema en varias gestiones, resáltalo.
-                - Responde en español colombiano informal, directo y accionable.
-                - Cuando cites un comentario, menciona la fecha y quién la registró (farmerName si está disponible).
-                - Sugiere la próxima acción basada en lo que el farmer escribió, no solo en los datos técnicos.
-                - Máximo 400 palabras. Sin relleno. Sin inventar información que no esté en el historial.
+                FORMATO OBLIGATORIO — SIEMPRE usa markdown estructurado:
+                - Para listar gestiones o contactos: usa TABLA markdown con columnas | Fecha | Tipo | Resultado | Comentario |
+                - Para problemas recurrentes: usa lista con **negrita** en el problema
+                - Para próxima acción: sección con ### y bullet points
+                - NUNCA escribas párrafos largos de texto corrido cuando una tabla o lista es más claro
+                - Usa **negrita** para resaltar datos clave (fechas, resultados, palancas)
+
+                REGLAS DE CONTENIDO:
+                - EL COMENTARIO DEL FARMER ES LA FUENTE MÁS IMPORTANTE — cítalo en la tabla, no lo parafrasees
+                - Identifica PROBLEMAS RECURRENTES: si el aliado menciona el mismo problema varias veces, resáltalo
+                - Menciona quién registró cada gestión (farmerName) cuando esté disponible
+                - Sugiere próxima acción basada en los comentarios reales, no solo en datos técnicos
+                - Máximo 450 palabras. Sin inventar información que no esté en el historial.
                 """ + storeContext;
 
         boolean isFirstMessage = (history == null || history.isEmpty());
         String effectiveMessage = isFirstMessage
-                ? "Dame un resumen de esta tienda enfocado en: 1) Los COMENTARIOS reales que dejaron los farmers en cada gestión (cítalos textualmente). 2) PROBLEMAS RECURRENTES que el aliado haya mencionado. 3) Palancas trabajadas y su contexto según los comentarios. 4) Mi próxima acción concreta basada en lo que realmente pasó."
+                ? "Dame el resumen de esta tienda usando este formato EXACTO:\n\n### Historial de gestiones\n| Fecha | Tipo | Resultado | Farmer | Comentario |\n(llena la tabla con todas las gestiones disponibles, citando el comentario real)\n\n### Problemas recurrentes\n(lista con **negrita** los problemas que se repiten)\n\n### Próxima acción recomendada\n(bullet points concretos basados en los comentarios reales)"
                 : userMessage;
 
         List<Map<String, String>> messages = new ArrayList<>();
