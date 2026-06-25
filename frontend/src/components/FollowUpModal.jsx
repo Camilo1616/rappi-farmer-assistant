@@ -231,6 +231,12 @@ function AiChat({ store, onGestionar }) {
         </div>
       ) : (
         <>
+          {historyLog.length > 0 && (
+            <div className={styles.aiHistorySection}>
+              <p className={styles.aiHistoryLabel}>Gestiones registradas</p>
+              <HistoryTable items={historyLog} />
+            </div>
+          )}
           <div className={styles.chatMessages}>
             {messages.map((m, i) => (
               <div key={i} className={m.role === 'user' ? styles.msgUser : styles.msgAi}>

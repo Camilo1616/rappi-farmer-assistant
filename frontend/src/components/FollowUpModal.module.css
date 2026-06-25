@@ -562,6 +562,24 @@
   white-space: pre-wrap;
 }
 
+/* ── AI history section (table shown above AI chat) ── */
+.aiHistorySection {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 20px 0;
+  flex-shrink: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.aiHistoryLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 6px 0;
+}
+
 /* ── History table ── */
 .histTableWrap {
   width: 100%;

@@ -511,14 +511,14 @@ public class AiService {
                 - Palancas: acciones comerciales (Ads, Markdown, Catálogo, Churn, Sprints, etc.).
 
                 FORMATO OBLIGATORIO — SIEMPRE usa markdown estructurado:
-                - Para listar gestiones o contactos: usa TABLA markdown con columnas | Fecha | Tipo | Resultado | Comentario |
                 - Para problemas recurrentes: usa lista con **negrita** en el problema
                 - Para próxima acción: sección con ### y bullet points
-                - NUNCA escribas párrafos largos de texto corrido cuando una tabla o lista es más claro
-                - Usa **negrita** para resaltar datos clave (fechas, resultados, palancas)
+                - NUNCA repitas la tabla de gestiones — el farmer ya la ve en pantalla
+                - NUNCA escribas párrafos largos de texto corrido cuando una lista es más claro
+                - Usa **negrita** para resaltar datos clave
 
                 REGLAS DE CONTENIDO:
-                - EL COMENTARIO DEL FARMER ES LA FUENTE MÁS IMPORTANTE — cítalo en la tabla, no lo parafrasees
+                - EL COMENTARIO DEL FARMER ES LA FUENTE MÁS IMPORTANTE — cítalo textualmente al identificar problemas
                 - Identifica PROBLEMAS RECURRENTES: si el aliado menciona el mismo problema varias veces, resáltalo
                 - Menciona quién registró cada gestión (farmerName) cuando esté disponible
                 - Sugiere próxima acción basada en los comentarios reales, no solo en datos técnicos
@@ -527,7 +527,7 @@ public class AiService {
 
         boolean isFirstMessage = (history == null || history.isEmpty());
         String effectiveMessage = isFirstMessage
-                ? "Dame el resumen de esta tienda usando este formato EXACTO:\n\n### Historial de gestiones\n| Fecha | Tipo | Resultado | Farmer | Comentario |\n(llena la tabla con todas las gestiones disponibles, citando el comentario real)\n\n### Problemas recurrentes\n(lista con **negrita** los problemas que se repiten)\n\n### Próxima acción recomendada\n(bullet points concretos basados en los comentarios reales)"
+                ? "Analiza el historial de gestiones de esta tienda. El farmer ya ve la tabla de gestiones en pantalla, NO la repitas. Responde SOLO con:\n\n### Problemas recurrentes\n(lista con **negrita** los problemas que se mencionan más de una vez en los comentarios; si no hay, di 'Sin problemas recurrentes identificados')\n\n### Próxima acción recomendada\n(2-3 bullet points concretos basados en los comentarios reales del farmer)"
                 : userMessage;
 
         List<Map<String, String>> messages = new ArrayList<>();
