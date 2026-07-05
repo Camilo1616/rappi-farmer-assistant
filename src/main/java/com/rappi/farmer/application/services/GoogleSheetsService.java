@@ -210,6 +210,9 @@ public class GoogleSheetsService {
             if (storeId.isBlank()) continue;
             if (!storeNorm.isBlank() && !storeId.toLowerCase().contains(storeNorm)) continue;
 
+            // Ya resuelto — no debe seguir apareciendo en la cola de pendientes
+            if (esEstadoFinal(val(row, col, "STATUS"))) continue;
+
             List<String> links = new ArrayList<>();
             for (String linkCol : List.of("LINK_1", "LINK_2", "LINK_3", "LINK_4", "LINK_5")) {
                 String l = val(row, col, linkCol);
