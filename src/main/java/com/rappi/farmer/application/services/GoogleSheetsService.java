@@ -1,0 +1,330 @@
+package com.rappi.farmer.application.services;
+
+import com.google.api.client.auth.oauth2.BearerToken;
+import com.google.api.client.auth.oauth2.ClientParametersAuthentication;
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.api.services.sheets.v4.model.AppendValuesResponse;
+import com.google.api.services.sheets.v4.model.ValueRange;
+import com.rappi.farmer.application.dtos.AgmGrupoDto;
+import com.rappi.farmer.application.dtos.AgmTareaDto;
+import com.rappi.farmer.application.dtos.GuardarAgmGestionRequest;
+import com.rappi.farmer.infrastructure.persistence.entity.GoogleSheetsCredentialEntity;
+import com.rappi.farmer.infrastructure.persistence.repository.GoogleSheetsCredentialJpaRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Integración con el Google Sheet "Gestión AGM-IA" (LINA). Una sola cuenta (ADMIN) autoriza
+ * el acceso una vez; todos los agentes leen/escriben a través de ese mismo token guardado.
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class GoogleSheetsService {
+
+    private static final GsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+    private static final Long SINGLETON_ID = 1L;
+
+    private static final String TAB_SOPORTE          = "soporte";
+    private static final String TAB_HISTORIAL_ESTADOS = "HISTORIAL_ESTADOS";
+    private static final String TAB_BACKLIST         = "BACKLIST";
+
+    @Value("${google.sheets.client-id}")
+    private String clientId;
+
+    @Value("${google.sheets.client-secret}")
+    private String clientSecret;
+
+    @Value("${google.sheets.redirect-uri}")
+    private String redirectUri;
+
+    @Value("${google.sheets.spreadsheet-id}")
+    private String spreadsheetId;
+
+    private final GoogleSheetsCredentialJpaRepository credentialRepository;
+
+    // ── OAuth ─────────────────────────────────────────────────────────────────
+
+    public boolean isConnected() {
+        return credentialRepository.findById(SINGLETON_ID).isPresent();
+    }
+
+    public String connectedByEmail() {
+        return credentialRepository.findById(SINGLETON_ID)
+                .map(GoogleSheetsCredentialEntity::getConnectedByEmail).orElse(null);
+    }
+
+    public String buildAuthUrl(String adminEmail) throws GeneralSecurityException, IOException {
+        return buildFlow().newAuthorizationUrl()
+                .setRedirectUri(redirectUri)
+                .setState(adminEmail)
+                .set("access_type", "offline")
+                .set("prompt", "consent")
+                .build();
+    }
+
+    public void handleCallback(String code, String adminEmail) throws GeneralSecurityException, IOException {
+        GoogleTokenResponse tokenResponse = buildFlow().newTokenRequest(code)
+                .setRedirectUri(redirectUri).execute();
+        String refreshToken = tokenResponse.getRefreshToken();
+        if (refreshToken == null) {
+            log.warn("No se recibió refresh_token al conectar Google Sheets (adminEmail={})", adminEmail);
+            return;
+        }
+        GoogleSheetsCredentialEntity entity = credentialRepository.findById(SINGLETON_ID)
+                .orElseGet(() -> {
+                    GoogleSheetsCredentialEntity e = new GoogleSheetsCredentialEntity();
+                    e.setId(SINGLETON_ID);
+                    return e;
+                });
+        entity.setRefreshToken(refreshToken);
+        entity.setConnectedByEmail(adminEmail);
+        entity.setConnectedAt(LocalDateTime.now());
+        credentialRepository.save(entity);
+        log.info("Google Sheets conectado por {}", adminEmail);
+    }
+
+    public void disconnect() {
+        credentialRepository.deleteById(SINGLETON_ID);
+    }
+
+    private GoogleAuthorizationCodeFlow buildFlow() throws GeneralSecurityException, IOException {
+        NetHttpTransport transport = GoogleNetHttpTransport.newTrustedTransport();
+        GoogleClientSecrets secrets = new GoogleClientSecrets()
+                .setWeb(new GoogleClientSecrets.Details()
+                        .setClientId(clientId)
+                        .setClientSecret(clientSecret));
+        return new GoogleAuthorizationCodeFlow.Builder(transport, JSON_FACTORY, secrets,
+                List.of(SheetsScopes.SPREADSHEETS))
+                .setAccessType("offline")
+                .build();
+    }
+
+    private Credential buildCredential(String refreshToken) throws GeneralSecurityException, IOException {
+        NetHttpTransport transport = GoogleNetHttpTransport.newTrustedTransport();
+        return new Credential.Builder(BearerToken.authorizationHeaderAccessMethod())
+                .setTransport(transport)
+                .setJsonFactory(JSON_FACTORY)
+                .setTokenServerUrl(new com.google.api.client.http.GenericUrl("https://oauth2.googleapis.com/token"))
+                .setClientAuthentication(new ClientParametersAuthentication(clientId, clientSecret))
+                .build()
+                .setRefreshToken(refreshToken);
+    }
+
+    private Sheets sheetsClient() throws GeneralSecurityException, IOException {
+        GoogleSheetsCredentialEntity cred = credentialRepository.findById(SINGLETON_ID)
+                .orElseThrow(() -> new IllegalStateException("Google Sheets no está conectado — un Administrador debe conectarlo primero"));
+        Credential credential = buildCredential(cred.getRefreshToken());
+        return new Sheets.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, credential)
+                .setApplicationName("Rappi Assistant — Gestión AGM-IA")
+                .build();
+    }
+
+    // ── Lectura ───────────────────────────────────────────────────────────────
+
+    /** Devuelve los casos pendientes/asignados a un agente, agrupados por Store. */
+    public List<AgmGrupoDto> getCasosPorAgente(String email, String storeFiltro) throws Exception {
+        Sheets sheets = sheetsClient();
+        ValueRange range = sheets.spreadsheets().values()
+                .get(spreadsheetId, TAB_SOPORTE)
+                .execute();
+        List<List<Object>> rows = range.getValues();
+        if (rows == null || rows.isEmpty()) return List.of();
+
+        Map<String, Integer> col = headerIndex(rows.get(0));
+        String emailNorm = email == null ? "" : email.trim().toLowerCase();
+        String storeNorm = storeFiltro == null ? "" : storeFiltro.trim().toLowerCase();
+
+        // Mapa temporal de storeId -> lista de tareas + metadata, preservando orden de aparición
+        LinkedHashMap<String, List<AgmTareaDto>> tareasPorStore = new LinkedHashMap<>();
+        Map<String, String[]> metaPorStore = new LinkedHashMap<>(); // storeId -> [pais, storeName, telefono]
+
+        for (int i = 1; i < rows.size(); i++) {
+            List<Object> row = rows.get(i);
+            String agenteAsignado = val(row, col, "AGENTE_ASIGNADO");
+            if (!emailNorm.equals(agenteAsignado.trim().toLowerCase())) continue;
+
+            String storeId = val(row, col, "STORE_ID");
+            if (storeId.isBlank()) continue;
+            if (!storeNorm.isBlank() && !storeId.toLowerCase().contains(storeNorm)) continue;
+
+            List<String> links = new ArrayList<>();
+            for (String linkCol : List.of("LINK_1", "LINK_2", "LINK_3", "LINK_4", "LINK_5")) {
+                String l = val(row, col, linkCol);
+                if (!l.isBlank()) links.add(l);
+            }
+
+            AgmTareaDto tarea = new AgmTareaDto(
+                    i + 1, // rowNumber 1-based (i=0 es la fila 1 de encabezados, así que fila real = i+1)
+                    storeId,
+                    val(row, col, "TIPO_SOPORTE"),
+                    val(row, col, "EXPLICACION"),
+                    val(row, col, "STATUS"),
+                    val(row, col, "COMENTARIO INTERNO"),
+                    val(row, col, "COMENTARIO PARA EL ALIADO"),
+                    val(row, col, "FECHA ESCALAMIENTO"),
+                    val(row, col, "AREA ESCALADA"),
+                    val(row, col, "TICKET"),
+                    val(row, col, "STATUS TICKET"),
+                    val(row, col, "HISTORIAL_CONVERSACIÓN").isBlank()
+                            ? val(row, col, "HISTORIAL_CONVERSACION") : val(row, col, "HISTORIAL_CONVERSACIÓN"),
+                    links
+            );
+
+            tareasPorStore.computeIfAbsent(storeId, k -> new ArrayList<>()).add(tarea);
+            metaPorStore.putIfAbsent(storeId, new String[]{
+                    val(row, col, "PAIS").isBlank() ? val(row, col, "PAÍS") : val(row, col, "PAIS"),
+                    val(row, col, "STORE_NAME"),
+                    val(row, col, "TELEFONO").isBlank() ? val(row, col, "TELÉFONO") : val(row, col, "TELEFONO"),
+            });
+        }
+
+        List<AgmGrupoDto> resultado = new ArrayList<>();
+        for (var entry : tareasPorStore.entrySet()) {
+            String storeId = entry.getKey();
+            String[] meta = metaPorStore.getOrDefault(storeId, new String[]{"", "", ""});
+            resultado.add(new AgmGrupoDto(meta[0], storeId, meta[1], meta[2], entry.getValue()));
+        }
+        return resultado;
+    }
+
+    // ── Escritura ─────────────────────────────────────────────────────────────
+
+    public void guardarGestion(GuardarAgmGestionRequest req) throws Exception {
+        Sheets sheets = sheetsClient();
+        ValueRange headerRange = sheets.spreadsheets().values()
+                .get(spreadsheetId, TAB_SOPORTE + "!1:1")
+                .execute();
+        List<Object> headerRow = headerRange.getValues() != null && !headerRange.getValues().isEmpty()
+                ? headerRange.getValues().get(0) : List.of();
+        Map<String, Integer> col = headerIndex(headerRow);
+
+        List<ValueRange> updates = new ArrayList<>();
+        putUpdate(updates, col, "STATUS", req.rowNumber(), req.status());
+        putUpdate(updates, col, "COMENTARIO INTERNO", req.rowNumber(), req.comentarioInterno());
+        putUpdate(updates, col, "COMENTARIO PARA EL ALIADO", req.rowNumber(), req.comentarioAliado());
+        putUpdate(updates, col, "FECHA ESCALAMIENTO", req.rowNumber(), req.fechaEscalamiento());
+        putUpdate(updates, col, "TICKET", req.rowNumber(), req.ticket());
+        putUpdate(updates, col, "STATUS TICKET", req.rowNumber(), req.statusTicket());
+
+        boolean esFinal = esEstadoFinal(req.status());
+        if (esFinal) {
+            putUpdate(updates, col, "FECHA SOLUCION", req.rowNumber(),
+                    LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE));
+        }
+
+        if (!updates.isEmpty()) {
+            com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest batch =
+                    new com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest()
+                            .setValueInputOption("USER_ENTERED")
+                            .setData(updates);
+            sheets.spreadsheets().values().batchUpdate(spreadsheetId, batch).execute();
+        }
+
+        appendHistorial(sheets, req);
+
+        if ("Baja".equalsIgnoreCase(req.status())) {
+            appendBacklist(sheets, req);
+        }
+    }
+
+    private void putUpdate(List<ValueRange> updates, Map<String, Integer> col, String header, int rowNumber, String value) {
+        if (value == null) return;
+        Integer idx = col.get(header.toUpperCase());
+        if (idx == null) return;
+        String a1 = TAB_SOPORTE + "!" + colLetter(idx) + rowNumber;
+        updates.add(new ValueRange().setRange(a1).setValues(List.of(List.of(value))));
+    }
+
+    private void appendHistorial(Sheets sheets, GuardarAgmGestionRequest req) throws IOException {
+        List<Object> row = List.of(
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                nullToEmpty(req.storeId()),
+                nullToEmpty(req.agente()),
+                nullToEmpty(req.status()),
+                nullToEmpty(req.comentarioInterno()),
+                nullToEmpty(req.comentarioAliado()),
+                nullToEmpty(req.ticket()),
+                nullToEmpty(req.statusTicket()),
+                "",
+                ""
+        );
+        ValueRange body = new ValueRange().setValues(List.of(row));
+        sheets.spreadsheets().values()
+                .append(spreadsheetId, TAB_HISTORIAL_ESTADOS, body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
+
+    private void appendBacklist(Sheets sheets, GuardarAgmGestionRequest req) throws IOException {
+        List<Object> row = List.of(
+                nullToEmpty(req.storeId()),
+                nullToEmpty(req.status()),
+                nullToEmpty(req.motivoBaja()),
+                LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
+                nullToEmpty(req.agente()),
+                nullToEmpty(req.tipoBlacklist())
+        );
+        ValueRange body = new ValueRange().setValues(List.of(row));
+        sheets.spreadsheets().values()
+                .append(spreadsheetId, TAB_BACKLIST, body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static boolean esEstadoFinal(String status) {
+        if (status == null) return false;
+        String s = status.trim().toLowerCase();
+        return Set.of("imposible contacto", "confirmado", "baja", "asignada a otra área",
+                "asignada a otra area", "gestión incompleta", "gestion incompleta").contains(s);
+    }
+
+    private Map<String, Integer> headerIndex(List<Object> headerRow) {
+        Map<String, Integer> map = new HashMap<>();
+        for (int i = 0; i < headerRow.size(); i++) {
+            String h = String.valueOf(headerRow.get(i)).trim().toUpperCase();
+            if (!h.isBlank()) map.putIfAbsent(h, i);
+        }
+        return map;
+    }
+
+    private String val(List<Object> row, Map<String, Integer> col, String header) {
+        Integer idx = col.get(header.toUpperCase());
+        if (idx == null || idx >= row.size()) return "";
+        Object v = row.get(idx);
+        return v == null ? "" : v.toString();
+    }
+
+    private String nullToEmpty(String s) { return s == null ? "" : s; }
+
+    /** Convierte índice de columna 0-based a letra A1 (0->A, 25->Z, 26->AA...). */
+    private static String colLetter(int index) {
+        StringBuilder sb = new StringBuilder();
+        int n = index;
+        do {
+            sb.insert(0, (char) ('A' + (n % 26)));
+            n = n / 26 - 1;
+        } while (n >= 0);
+        return sb.toString();
+    }
+}
