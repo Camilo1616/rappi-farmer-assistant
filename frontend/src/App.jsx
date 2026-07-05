@@ -1,10 +1,21 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import AppShell from './components/AppShell'
 import LoginPage from './pages/LoginPage'
-import HomePage from './pages/HomePage'
-import WhatsappPage from './pages/WhatsappPage'
-import ProfilePage from './pages/ProfilePage'
+import CalendarCallbackPage from './pages/CalendarCallbackPage'
+import DashboardPage from './pages/DashboardPage'
+import LiderDashboardPage from './pages/LiderDashboardPage'
+
+function RoleRoute({ allowed, children }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (!allowed.includes(user.role)) return <Navigate to={user.role === 'LIDER' ? '/lider' : '/dashboard'} replace />
+  return children
+}
+
+function IndexRedirect() {
+  const { user } = useAuth()
+  return <Navigate to={user?.role === 'LIDER' ? '/lider' : '/dashboard'} replace />
+}
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -16,18 +27,28 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/calendar-callback" element={<CalendarCallbackPage />} />
+      <Route path="/" element={<PrivateRoute><IndexRedirect /></PrivateRoute>} />
       <Route
-        path="/"
+        path="/dashboard/*"
         element={
           <PrivateRoute>
-            <AppShell />
+            <RoleRoute allowed={['FARMER_MASS', 'ADMIN', 'COORDINATOR']}>
+              <DashboardPage />
+            </RoleRoute>
           </PrivateRoute>
         }
-      >
-        <Route index element={<HomePage />} />
-        <Route path="whatsapp" element={<WhatsappPage />} />
-        <Route path="perfil" element={<ProfilePage />} />
-      </Route>
+      />
+      <Route
+        path="/lider"
+        element={
+          <PrivateRoute>
+            <RoleRoute allowed={['LIDER', 'ADMIN']}>
+              <LiderDashboardPage />
+            </RoleRoute>
+          </PrivateRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

@@ -12,14 +12,15 @@
     </parent>
 
     <groupId>com.rappi</groupId>
-    <artifactId>rappi-assistant</artifactId>
+    <artifactId>rappi-farmer-assistant</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>rappi-assistant</name>
-    <description>Asistente Rappi — plataforma interna de automatización</description>
+    <name>rappi-farmer-assistant</name>
+    <description>Herramienta web para automatización de gestión de restaurantes Rappi</description>
 
     <properties>
         <java.version>21</java.version>
         <selenium.version>4.20.0</selenium.version>
+        <poi.version>5.3.0</poi.version>
         <jjwt.version>0.12.6</jjwt.version>
         <maven.test.skip>true</maven.test.skip>
     </properties>
@@ -87,6 +88,13 @@
             <version>${selenium.version}</version>
         </dependency>
 
+        <!-- ===== Lectura/escritura de Excel ===== -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+
         <!-- ===== Email (verificación de cuenta) ===== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -99,6 +107,28 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+
+        <!-- ===== Google Calendar API ===== -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-calendar</artifactId>
+            <version>v3-rev20220715-2.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.oauth-client</groupId>
+            <artifactId>google-oauth-client</artifactId>
+            <version>1.34.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-jackson2</artifactId>
+            <version>1.43.3</version>
+        </dependency>
 
         <!-- ===== Utilidades ===== -->
         <dependency>
@@ -123,7 +153,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.rappi.assistant.RappiAssistantApplication</mainClass>
+                    <mainClass>com.rappi.farmer.RappiFarmerApplication</mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

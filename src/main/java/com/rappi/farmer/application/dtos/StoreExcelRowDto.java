@@ -1,0 +1,35 @@
+package com.rappi.farmer.application.dtos;
+
+import lombok.Builder;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Data
+@Builder
+public class StoreExcelRowDto {
+    private String storeCode;
+    private String brandId;
+    private String storeName;
+    private String phoneNumber;
+    private String backupPhone;
+    private String channel;
+    private LocalDate onboardingDate;
+    private BigDecimal connectionPercentage;
+    private String currentStatus;
+    private Integer ordersL4W;
+    private Integer aging;
+    private String avaStatus;
+    private BigDecimal avaL7d;
+    private Boolean hadHandoff;
+    private String farmerEmail;
+    private LocalDate lastLoginDate;
+    private BigDecimal avaMtd;
+    private String agingStage;
+    private String gestionar;
+    private LocalDate uploadDate;
+    private LocalDate credentialsDate;
+    private LocalDate lastFollowUp;
+    private String followUpLast30d;
+}

@@ -1,0 +1,85 @@
+.wrap {
+  background: rgba(234,179,8,0.05);
+  border: 1px solid rgba(234,179,8,0.2);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #EAB308;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.siNo { display: flex; gap: 6px; }
+
+.siNoBtn {
+  padding: 4px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btnSi {
+  background: rgba(34,197,94,0.1);
+  border-color: #22C55E;
+  color: #22C55E;
+}
+.btnNo {
+  background: rgba(239,68,68,0.1);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+.select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 4px;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  min-height: 80px;
+}
+.select:focus { border-color: rgba(234,179,8,0.4); }
+.select option { background: var(--bg-card); padding: 5px 8px; }
+.select option:checked { background: rgba(234,179,8,0.2); color: #EAB308; }
+.hint { font-size: 10px; color: var(--text-muted); margin: 2px 0 0; font-style: italic; }

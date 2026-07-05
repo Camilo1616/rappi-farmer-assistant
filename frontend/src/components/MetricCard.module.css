@@ -1,0 +1,72 @@
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.18s, transform 0.18s;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.card:hover {
+  border-color: var(--text-muted);
+  transform: translateY(-2px);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.icon { font-size: 20px; line-height: 1; }
+
+.trend {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+
+.value {
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -1.5px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  opacity: 0.7;
+}
+
+/* Colores */
+.blue  .value { color: #3B82F6; }
+.blue  .bar   { background: #3B82F6; }
+.blue  .trend { background: rgba(59,130,246,0.12); color: #3B82F6; }
+
+.red   .value { color: #EF4444; }
+.red   .bar   { background: #EF4444; }
+.red   .trend { background: rgba(239,68,68,0.12); color: #EF4444; }
+
+.orange .value { color: #F97316; }
+.orange .bar   { background: #F97316; }
+.orange .trend { background: rgba(249,115,22,0.12); color: #F97316; }
+
+.green  .value { color: #22C55E; }
+.green  .bar   { background: #22C55E; }
+.green  .trend { background: rgba(34,197,94,0.12); color: #22C55E; }
