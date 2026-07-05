@@ -88,7 +88,7 @@ public class GestionAgmController {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             log.error("Error leyendo casos de Sheets: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el Sheet"));
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el Sheet: " + rootMessage(e)));
         }
     }
 
@@ -103,7 +103,7 @@ public class GestionAgmController {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             log.error("Error leyendo historial de Sheets: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el historial"));
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el historial: " + rootMessage(e)));
         }
     }
 
@@ -116,7 +116,7 @@ public class GestionAgmController {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             log.error("Error guardando gestión en Sheets: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of("message", "Error al guardar en el Sheet"));
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al guardar en el Sheet: " + rootMessage(e)));
         }
     }
 
@@ -129,7 +129,7 @@ public class GestionAgmController {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             log.error("Error leyendo resumen del día: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el resumen"));
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el resumen: " + rootMessage(e)));
         }
     }
 
@@ -143,7 +143,7 @@ public class GestionAgmController {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             log.error("Error deshaciendo cambio en Sheets: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of("message", "Error al deshacer el cambio"));
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al deshacer el cambio: " + rootMessage(e)));
         }
     }
 
@@ -157,7 +157,15 @@ public class GestionAgmController {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             log.error("Error guardando feedback IA: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of("message", "Error al guardar feedback"));
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al guardar feedback: " + rootMessage(e)));
         }
+    }
+
+    /** Extrae el mensaje más útil de la excepción (incluye detalle de errores de la API de Google). */
+    private String rootMessage(Exception e) {
+        Throwable t = e;
+        while (t.getCause() != null && t.getCause() != t) t = t.getCause();
+        String msg = t.getMessage();
+        return msg != null && !msg.isBlank() ? msg : e.getClass().getSimpleName();
     }
 }

@@ -24,6 +24,28 @@ const STATUS_COLOR = {
 
 function esc(v) { return v ?? '' }
 
+/** Convierte una fecha del Sheet (dd/MM/yyyy o yyyy-MM-dd) al formato que exige <input type="date">. */
+function toInputDate(value) {
+  if (!value) return ''
+  const v = value.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+  const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (m) {
+    const [, d, mo, y] = m
+    return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`
+  }
+  return ''
+}
+
+/** Convierte yyyy-MM-dd (lo que da el input) a dd/MM/yyyy, formato usado en el Sheet. */
+function toSheetDate(value) {
+  if (!value) return value
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return value
+  const [, y, mo, d] = m
+  return `${d}/${mo}/${y}`
+}
+
 function estadoEsFinal(status) {
   return ESTADOS_FINALES.has((status || '').trim().toLowerCase())
 }
@@ -246,7 +268,7 @@ function TareaCard({ tarea, idx, storeId, agente, onChange, onSave, onRefresh, s
         <div>
           <label className={styles.label}>Fecha escalamiento</label>
           <input className={styles.input} type="date" disabled={soloLectura}
-            value={tarea.fechaEscalamiento || ''} onChange={e => update({ fechaEscalamiento: e.target.value })} />
+            value={toInputDate(tarea.fechaEscalamiento)} onChange={e => update({ fechaEscalamiento: e.target.value })} />
         </div>
         <div>
           <label className={styles.label}>Ticket</label>
@@ -483,7 +505,7 @@ export default function GestionAgmPage() {
         status: tarea.status,
         comentarioInterno: tarea.comentarioInterno,
         comentarioAliado: tarea.comentarioAliado,
-        fechaEscalamiento: tarea.fechaEscalamiento,
+        fechaEscalamiento: toSheetDate(tarea.fechaEscalamiento),
         ticket: tarea.ticket,
         statusTicket: tarea.statusTicket,
         motivoBaja: extra?.motivoBaja,
