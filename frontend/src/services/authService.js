@@ -47,7 +47,17 @@ export const getLidersByCountry = (country) => api.get(`/auth/liders?country=${c
 
 export const heartbeat = () => api.post('/auth/heartbeat').catch(() => {})
 
+const VALID_ROLES = ['ADMIN', 'LIDER', 'COORDINATOR', 'FARMER_MASS']
+
 export const getCurrentUser = () => {
   const raw = localStorage.getItem('user')
-  return raw ? JSON.parse(raw) : null
+  if (!raw) return null
+  let user
+  try { user = JSON.parse(raw) } catch { user = null }
+  // Sesión de una versión incompatible de la app (rol desconocido) — limpiar para evitar loops de redirección
+  if (!user || !VALID_ROLES.includes(user.role)) {
+    localStorage.clear()
+    return null
+  }
+  return user
 }
