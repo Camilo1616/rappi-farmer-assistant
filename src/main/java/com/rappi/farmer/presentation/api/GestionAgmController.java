@@ -90,6 +90,21 @@ public class GestionAgmController {
         }
     }
 
+    /** Historial: sin storeId = "mi historial" (últimos N días); con storeId = timeline completo de esa tienda. */
+    @GetMapping("/historial")
+    public ResponseEntity<?> getHistorial(@RequestParam(required = false) String storeId,
+                                           @RequestParam(defaultValue = "7") int days) {
+        try {
+            String email = sessionContext.getCurrentUserEmail();
+            return ResponseEntity.ok(sheetsService.getHistorial(email, storeId, days));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error leyendo historial de Sheets: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el historial"));
+        }
+    }
+
     @PostMapping("/gestion")
     public ResponseEntity<?> guardarGestion(@RequestBody GuardarAgmGestionRequest request) {
         try {

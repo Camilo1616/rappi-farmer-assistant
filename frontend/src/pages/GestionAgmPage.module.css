@@ -198,6 +198,110 @@
   margin-bottom: 8px;
 }
 
+/* ── Timeline de historial ── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+}
+
+.timelineRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.timelineDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.timelineBody {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-input);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.timelineHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.timelineStatus {
+  font-weight: 700;
+}
+
+.timelineStore {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.timelineDate {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.timelineMeta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.timelineComment {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+
+/* ── Mi historial — agrupado por día ── */
+.dayGroup {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.dayHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: none;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dayCount {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.dayBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
 /* ── Modal conversación ── */
 .modalOverlay {
   position: fixed;

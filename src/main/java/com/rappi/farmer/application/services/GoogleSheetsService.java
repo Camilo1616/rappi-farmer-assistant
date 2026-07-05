@@ -14,6 +14,7 @@ import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.AppendValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import com.rappi.farmer.application.dtos.AgmGrupoDto;
+import com.rappi.farmer.application.dtos.AgmHistorialEntryDto;
 import com.rappi.farmer.application.dtos.AgmTareaDto;
 import com.rappi.farmer.application.dtos.GuardarAgmGestionRequest;
 import com.rappi.farmer.infrastructure.persistence.entity.GoogleSheetsCredentialEntity;
@@ -204,6 +205,60 @@ public class GoogleSheetsService {
             String[] meta = metaPorStore.getOrDefault(storeId, new String[]{"", "", ""});
             resultado.add(new AgmGrupoDto(meta[0], storeId, meta[1], meta[2], entry.getValue()));
         }
+        return resultado;
+    }
+
+    /**
+     * Historial de cambios de estado. Si {@code storeId} viene, muestra el timeline completo de esa
+     * tienda (cualquier agente). Si no, muestra "mi historial": solo los cambios hechos por {@code email}
+     * en los últimos {@code days} días. Más reciente primero.
+     */
+    public List<AgmHistorialEntryDto> getHistorial(String email, String storeId, int days) throws Exception {
+        Sheets sheets = sheetsClient();
+        ValueRange range = sheets.spreadsheets().values()
+                .get(spreadsheetId, TAB_HISTORIAL_ESTADOS)
+                .execute();
+        List<List<Object>> rows = range.getValues();
+        if (rows == null || rows.isEmpty()) return List.of();
+
+        Map<String, Integer> col = headerIndex(rows.get(0));
+        boolean porStore = storeId != null && !storeId.isBlank();
+        String emailNorm = email == null ? "" : email.trim().toLowerCase();
+        String storeNorm = porStore ? storeId.trim().toLowerCase() : "";
+        LocalDateTime desde = LocalDateTime.now().minusDays(Math.max(days, 1));
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        List<AgmHistorialEntryDto> resultado = new ArrayList<>();
+        for (int i = 1; i < rows.size(); i++) {
+            List<Object> row = rows.get(i);
+            String rowStoreId = val(row, col, "STORE_ID");
+            String rowAgente = val(row, col, "AGENTE");
+
+            if (porStore) {
+                if (!rowStoreId.trim().toLowerCase().equals(storeNorm)) continue;
+            } else {
+                if (!emailNorm.equals(rowAgente.trim().toLowerCase())) continue;
+            }
+
+            String fechaHora = val(row, col, "FECHA_HORA");
+            if (!porStore) {
+                try {
+                    if (LocalDateTime.parse(fechaHora, fmt).isBefore(desde)) continue;
+                } catch (Exception ignored) { /* fecha con formato distinto, se incluye igual */ }
+            }
+
+            resultado.add(new AgmHistorialEntryDto(
+                    fechaHora,
+                    rowStoreId,
+                    rowAgente,
+                    val(row, col, "STATUS"),
+                    val(row, col, "COMENTARIO_INTERNO"),
+                    val(row, col, "COMENTARIO_ALIADO"),
+                    val(row, col, "TICKET"),
+                    val(row, col, "STATUS_TICKET")
+            ));
+        }
+        Collections.reverse(resultado);
         return resultado;
     }
 
