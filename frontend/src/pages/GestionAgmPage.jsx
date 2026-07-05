@@ -162,11 +162,17 @@ export default function GestionAgmPage() {
   }, [])
 
   const handleConnect = async () => {
-    setConnecting(true)
+    setConnecting(true); setMsg(null)
     try {
       const { data } = await connectSheets()
+      if (!data?.authUrl) {
+        setMsg({ type: 'err', text: 'El servidor no devolvió una URL de autorización.' })
+        setConnecting(false)
+        return
+      }
       window.location.href = data.authUrl
     } catch (e) {
+      setMsg({ type: 'err', text: e.response?.data?.message || `Error al conectar (${e.response?.status || 'sin conexión'})` })
       setConnecting(false)
     }
   }
