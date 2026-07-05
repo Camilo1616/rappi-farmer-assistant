@@ -20,6 +20,7 @@ import ProfilePage from './ProfilePage'
 import ManagementPage from './ManagementPage'
 import WhatsappPage from './WhatsappPage'
 import ReportsPage from './ReportsPage'
+import GestionAgmPage from './GestionAgmPage'
 import ConfirmModal from '../components/ConfirmModal'
 import styles from './DashboardPage.module.css'
 
@@ -31,6 +32,7 @@ const NAV_TO_PATH = {
   management: 'gestiones',
   whatsapp: 'whatsapp',
   reports: 'reportes',
+  agm: 'agm-ia',
   profile: 'perfil',
 }
 const PATH_TO_NAV = Object.fromEntries(
@@ -60,6 +62,7 @@ const NAV_ITEMS = [
   { icon: <IC d="M9 11l3 3L22 4" d2="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />, color: '#F59E0B', bg: 'rgba(245,158,11,0.13)',  label: 'Gestiones', key: 'management' },
   { icon: <IC d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,                 color: '#22C55E', bg: 'rgba(34,197,94,0.13)',   label: 'Mensajes',  key: 'whatsapp'   },
   { icon: <IC d="M18 20V10M12 20V4M6 20v-6" />,                                                       color: '#06B6D4', bg: 'rgba(6,182,212,0.13)',   label: 'Reportes',  key: 'reports'    },
+  { icon: <IC d="M12 8v4l3 3" d2="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />,                       color: '#7C3AED', bg: 'rgba(124,58,237,0.13)',  label: 'Gestión AGM-IA', key: 'agm'   },
   { icon: <IC d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" d2="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />, color: '#94A3B8', bg: 'rgba(148,163,184,0.13)', label: 'Perfil',    key: 'profile'    },
 ]
 
@@ -323,7 +326,7 @@ export default function DashboardPage() {
 
         <nav className={styles.sidebarNav}>
           {NAV_ITEMS.map(item => {
-            const blocked = importedToday === false && item.key !== 'excel' && item.key !== 'profile'
+            const blocked = importedToday === false && item.key !== 'excel' && item.key !== 'profile' && item.key !== 'agm'
             const blockMsg = !hasStores
               ? 'Carga tu base de tiendas para empezar'
               : 'Carga el Excel del día para habilitar este módulo'
@@ -475,7 +478,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Banner obligatorio de cargue diario ── */}
-        {importedToday === false && activeNav !== 'excel' && activeNav !== 'profile' && (
+        {importedToday === false && activeNav !== 'excel' && activeNav !== 'profile' && activeNav !== 'agm' && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 14,
             background: 'linear-gradient(90deg, rgba(255,68,31,0.12), rgba(255,68,31,0.06))',
@@ -583,6 +586,8 @@ export default function DashboardPage() {
           )}
 
           {activeNav === 'reports' && <ReportsPage />}
+
+          {activeNav === 'agm' && <GestionAgmPage />}
 
         </main>
       </div>
