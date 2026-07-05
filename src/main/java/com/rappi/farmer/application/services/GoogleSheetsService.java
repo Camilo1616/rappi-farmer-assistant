@@ -15,7 +15,10 @@ import com.google.api.services.sheets.v4.model.AppendValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import com.rappi.farmer.application.dtos.AgmGrupoDto;
 import com.rappi.farmer.application.dtos.AgmHistorialEntryDto;
+import com.rappi.farmer.application.dtos.AgmResumenDiaDto;
 import com.rappi.farmer.application.dtos.AgmTareaDto;
+import com.rappi.farmer.application.dtos.DeshacerAgmGestionRequest;
+import com.rappi.farmer.application.dtos.GuardarAgmFeedbackRequest;
 import com.rappi.farmer.application.dtos.GuardarAgmGestionRequest;
 import com.rappi.farmer.infrastructure.persistence.entity.GoogleSheetsCredentialEntity;
 import com.rappi.farmer.infrastructure.persistence.repository.GoogleSheetsCredentialJpaRepository;
@@ -47,6 +50,7 @@ public class GoogleSheetsService {
     private static final String TAB_SOPORTE          = "soporte";
     private static final String TAB_HISTORIAL_ESTADOS = "HISTORIAL_ESTADOS";
     private static final String TAB_BACKLIST         = "BACKLIST";
+    private static final String TAB_FEEDBACK_IA      = "FEEDBACK_IA";
 
     @Value("${google.sheets.client-id}")
     private String clientId;
@@ -199,13 +203,41 @@ public class GoogleSheetsService {
             });
         }
 
+        Map<String, LocalDateTime> ultimoToque = ultimoToquePorStore(sheets);
+
         List<AgmGrupoDto> resultado = new ArrayList<>();
         for (var entry : tareasPorStore.entrySet()) {
             String storeId = entry.getKey();
             String[] meta = metaPorStore.getOrDefault(storeId, new String[]{"", "", ""});
-            resultado.add(new AgmGrupoDto(meta[0], storeId, meta[1], meta[2], entry.getValue()));
+            LocalDateTime ultimo = ultimoToque.get(storeId.trim().toLowerCase());
+            Long diasSinTocar = ultimo == null ? null
+                    : java.time.temporal.ChronoUnit.DAYS.between(ultimo.toLocalDate(), LocalDate.now());
+            resultado.add(new AgmGrupoDto(meta[0], storeId, meta[1], meta[2], entry.getValue(), diasSinTocar));
         }
         return resultado;
+    }
+
+    /** Último FECHA_HORA registrado en HISTORIAL_ESTADOS por cada Store_ID (clave normalizada a minúsculas). */
+    private Map<String, LocalDateTime> ultimoToquePorStore(Sheets sheets) throws IOException {
+        ValueRange range = sheets.spreadsheets().values()
+                .get(spreadsheetId, TAB_HISTORIAL_ESTADOS)
+                .execute();
+        List<List<Object>> rows = range.getValues();
+        Map<String, LocalDateTime> result = new HashMap<>();
+        if (rows == null || rows.isEmpty()) return result;
+
+        Map<String, Integer> col = headerIndex(rows.get(0));
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        for (int i = 1; i < rows.size(); i++) {
+            List<Object> row = rows.get(i);
+            String storeId = val(row, col, "STORE_ID").trim().toLowerCase();
+            if (storeId.isBlank()) continue;
+            try {
+                LocalDateTime fecha = LocalDateTime.parse(val(row, col, "FECHA_HORA"), fmt);
+                result.merge(storeId, fecha, (a, b) -> a.isAfter(b) ? a : b);
+            } catch (Exception ignored) { /* fila con fecha inválida, se omite */ }
+        }
+        return result;
     }
 
     /**
@@ -260,6 +292,18 @@ public class GoogleSheetsService {
         }
         Collections.reverse(resultado);
         return resultado;
+    }
+
+    /** Resumen del día: cuántos cambios hizo el agente hoy, agrupados por status resultante. */
+    public AgmResumenDiaDto getResumenHoy(String email) throws Exception {
+        List<AgmHistorialEntryDto> historialHoy = getHistorial(email, null, 1).stream()
+                .filter(h -> h.fechaHora() != null && h.fechaHora().startsWith(LocalDate.now().toString()))
+                .toList();
+        Map<String, Long> porStatus = historialHoy.stream()
+                .collect(Collectors.groupingBy(
+                        h -> h.status() == null || h.status().isBlank() ? "Sin status" : h.status(),
+                        LinkedHashMap::new, Collectors.counting()));
+        return new AgmResumenDiaDto(historialHoy.size(), porStatus);
     }
 
     // ── Escritura ─────────────────────────────────────────────────────────────
@@ -342,6 +386,80 @@ public class GoogleSheetsService {
         ValueRange body = new ValueRange().setValues(List.of(row));
         sheets.spreadsheets().values()
                 .append(spreadsheetId, TAB_BACKLIST, body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
+
+    /**
+     * Revierte la fila de "soporte" al estado anterior al último cambio registrado en HISTORIAL_ESTADOS
+     * para ese Store. Requiere al menos 2 entradas de historial para ese store (la actual + una previa).
+     */
+    public void deshacerUltimoCambio(DeshacerAgmGestionRequest req) throws Exception {
+        Sheets sheets = sheetsClient();
+        List<AgmHistorialEntryDto> historial = getHistorial(null, req.storeId(), 0); // más reciente primero
+        if (historial.size() < 2) {
+            throw new IllegalStateException("No hay un estado anterior registrado para deshacer en esta tienda");
+        }
+        AgmHistorialEntryDto anterior = historial.get(1);
+
+        ValueRange headerRange = sheets.spreadsheets().values()
+                .get(spreadsheetId, TAB_SOPORTE + "!1:1")
+                .execute();
+        List<Object> headerRow = headerRange.getValues() != null && !headerRange.getValues().isEmpty()
+                ? headerRange.getValues().get(0) : List.of();
+        Map<String, Integer> col = headerIndex(headerRow);
+
+        List<ValueRange> updates = new ArrayList<>();
+        putUpdate(updates, col, "STATUS", req.rowNumber(), anterior.status());
+        putUpdate(updates, col, "COMENTARIO INTERNO", req.rowNumber(), anterior.comentarioInterno());
+        putUpdate(updates, col, "COMENTARIO PARA EL ALIADO", req.rowNumber(), anterior.comentarioAliado());
+        putUpdate(updates, col, "TICKET", req.rowNumber(), anterior.ticket());
+        putUpdate(updates, col, "STATUS TICKET", req.rowNumber(), anterior.statusTicket());
+
+        if (!updates.isEmpty()) {
+            com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest batch =
+                    new com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest()
+                            .setValueInputOption("USER_ENTERED")
+                            .setData(updates);
+            sheets.spreadsheets().values().batchUpdate(spreadsheetId, batch).execute();
+        }
+
+        List<Object> row = List.of(
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                nullToEmpty(req.storeId()),
+                nullToEmpty(req.agente()),
+                "[DESHECHO] " + nullToEmpty(anterior.status()),
+                nullToEmpty(anterior.comentarioInterno()),
+                nullToEmpty(anterior.comentarioAliado()),
+                nullToEmpty(anterior.ticket()),
+                nullToEmpty(anterior.statusTicket()),
+                "",
+                ""
+        );
+        ValueRange body = new ValueRange().setValues(List.of(row));
+        sheets.spreadsheets().values()
+                .append(spreadsheetId, TAB_HISTORIAL_ESTADOS, body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
+
+    /**
+     * Registra un reporte de "Feedback IA" (la IA respondió mal). Formato de columnas inferido de datos
+     * existentes en la hoja (sin encabezados) — ajustar si no calza exactamente con lo esperado.
+     */
+    public void guardarFeedbackIA(String agenteEmail, GuardarAgmFeedbackRequest req) throws Exception {
+        Sheets sheets = sheetsClient();
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        List<Object> row = List.of(
+                "",
+                "",
+                UUID.randomUUID().toString(),
+                agenteEmail + " (" + timestamp + "): " + nullToEmpty(req.mensajeErroneo()),
+                nullToEmpty(req.solucion())
+        );
+        ValueRange body = new ValueRange().setValues(List.of(row));
+        sheets.spreadsheets().values()
+                .append(spreadsheetId, TAB_FEEDBACK_IA, body)
                 .setValueInputOption("USER_ENTERED")
                 .execute();
     }

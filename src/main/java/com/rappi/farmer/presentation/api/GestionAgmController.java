@@ -1,6 +1,8 @@
 package com.rappi.farmer.presentation.api;
 
 import com.rappi.farmer.application.SessionContext;
+import com.rappi.farmer.application.dtos.DeshacerAgmGestionRequest;
+import com.rappi.farmer.application.dtos.GuardarAgmFeedbackRequest;
 import com.rappi.farmer.application.dtos.GuardarAgmGestionRequest;
 import com.rappi.farmer.application.services.GoogleSheetsService;
 import com.rappi.farmer.domain.enums.UserRole;
@@ -115,6 +117,47 @@ public class GestionAgmController {
         } catch (Exception e) {
             log.error("Error guardando gestión en Sheets: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body(Map.of("message", "Error al guardar en el Sheet"));
+        }
+    }
+
+    /** Resumen de gestiones de hoy del agente logueado. */
+    @GetMapping("/resumen-hoy")
+    public ResponseEntity<?> resumenHoy() {
+        try {
+            return ResponseEntity.ok(sheetsService.getResumenHoy(sessionContext.getCurrentUserEmail()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error leyendo resumen del día: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el resumen"));
+        }
+    }
+
+    /** Revierte el último cambio de estado registrado para una tienda. */
+    @PostMapping("/deshacer")
+    public ResponseEntity<?> deshacer(@RequestBody DeshacerAgmGestionRequest request) {
+        try {
+            sheetsService.deshacerUltimoCambio(request);
+            return ResponseEntity.ok(Map.of("message", "Cambio revertido"));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error deshaciendo cambio en Sheets: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al deshacer el cambio"));
+        }
+    }
+
+    /** Reporta un caso donde la IA (LINA) respondió mal. */
+    @PostMapping("/feedback")
+    public ResponseEntity<?> guardarFeedback(@RequestBody GuardarAgmFeedbackRequest request) {
+        try {
+            sheetsService.guardarFeedbackIA(sessionContext.getCurrentUserEmail(), request);
+            return ResponseEntity.ok(Map.of("message", "Feedback guardado"));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error guardando feedback IA: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al guardar feedback"));
         }
     }
 }

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../context/AuthContext'
-import { getSheetsStatus, connectSheets, getCasos, guardarGestion, getHistorial } from '../services/agmService'
+import {
+  getSheetsStatus, connectSheets, getCasos, guardarGestion, getHistorial,
+  getResumenHoy, deshacerUltimoCambio, guardarFeedbackIA,
+} from '../services/agmService'
 import styles from './GestionAgmPage.module.css'
 
 const STATUS_OPTIONS = [
@@ -95,11 +98,49 @@ function ConversacionModal({ tarea, storeId, onClose }) {
   )
 }
 
-function TareaCard({ tarea, idx, storeId, onChange, onSave, saving }) {
+function ResumenHoyBanner({ email }) {
+  const [resumen, setResumen] = useState(null)
+
+  useEffect(() => {
+    getResumenHoy().then(r => setResumen(r.data)).catch(() => setResumen(null))
+  }, [email])
+
+  if (!resumen || resumen.totalHoy === 0) return null
+
+  return (
+    <div className={styles.card} style={{ marginBottom: 16 }}>
+      <div className={styles.sectionTitle}>📊 Hoy gestionaste {resumen.totalHoy} caso{resumen.totalHoy !== 1 ? 's' : ''}</div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {Object.entries(resumen.porStatus || {}).map(([status, n]) => (
+          <span key={status} className={styles.dayBadge} style={{ color: statusColor(status), borderColor: statusColor(status) + '55' }}>
+            {status} × {n}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TareaCard({ tarea, idx, storeId, agente, onChange, onSave, onRefresh, saving }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [motivoBaja, setMotivoBaja] = useState('')
   const [tipoBlacklist, setTipoBlacklist] = useState('')
+  const [deshaciendo, setDeshaciendo] = useState(false)
+  const [deshacerMsg, setDeshacerMsg] = useState(null)
   const soloLectura = estadoEsFinal(tarea.status)
+
+  const handleDeshacer = async () => {
+    if (!confirm('¿Deshacer el último cambio de esta tienda? Esto revierte al estado anterior.')) return
+    setDeshaciendo(true); setDeshacerMsg(null)
+    try {
+      await deshacerUltimoCambio({ storeId, rowNumber: tarea.rowNumber, agente })
+      onRefresh()
+    } catch (e) {
+      setDeshacerMsg(e.response?.data?.message || 'Error al deshacer')
+    } finally {
+      setDeshaciendo(false)
+    }
+  }
 
   const update = (patch) => onChange(idx, patch)
 
@@ -182,15 +223,72 @@ function TareaCard({ tarea, idx, storeId, onChange, onSave, saving }) {
       </select>
 
       {!soloLectura && (
-        <button className={styles.btnPrimary} disabled={saving || !tarea.status}
-          onClick={() => onSave(idx, { motivoBaja, tipoBlacklist })}>
-          {saving ? 'Guardando...' : `Guardar gestión tarea ${idx + 1}`}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button className={styles.btnPrimary} disabled={saving || !tarea.status}
+            onClick={() => onSave(idx, { motivoBaja, tipoBlacklist })}>
+            {saving ? 'Guardando...' : `Guardar gestión tarea ${idx + 1}`}
+          </button>
+          <button className={styles.btnGhost} disabled={deshaciendo} onClick={handleDeshacer}
+            title="Revierte esta tienda al estado anterior al último cambio guardado">
+            {deshaciendo ? 'Deshaciendo...' : '↩ Deshacer último cambio'}
+          </button>
+        </div>
       )}
+      {deshacerMsg && <div className={styles.readOnlyNote}>⚠ {deshacerMsg}</div>}
 
       {modalOpen && (
         <ConversacionModal tarea={tarea} storeId={storeId} onClose={() => setModalOpen(false)} />
       )}
+    </div>
+  )
+}
+
+/* ── Tab "Feedback IA" — reportar cuando LINA respondió mal ── */
+function FeedbackIaTab() {
+  const [mensajeErroneo, setMensajeErroneo] = useState('')
+  const [solucion, setSolucion] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  const handleSubmit = async () => {
+    if (!mensajeErroneo.trim() || !solucion.trim()) return
+    setSaving(true); setMsg(null)
+    try {
+      await guardarFeedbackIA({ mensajeErroneo, solucion })
+      setMsg({ type: 'ok', text: '✅ Feedback guardado — gracias por ayudar a mejorar a LINA' })
+      setMensajeErroneo(''); setSolucion('')
+    } catch (e) {
+      setMsg({ type: 'err', text: e.response?.data?.message || 'Error al guardar feedback' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.sectionTitle}>Feedback IA</div>
+      <p className={styles.emptyText}>Reporta cuando LINA respondió algo incorrecto a un aliado, para que el equipo lo revise.</p>
+
+      {msg && (
+        <div className={styles.readOnlyNote} style={msg.type === 'ok' ? { color: '#22C55E' } : {}}>
+          {msg.text}
+        </div>
+      )}
+
+      <label className={styles.label}>Mensaje Erróneo *</label>
+      <textarea className={styles.textarea} value={mensajeErroneo}
+        onChange={e => setMensajeErroneo(e.target.value)}
+        placeholder="Pega o describe lo que LINA respondió mal" />
+
+      <label className={styles.label}>Solución *</label>
+      <textarea className={styles.textarea} value={solucion}
+        onChange={e => setSolucion(e.target.value)}
+        placeholder="¿Cuál era la respuesta correcta?" />
+
+      <button className={styles.btnPrimary} disabled={saving || !mensajeErroneo.trim() || !solucion.trim()}
+        onClick={handleSubmit}>
+        {saving ? 'Guardando...' : 'Guardar feedback'}
+      </button>
     </div>
   )
 }
@@ -382,11 +480,15 @@ export default function GestionAgmPage() {
         </div>
       )}
 
-      <div className={styles.topActions}>
+      <ResumenHoyBanner email={user?.email} />
+
+      <div className={styles.topActions} style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
         <button className={`${styles.btnTab} ${tab === 'gestion' ? styles.btnTabActive : ''}`}
           onClick={() => setTab('gestion')}>Gestión Tareas</button>
         <button className={`${styles.btnTab} ${tab === 'historial' ? styles.btnTabActive : ''}`}
           onClick={() => setTab('historial')}>Mi Historial</button>
+        <button className={`${styles.btnTab} ${tab === 'feedback' ? styles.btnTabActive : ''}`}
+          onClick={() => setTab('feedback')}>Feedback IA</button>
       </div>
 
       {tab === 'gestion' && (
@@ -412,7 +514,22 @@ export default function GestionAgmPage() {
 
           {grupo && (
             <div className={styles.grupoBox}>
-              <div className={styles.sectionTitle}>Store agrupado</div>
+              <div className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                Store agrupado
+                {grupo.diasSinTocar != null && (
+                  <span className={styles.dayBadge} style={{
+                    color: grupo.diasSinTocar >= 3 ? '#EF4444' : grupo.diasSinTocar >= 1 ? '#F59E0B' : '#22C55E',
+                    borderColor: (grupo.diasSinTocar >= 3 ? '#EF4444' : grupo.diasSinTocar >= 1 ? '#F59E0B' : '#22C55E') + '55',
+                  }}>
+                    ⏱ {grupo.diasSinTocar === 0 ? 'Gestionado hoy' : `${grupo.diasSinTocar} día${grupo.diasSinTocar !== 1 ? 's' : ''} sin tocar`}
+                  </span>
+                )}
+                {grupo.diasSinTocar == null && (
+                  <span className={styles.dayBadge} style={{ color: '#EF4444', borderColor: '#EF444455' }}>
+                    ⏱ Nunca gestionado
+                  </span>
+                )}
+              </div>
               <div className={styles.grid2}>
                 <div>
                   <div className={styles.dato}><b>País:</b> {grupo.pais}</div>
@@ -426,8 +543,8 @@ export default function GestionAgmPage() {
               </div>
 
               {grupo.tareas.map((t, i) => (
-                <TareaCard key={t.rowNumber ?? i} tarea={t} idx={i} storeId={grupo.storeId}
-                  onChange={handleTareaChange} onSave={handleGuardar} saving={savingIdx === i} />
+                <TareaCard key={t.rowNumber ?? i} tarea={t} idx={i} storeId={grupo.storeId} agente={user?.email}
+                  onChange={handleTareaChange} onSave={handleGuardar} onRefresh={handleBuscar} saving={savingIdx === i} />
               ))}
 
               <div className={styles.nav}>
@@ -442,6 +559,7 @@ export default function GestionAgmPage() {
       )}
 
       {tab === 'historial' && <MiHistorialTab />}
+      {tab === 'feedback' && <FeedbackIaTab />}
     </div>
   )
 }

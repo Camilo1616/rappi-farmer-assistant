@@ -8,5 +8,6 @@ public record AgmGrupoDto(
         String storeId,
         String storeName,
         String telefono,
-        List<AgmTareaDto> tareas
+        List<AgmTareaDto> tareas,
+        Long diasSinTocar // null si nunca se ha registrado un cambio para este store
 ) {}

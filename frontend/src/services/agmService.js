@@ -11,3 +11,7 @@ export const guardarGestion = (payload) => api.post('/agm/gestion', payload)
 
 // Sin storeId = "mi historial" (últimos N días). Con storeId = timeline completo de esa tienda.
 export const getHistorial = (params = {}) => api.get('/agm/historial', { params })
+
+export const getResumenHoy = () => api.get('/agm/resumen-hoy')
+export const deshacerUltimoCambio = (payload) => api.post('/agm/deshacer', payload)
+export const guardarFeedbackIA = (payload) => api.post('/agm/feedback', payload)
