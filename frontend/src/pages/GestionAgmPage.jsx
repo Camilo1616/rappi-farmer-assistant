@@ -59,6 +59,47 @@ function TimelineList({ entries, showStore }) {
   )
 }
 
+/* ── Historial completo de una tienda (qué agentes la tocaron y cuándo) ── */
+function StoreHistorialModal({ storeId, onClose }) {
+  const [historial, setHistorial] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getHistorial({ storeId })
+      .then(r => setHistorial(r.data))
+      .catch(() => setHistorial([]))
+      .finally(() => setLoading(false))
+  }, [storeId])
+
+  const agentesUnicos = [...new Set((historial || []).map(h => h.agente).filter(Boolean))]
+
+  return createPortal(
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <h2 className={styles.modalTitle}>📅 Historial de la tienda</h2>
+        <p className={styles.modalStore}><strong>Store ID:</strong> {storeId}</p>
+
+        {!loading && agentesUnicos.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <div className={styles.sectionTitle} style={{ marginTop: 0 }}>Agentes que la han gestionado</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {agentesUnicos.map(a => (
+                <span key={a} className={styles.dayBadge} style={{ color: '#3B82F6', borderColor: '#3B82F655' }}>{a}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className={styles.sectionTitle}>Cambios registrados</div>
+        {loading ? <p className={styles.emptyText}>Cargando...</p> : <TimelineList entries={historial} />}
+
+        <button className={styles.btnPrimary} onClick={onClose}>Cerrar</button>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 function ConversacionModal({ tarea, storeId, onClose }) {
   const [historial, setHistorial] = useState(null)
   const [loadingHist, setLoadingHist] = useState(true)
@@ -384,6 +425,7 @@ export default function GestionAgmPage() {
   const [indexGrupo, setIndexGrupo] = useState(0)
   const [savingIdx, setSavingIdx] = useState(null)
   const [msg, setMsg] = useState(null)
+  const [historialStoreOpen, setHistorialStoreOpen] = useState(null)
 
   useEffect(() => {
     getSheetsStatus().then(r => setSheetsStatus(r.data)).catch(() => setSheetsStatus({ connected: false }))
@@ -520,13 +562,17 @@ export default function GestionAgmPage() {
                   <span className={styles.dayBadge} style={{
                     color: grupo.diasSinTocar >= 3 ? '#EF4444' : grupo.diasSinTocar >= 1 ? '#F59E0B' : '#22C55E',
                     borderColor: (grupo.diasSinTocar >= 3 ? '#EF4444' : grupo.diasSinTocar >= 1 ? '#F59E0B' : '#22C55E') + '55',
-                  }}>
+                    cursor: 'pointer',
+                  }} onClick={() => setHistorialStoreOpen(grupo.storeId)}
+                    title="Ver quién y cuándo gestionó esta tienda">
                     ⏱ {grupo.diasSinTocar === 0 ? 'Gestionado hoy' : `${grupo.diasSinTocar} día${grupo.diasSinTocar !== 1 ? 's' : ''} sin tocar`}
                   </span>
                 )}
                 {grupo.diasSinTocar == null && (
-                  <span className={styles.dayBadge} style={{ color: '#EF4444', borderColor: '#EF444455' }}>
-                    ⏱ Nunca gestionado
+                  <span className={styles.dayBadge} style={{ color: '#EF4444', borderColor: '#EF444455', cursor: 'pointer' }}
+                    onClick={() => setHistorialStoreOpen(grupo.storeId)}
+                    title="Ver quién y cuándo gestionó esta tienda">
+                    ⏱ Sin registro en historial — clic para ver detalle
                   </span>
                 )}
               </div>
@@ -560,6 +606,10 @@ export default function GestionAgmPage() {
 
       {tab === 'historial' && <MiHistorialTab />}
       {tab === 'feedback' && <FeedbackIaTab />}
+
+      {historialStoreOpen && (
+        <StoreHistorialModal storeId={historialStoreOpen} onClose={() => setHistorialStoreOpen(null)} />
+      )}
     </div>
   )
 }

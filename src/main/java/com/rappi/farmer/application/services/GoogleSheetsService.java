@@ -199,6 +199,7 @@ public class GoogleSheetsService {
         // Mapa temporal de storeId -> lista de tareas + metadata, preservando orden de aparición
         LinkedHashMap<String, List<AgmTareaDto>> tareasPorStore = new LinkedHashMap<>();
         Map<String, String[]> metaPorStore = new LinkedHashMap<>(); // storeId -> [pais, storeName, telefono]
+        Map<String, String> fechaAsignacionPorStore = new LinkedHashMap<>();
 
         for (int i = 1; i < rows.size(); i++) {
             List<Object> row = rows.get(i);
@@ -238,6 +239,7 @@ public class GoogleSheetsService {
                     val(row, col, "STORE_NAME"),
                     val(row, col, "TELEFONO").isBlank() ? val(row, col, "TELÉFONO") : val(row, col, "TELEFONO"),
             });
+            fechaAsignacionPorStore.putIfAbsent(storeId, val(row, col, "FECHA_ASIGNACION"));
         }
 
         Map<String, LocalDateTime> ultimoToque = ultimoToquePorStore(sheets);
@@ -247,11 +249,29 @@ public class GoogleSheetsService {
             String storeId = entry.getKey();
             String[] meta = metaPorStore.getOrDefault(storeId, new String[]{"", "", ""});
             LocalDateTime ultimo = ultimoToque.get(storeId.trim().toLowerCase());
-            Long diasSinTocar = ultimo == null ? null
-                    : java.time.temporal.ChronoUnit.DAYS.between(ultimo.toLocalDate(), LocalDate.now());
+            LocalDate referencia = ultimo != null ? ultimo.toLocalDate()
+                    : parseFechaFlexible(fechaAsignacionPorStore.get(storeId));
+            Long diasSinTocar = referencia == null ? null
+                    : java.time.temporal.ChronoUnit.DAYS.between(referencia, LocalDate.now());
             resultado.add(new AgmGrupoDto(meta[0], storeId, meta[1], meta[2], entry.getValue(), diasSinTocar));
         }
         return resultado;
+    }
+
+    /** Intenta parsear una fecha en varios formatos comunes del Sheet; null si no se pudo. */
+    private static LocalDate parseFechaFlexible(String value) {
+        if (value == null || value.isBlank()) return null;
+        String v = value.trim();
+        List<DateTimeFormatter> formatos = List.of(
+                DateTimeFormatter.ISO_LOCAL_DATE,
+                DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+                DateTimeFormatter.ofPattern("d/M/yyyy"),
+                DateTimeFormatter.ofPattern("MM/dd/yyyy")
+        );
+        for (DateTimeFormatter f : formatos) {
+            try { return LocalDate.parse(v, f); } catch (Exception ignored) { }
+        }
+        return null;
     }
 
     /** Último FECHA_HORA registrado en HISTORIAL_ESTADOS por cada Store_ID (clave normalizada a minúsculas). */
