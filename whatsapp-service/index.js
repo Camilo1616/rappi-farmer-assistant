@@ -356,6 +356,6 @@ app.post('/logout', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[WA] Servicio multi-sesión escuchando en puerto ${PORT}`)
-  // Las sesiones se inicializan bajo demanda cuando cada farmer accede a /status.
+  // Las sesiones se inicializan bajo demanda cuando cada usuario accede a /status.
   // No restaurar todas al arrancar — lanzar 10+ Chromium simultáneos colapsa el container.
 })
