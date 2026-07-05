@@ -77,7 +77,8 @@ public class GoogleSheetsService {
                 .setRedirectUri(redirectUri)
                 .setState(adminEmail)
                 .set("access_type", "offline")
-                .set("prompt", "consent")
+                .set("prompt", "select_account consent")
+                .set("login_hint", adminEmail)
                 .build();
     }
 
