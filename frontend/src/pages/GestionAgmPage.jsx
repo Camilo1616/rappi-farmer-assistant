@@ -568,13 +568,21 @@ export default function GestionAgmPage() {
                     ⏱ {grupo.diasSinTocar === 0 ? 'Gestionado hoy' : `${grupo.diasSinTocar} día${grupo.diasSinTocar !== 1 ? 's' : ''} sin tocar`}
                   </span>
                 )}
-                {grupo.diasSinTocar == null && (
-                  <span className={styles.dayBadge} style={{ color: '#EF4444', borderColor: '#EF444455', cursor: 'pointer' }}
-                    onClick={() => setHistorialStoreOpen(grupo.storeId)}
-                    title="Ver quién y cuándo gestionó esta tienda">
-                    ⏱ Sin registro en historial — clic para ver detalle
-                  </span>
-                )}
+                {grupo.diasSinTocar == null && (() => {
+                  const tieneAvance = grupo.tareas.some(t =>
+                    (t.status && t.status.trim()) || (t.comentarioInterno && t.comentarioInterno.trim()) || (t.ticket && t.ticket.trim()))
+                  return (
+                    <span className={styles.dayBadge} style={{
+                      color: tieneAvance ? '#94A3B8' : '#EF4444',
+                      borderColor: (tieneAvance ? '#94A3B8' : '#EF4444') + '55',
+                      cursor: 'pointer',
+                    }}
+                      onClick={() => setHistorialStoreOpen(grupo.storeId)}
+                      title="Ver quién y cuándo gestionó esta tienda">
+                      ⏱ {tieneAvance ? 'Gestionado (sin fecha registrada en el Sheet)' : 'Sin gestionar aún'} — clic para ver detalle
+                    </span>
+                  )
+                })()}
               </div>
               <div className={styles.grid2}>
                 <div>
