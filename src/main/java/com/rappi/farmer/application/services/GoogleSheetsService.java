@@ -66,6 +66,17 @@ public class GoogleSheetsService {
 
     private final GoogleSheetsCredentialJpaRepository credentialRepository;
 
+    // Cachea el cliente autenticado — evita re-negociar un access token con Google en cada llamada.
+    private volatile Sheets cachedSheets;
+    private volatile String cachedRefreshToken;
+
+    // Cachea el contenido de cada pestaña por unos segundos — evita releer el sheet completo
+    // varias veces cuando la UI dispara varias peticiones seguidas (resumen, casos, historial...).
+    private static final long TAB_CACHE_TTL_MS = 15_000;
+    private final Map<String, CachedTab> tabCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private record CachedTab(List<List<Object>> rows, long fetchedAt) {}
+
     // ── OAuth ─────────────────────────────────────────────────────────────────
 
     public boolean isConnected() {
@@ -110,6 +121,9 @@ public class GoogleSheetsService {
 
     public void disconnect() {
         credentialRepository.deleteById(SINGLETON_ID);
+        cachedSheets = null;
+        cachedRefreshToken = null;
+        tabCache.clear();
     }
 
     private GoogleAuthorizationCodeFlow buildFlow() throws GeneralSecurityException, IOException {
@@ -135,13 +149,39 @@ public class GoogleSheetsService {
                 .setRefreshToken(refreshToken);
     }
 
-    private Sheets sheetsClient() throws GeneralSecurityException, IOException {
+    private synchronized Sheets sheetsClient() throws GeneralSecurityException, IOException {
         GoogleSheetsCredentialEntity cred = credentialRepository.findById(SINGLETON_ID)
                 .orElseThrow(() -> new IllegalStateException("Google Sheets no está conectado — un Administrador debe conectarlo primero"));
+
+        // Reusa el cliente ya autenticado — su Credential interno cachea y renueva el access token
+        // solo cuando expira, en vez de pedir uno nuevo en cada request.
+        if (cachedSheets != null && cred.getRefreshToken().equals(cachedRefreshToken)) {
+            return cachedSheets;
+        }
+
         Credential credential = buildCredential(cred.getRefreshToken());
-        return new Sheets.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, credential)
+        Sheets sheets = new Sheets.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, credential)
                 .setApplicationName("Rappi Assistant — Gestión AGM-IA")
                 .build();
+        cachedSheets = sheets;
+        cachedRefreshToken = cred.getRefreshToken();
+        return sheets;
+    }
+
+    /** Lee una pestaña completa, sirviendo de caché si se pidió hace menos de {@link #TAB_CACHE_TTL_MS}. */
+    private List<List<Object>> readTab(Sheets sheets, String tabName) throws IOException {
+        CachedTab cached = tabCache.get(tabName);
+        if (cached != null && System.currentTimeMillis() - cached.fetchedAt() < TAB_CACHE_TTL_MS) {
+            return cached.rows();
+        }
+        ValueRange range = sheets.spreadsheets().values().get(spreadsheetId, tabName).execute();
+        List<List<Object>> rows = range.getValues() != null ? range.getValues() : List.of();
+        tabCache.put(tabName, new CachedTab(rows, System.currentTimeMillis()));
+        return rows;
+    }
+
+    private void invalidateTab(String tabName) {
+        tabCache.remove(tabName);
     }
 
     // ── Lectura ───────────────────────────────────────────────────────────────
@@ -149,11 +189,8 @@ public class GoogleSheetsService {
     /** Devuelve los casos pendientes/asignados a un agente, agrupados por Store. */
     public List<AgmGrupoDto> getCasosPorAgente(String email, String storeFiltro) throws Exception {
         Sheets sheets = sheetsClient();
-        ValueRange range = sheets.spreadsheets().values()
-                .get(spreadsheetId, TAB_SOPORTE)
-                .execute();
-        List<List<Object>> rows = range.getValues();
-        if (rows == null || rows.isEmpty()) return List.of();
+        List<List<Object>> rows = readTab(sheets, TAB_SOPORTE);
+        if (rows.isEmpty()) return List.of();
 
         Map<String, Integer> col = headerIndex(rows.get(0));
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
@@ -219,12 +256,9 @@ public class GoogleSheetsService {
 
     /** Último FECHA_HORA registrado en HISTORIAL_ESTADOS por cada Store_ID (clave normalizada a minúsculas). */
     private Map<String, LocalDateTime> ultimoToquePorStore(Sheets sheets) throws IOException {
-        ValueRange range = sheets.spreadsheets().values()
-                .get(spreadsheetId, TAB_HISTORIAL_ESTADOS)
-                .execute();
-        List<List<Object>> rows = range.getValues();
+        List<List<Object>> rows = readTab(sheets, TAB_HISTORIAL_ESTADOS);
         Map<String, LocalDateTime> result = new HashMap<>();
-        if (rows == null || rows.isEmpty()) return result;
+        if (rows.isEmpty()) return result;
 
         Map<String, Integer> col = headerIndex(rows.get(0));
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -247,11 +281,8 @@ public class GoogleSheetsService {
      */
     public List<AgmHistorialEntryDto> getHistorial(String email, String storeId, int days) throws Exception {
         Sheets sheets = sheetsClient();
-        ValueRange range = sheets.spreadsheets().values()
-                .get(spreadsheetId, TAB_HISTORIAL_ESTADOS)
-                .execute();
-        List<List<Object>> rows = range.getValues();
-        if (rows == null || rows.isEmpty()) return List.of();
+        List<List<Object>> rows = readTab(sheets, TAB_HISTORIAL_ESTADOS);
+        if (rows.isEmpty()) return List.of();
 
         Map<String, Integer> col = headerIndex(rows.get(0));
         boolean porStore = storeId != null && !storeId.isBlank();
@@ -310,12 +341,8 @@ public class GoogleSheetsService {
 
     public void guardarGestion(GuardarAgmGestionRequest req) throws Exception {
         Sheets sheets = sheetsClient();
-        ValueRange headerRange = sheets.spreadsheets().values()
-                .get(spreadsheetId, TAB_SOPORTE + "!1:1")
-                .execute();
-        List<Object> headerRow = headerRange.getValues() != null && !headerRange.getValues().isEmpty()
-                ? headerRange.getValues().get(0) : List.of();
-        Map<String, Integer> col = headerIndex(headerRow);
+        List<List<Object>> soporteRows = readTab(sheets, TAB_SOPORTE);
+        Map<String, Integer> col = headerIndex(soporteRows.isEmpty() ? List.of() : soporteRows.get(0));
 
         List<ValueRange> updates = new ArrayList<>();
         putUpdate(updates, col, "STATUS", req.rowNumber(), req.status());
@@ -340,6 +367,8 @@ public class GoogleSheetsService {
         }
 
         appendHistorial(sheets, req);
+        invalidateTab(TAB_SOPORTE);
+        invalidateTab(TAB_HISTORIAL_ESTADOS);
 
         if ("Baja".equalsIgnoreCase(req.status())) {
             appendBacklist(sheets, req);
@@ -402,12 +431,8 @@ public class GoogleSheetsService {
         }
         AgmHistorialEntryDto anterior = historial.get(1);
 
-        ValueRange headerRange = sheets.spreadsheets().values()
-                .get(spreadsheetId, TAB_SOPORTE + "!1:1")
-                .execute();
-        List<Object> headerRow = headerRange.getValues() != null && !headerRange.getValues().isEmpty()
-                ? headerRange.getValues().get(0) : List.of();
-        Map<String, Integer> col = headerIndex(headerRow);
+        List<List<Object>> soporteRows = readTab(sheets, TAB_SOPORTE);
+        Map<String, Integer> col = headerIndex(soporteRows.isEmpty() ? List.of() : soporteRows.get(0));
 
         List<ValueRange> updates = new ArrayList<>();
         putUpdate(updates, col, "STATUS", req.rowNumber(), anterior.status());
@@ -441,6 +466,9 @@ public class GoogleSheetsService {
                 .append(spreadsheetId, TAB_HISTORIAL_ESTADOS, body)
                 .setValueInputOption("USER_ENTERED")
                 .execute();
+
+        invalidateTab(TAB_SOPORTE);
+        invalidateTab(TAB_HISTORIAL_ESTADOS);
     }
 
     /**
