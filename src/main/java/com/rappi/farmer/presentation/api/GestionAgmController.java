@@ -5,12 +5,12 @@ import com.rappi.farmer.application.dtos.DeshacerAgmGestionRequest;
 import com.rappi.farmer.application.dtos.GuardarAgmFeedbackRequest;
 import com.rappi.farmer.application.dtos.GuardarAgmGestionRequest;
 import com.rappi.farmer.application.services.GoogleSheetsService;
-import com.rappi.farmer.domain.enums.UserRole;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -33,10 +33,8 @@ public class GestionAgmController {
 
     /** ADMIN solicita conectar el Sheet compartido — devuelve la URL de autorización. */
     @GetMapping("/connect")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> connect() {
-        if (sessionContext.getCurrentUserRole() != UserRole.ADMIN) {
-            return ResponseEntity.status(403).body(Map.of("message", "Solo un Administrador puede conectar el Sheet"));
-        }
         try {
             String authUrl = sheetsService.buildAuthUrl(sessionContext.getCurrentUserEmail());
             return ResponseEntity.ok(Map.of("authUrl", authUrl));
@@ -70,10 +68,8 @@ public class GestionAgmController {
     }
 
     @DeleteMapping("/disconnect")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> disconnect() {
-        if (sessionContext.getCurrentUserRole() != UserRole.ADMIN) {
-            return ResponseEntity.status(403).body(Map.of("message", "Solo un Administrador puede desconectar el Sheet"));
-        }
         sheetsService.disconnect();
         return ResponseEntity.ok(Map.of("message", "Google Sheets desconectado"));
     }

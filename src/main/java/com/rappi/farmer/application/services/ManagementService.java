@@ -11,12 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -25,6 +25,11 @@ import java.util.stream.Collectors;
 public class ManagementService {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final ZoneId BOGOTA = ZoneId.of("America/Bogota");
+
+    // Un lock por brand (o por tienda si no tiene marca) evita que registros concurrentes
+    // para la misma tienda/marca pasen ambos el check "ya existe gestión hoy" antes de escribir.
+    private static final ConcurrentHashMap<String, Object> REGISTER_LOCKS = new ConcurrentHashMap<>();
 
     private final ManagementRepository managementRepository;
     private final StoreRepository storeRepository;
@@ -32,8 +37,19 @@ public class ManagementService {
 
     @Transactional
     public Management register(RegisterManagementRequest request) {
+        String brandId = storeRepository.findById(request.getStoreId())
+                .map(com.rappi.farmer.domain.entities.Store::getBrandId)
+                .orElse(null);
+        String lockKey = brandId != null ? "brand:" + brandId : "store:" + request.getStoreId();
+        Object lock = REGISTER_LOCKS.computeIfAbsent(lockKey, k -> new Object());
+        synchronized (lock) {
+            return doRegister(request);
+        }
+    }
+
+    private Management doRegister(RegisterManagementRequest request) {
         Long userId = sessionContext.getCurrentUserId();
-        LocalDateTime now = LocalDateTime.now(ZoneId.of("America/Bogota"));
+        LocalDateTime now = LocalDateTime.now(BOGOTA);
 
         // Bloquear si ya existe gestión hoy para esta tienda o cualquier hermana de la misma brand
         if (managementRepository.findLatestTodayByStoreId(request.getStoreId()).isPresent()) {
@@ -52,11 +68,8 @@ public class ManagementService {
             }
         });
 
-        Management management = new Management(
-                null, request.getStoreId(), null, null, userId,
-                request.getManagementType(), request.getResultType(),
-                request.getComments(), now, null, null, false
-        );
+        Management management = Management.register(request.getStoreId(), userId,
+                request.getManagementType(), request.getResultType(), request.getComments(), now);
         Management saved = managementRepository.save(management);
         log.info("Gestión registrada — tienda:{} tipo:{} resultado:{}",
                 request.getStoreId(), request.getManagementType(), request.getResultType());
@@ -68,12 +81,7 @@ public class ManagementService {
                         storeRepository.findAllByBrandId(origin.getBrandId());
                 for (com.rappi.farmer.domain.entities.Store sibling : siblings) {
                     if (sibling.getId().equals(request.getStoreId())) continue;
-                    Management m = new Management(
-                            null, sibling.getId(), null, null, userId,
-                            request.getManagementType(), request.getResultType(),
-                            request.getComments(), now, null, null, true
-                    );
-                    managementRepository.save(m);
+                    managementRepository.save(saved.propagateTo(sibling.getId()));
                     log.info("Gestión en hermana brandId:{} tienda:{}", origin.getBrandId(), sibling.getId());
                 }
             }
@@ -84,6 +92,9 @@ public class ManagementService {
 
     @Transactional
     public Management update(Long managementId, String managementType, String resultType, String comments) {
+        Management existing = managementRepository.findById(managementId)
+                .orElseThrow(() -> new com.rappi.farmer.domain.exceptions.BusinessException("Gestión no encontrada"));
+        assertModifiable(existing);
         Management updated = managementRepository.update(managementId, managementType, resultType, comments);
         log.info("Gestión actualizada — id:{} tipo:{} resultado:{}", managementId, managementType, resultType);
         return updated;
@@ -93,11 +104,18 @@ public class ManagementService {
     public void deleteManagement(Long managementId) {
         Management m = managementRepository.findById(managementId)
                 .orElseThrow(() -> new com.rappi.farmer.domain.exceptions.BusinessException("Gestión no encontrada"));
-        if (!m.getManagementDate().toLocalDate().equals(LocalDate.now(ZoneId.of("America/Bogota")))) {
+        assertModifiable(m);
+        if (!m.isEditableToday(BOGOTA)) {
             throw new com.rappi.farmer.domain.exceptions.BusinessException("Solo se pueden eliminar gestiones del día actual");
         }
         managementRepository.deleteById(managementId);
         log.info("Gestión eliminada — id:{}", managementId);
+    }
+
+    private void assertModifiable(Management management) {
+        if (!management.canBeModifiedBy(sessionContext.getCurrentUserId(), sessionContext.getCurrentUserRole())) {
+            throw new com.rappi.farmer.domain.exceptions.BusinessException("No puedes modificar una gestión que no es tuya");
+        }
     }
 
     public Optional<String> getTodayResultForStore(Long storeId) {

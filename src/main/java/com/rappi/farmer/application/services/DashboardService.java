@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +40,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
-
-    private static final BigDecimal ALIADOS_THRESHOLD = BigDecimal.valueOf(60);
 
     private final StoreRepository storeRepository;
     private final DailyMetricRepository dailyMetricRepository;
@@ -151,35 +148,26 @@ public class DashboardService {
 
         for (Store store : stores) {
             DailyMetric metric = metricsMap.get(store.getId());
-            int aging = calcAgingEfectivo(store);
+            int aging = store.effectiveAging();
             StoreViewDto dto = toViewDto(store, metric, aging, todayManagementsMap.get(store.getId()), lastContactMap.get(store.getId()));
-            boolean isSelf = store.getChannel() != null
-                    && store.getChannel().toLowerCase().contains("self");
-            // IS = canal exacto "Inside Sales" + HO=NO (o nulo) + lastFollowUp nulo + followUpLast30d=NO + cargada ≤7 días
-            boolean isInsideSalesChannel = store.getChannel() != null
-                    && store.getChannel().equalsIgnoreCase("Inside Sales");
-            if (isInsideSalesChannel && !log.isDebugEnabled()) {
+
+            if (store.isInsideSalesChannel() && !log.isDebugEnabled()) {
                 log.info("IS-DEBUG [{}] hadHandoff={} lastFollowUp={} followUpLast30d='{}' uploadDate={}",
                         store.getStoreName(), store.getHadHandoff(), store.getLastFollowUp(),
                         store.getFollowUpLast30d(), store.getUploadDate());
             }
-            boolean isGestionarIS = isInsideSalesChannel
-                    && !Boolean.TRUE.equals(store.getHadHandoff())
-                    && store.getLastFollowUp() == null
-                    && "NO".equalsIgnoreCase(store.getFollowUpLast30d())
-                    && store.getUploadDate() != null
-                    && !store.getUploadDate().isBefore(today.minusDays(7));
+            boolean isGestionarIS = store.isGestionarInsideSales(today);
             if (isGestionarIS) insideSales.add(dto);
 
             if (isGestionarIS) {
                 // IS ya fue agregado arriba — no duplicar en otros segmentos
-            } else if (isSelf) {
+            } else if (store.isSelfOnboarding()) {
                 selfOnboarding.add(dto);
-            } else if (aging >= 1 && aging <= 8 && isOnboardingEligible(store)) {
+            } else if (aging >= 1 && aging <= 8 && store.isOnboardingEligible()) {
                 onboardingCritical.add(dto);
             } else if (aging > 8 && aging <= 14) {
                 aliados.add(dto);
-            } else if (isChurnRisk(metric, store)) {
+            } else if (store.isChurnRisk()) {
                 churnRisk.add(dto);
             } else if (resolveAvaLabel(metric) != null) {
                 ava.add(dto);
@@ -318,73 +306,15 @@ public class DashboardService {
                 .collect(Collectors.toMap(DailyMetric::getStoreId, m -> m, (a, b) -> a));
 
         return stores.stream().filter(store -> {
-            DailyMetric metric = metricsMap.get(store.getId());
-            int aging = calcAgingEfectivo(store);
-            boolean isSelf = store.getChannel() != null
-                    && store.getChannel().toLowerCase().contains("self");
+            int aging = store.effectiveAging();
             return switch (baseType) {
-                case "ACTIVE_F7D" -> !isSelf && aging >= 1 && aging <= 8;
-                case "AVA_8_14"   -> !isSelf && aging > 8 && aging <= 14;
-                case "CHURN"      -> isChurnRisk(metric, store);
-                case "RETENCION"  -> resolveAvaLabel(metric) != null;
+                case "ACTIVE_F7D" -> !store.isSelfOnboarding() && aging >= 1 && aging <= 8;
+                case "AVA_8_14"   -> !store.isSelfOnboarding() && aging > 8 && aging <= 14;
+                case "CHURN"      -> store.isChurnRisk();
+                case "RETENCION"  -> resolveAvaLabel(metricsMap.get(store.getId())) != null;
                 default           -> true;
             };
         }).toList();
-    }
-
-    /**
-     * Edad real de la tienda: días desde la primera FECHA DE CARGUE en que apareció.
-     * Prioridad:
-     *  1. upload_date     — primera fecha de cargue (fuente de verdad según negocio)
-     *  2. onboarding_date — fallback si no hay upload_date
-     *  3. aging del Excel — último recurso estático
-     */
-    private int calcAgingEfectivo(Store store) {
-        if (store.getUploadDate() != null) {
-            return calcAging(store.getUploadDate());
-        }
-        if (store.getOnboardingDate() != null) {
-            return calcAging(store.getOnboardingDate());
-        }
-        return store.getAging() != null ? store.getAging() : 0;
-    }
-
-    private int calcAging(LocalDate onboardingDate) {
-        if (onboardingDate == null) return 0;
-        return (int) ChronoUnit.DAYS.between(onboardingDate, LocalDate.now());
-    }
-
-    private boolean hasNoOrders(DailyMetric metric) {
-        return metric == null
-                || metric.getOrdersCount() == null
-                || metric.getOrdersCount() == 0;
-    }
-
-    private boolean isLowConnection(DailyMetric metric, Store store) {
-        BigDecimal pct = metric != null && metric.getConnectionPercentage() != null
-                ? metric.getConnectionPercentage()
-                : store.getConnectionPercentage();
-        return pct != null && pct.compareTo(ALIADOS_THRESHOLD) < 0;
-    }
-
-    /**
-     * Hunting e Inside Sales: solo entran a onboarding si tuvieron handoff (TUVO_HANDOFF = SI).
-     * Self (se registra solo): siempre entra a onboarding sin importar el handoff.
-     */
-    private boolean isOnboardingEligible(Store store) {
-        String channel = store.getChannel();
-        if (channel == null) return true;
-        String c = channel.toLowerCase().trim();
-        if (c.contains("hunting") || c.contains("inside")) {
-            return Boolean.TRUE.equals(store.getHadHandoff());
-        }
-        return true;
-    }
-
-    /** Saludable: AVA_MTD >= 60%. */
-    private boolean isHealthy(DailyMetric metric) {
-        if (metric == null || metric.getAvaMtd() == null) return false;
-        return toPercent(metric.getAvaMtd()).compareTo(BigDecimal.valueOf(60)) >= 0;
     }
 
     /**
@@ -393,55 +323,10 @@ public class DashboardService {
      * 0% → va a Churn, no a AVA.
      */
     private String resolveAvaLabel(DailyMetric metric) {
-        if (metric == null) return null;
-        BigDecimal mtd = metric.getAvaMtd();
-        if (mtd == null) return null;
-        BigDecimal pct = toPercent(mtd);
+        if (metric == null || metric.getAvaMtd() == null) return null;
+        BigDecimal pct = metric.avaMtdPercent();
         if (pct.compareTo(BigDecimal.ZERO) > 0 && pct.compareTo(BigDecimal.valueOf(15)) <= 0) return "Retención";
         if (pct.compareTo(BigDecimal.valueOf(15)) > 0 && pct.compareTo(BigDecimal.valueOf(60)) < 0) return "Bajando";
-        return null;
-    }
-
-    /** Normaliza avaMtd: si está en escala 0-1 (decimal), convierte a 0-100 (porcentaje). */
-    private BigDecimal toPercent(BigDecimal val) {
-        if (val == null) return BigDecimal.ZERO;
-        return val.compareTo(BigDecimal.ONE) <= 0
-                ? val.multiply(BigDecimal.valueOf(100))
-                : val;
-    }
-
-    /**
-     * Churn: la columna "Estado Churn AVA" contiene "Churn", "Prevention W1/W2/W3"
-     * y el último login fue hace ≤ 90 días (o no tiene fecha de login).
-     */
-    private boolean isChurnRisk(DailyMetric metric, Store store) {
-        return resolveChurnLabel(store) != null;
-    }
-
-    /** Devuelve la etiqueta de churn o null si la tienda no está en riesgo. */
-    private String resolveChurnLabel(Store store) {
-        // Buscar en currentStatus (col "Estado Churn AVA") y en gestionar (col "GESTIONAR")
-        // Se revisan los DOS — el primero que haga match gana
-        String label = detectChurnLabel(store.getCurrentStatus());
-        if (label == null) label = detectChurnLabel(store.getGestionar());
-        if (label == null) return null;
-
-        // Sin fecha de login → no incluir
-        if (store.getLastLoginDate() == null) return null;
-        // Más de 90 días sin login → no incluir
-        long dias = ChronoUnit.DAYS.between(store.getLastLoginDate(), LocalDate.now());
-        if (dias > 90) return null;
-        return label;
-    }
-
-    /** Extrae la etiqueta de churn de un texto, o null si no hay match. */
-    private static String detectChurnLabel(String raw) {
-        if (raw == null || raw.isBlank()) return null;
-        String up = raw.trim().toUpperCase();
-        if (up.equals("CHURN") || up.startsWith("CHURN:") || up.startsWith("MAX RISK")) return "Churn";
-        if (up.contains("PREVENTION W1") || up.contains("PREVENTION 1W")) return "Prevention W1";
-        if (up.contains("PREVENTION W2") || up.contains("PREVENTION 2W")) return "Prevention W2";
-        if (up.contains("PREVENTION W3") || up.contains("PREVENTION 3W")) return "Prevention W3";
         return null;
     }
 
@@ -451,9 +336,7 @@ public class DashboardService {
                 ? metric.getConnectionPercentage()
                 : store.getConnectionPercentage();
 
-        Integer diasSinLogin = store.getLastLoginDate() != null
-                ? (int) ChronoUnit.DAYS.between(store.getLastLoginDate(), LocalDate.now())
-                : null;
+        Integer diasSinLogin = store.daysSinceLastLogin();
 
         return new StoreViewDto(
                 store.getId(),
@@ -472,12 +355,12 @@ public class DashboardService {
                 store.getLastLoginDate(),
                 diasSinLogin,
                 store.getAgingStage(),
-                resolveChurnLabel(store),
+                store.churnLabel(),
                 resolveAvaLabel(metric),
                 store.getFarmerEmail(), store.getFarmerId(),
-                metric != null ? toPercent(metric.getAvaMtd()) : null,
-                metric != null ? toPercent(metric.getConnectionPercentage()) : null,
-                metric != null ? toPercent(metric.getAvaL7d()) : null,
+                metric != null ? metric.avaMtdPercent() : null,
+                metric != null ? metric.connectionPercentagePercent() : null,
+                metric != null ? metric.avaL7dPercent() : null,
                 null,
                 lastContact,
                 store.getChannel(),

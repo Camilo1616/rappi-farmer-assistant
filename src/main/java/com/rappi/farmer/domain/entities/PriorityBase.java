@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Data
 @NoArgsConstructor
@@ -16,4 +17,13 @@ public class PriorityBase {
     private String baseType;
     private String message;
     private LocalDateTime createdAt;
+
+    public boolean belongsTo(Long candidateLiderId) {
+        return liderId != null && liderId.equals(candidateLiderId);
+    }
+
+    public static PriorityBase create(Long liderId, String baseType, String message) {
+        return new PriorityBase(null, liderId, null, baseType, message,
+                LocalDateTime.now(ZoneId.of("America/Bogota")));
+    }
 }

@@ -41,26 +41,17 @@ public class PriorityBaseService {
             throw new BusinessException("Debes etiquetar al menos un farmer");
         }
 
-        PriorityBase base = new PriorityBase(null, liderId, null,
-                request.getBaseType(), request.getMessage(), LocalDateTime.now(ZoneId.of("America/Bogota")));
+        PriorityBase base = PriorityBase.create(liderId, request.getBaseType(), request.getMessage());
         PriorityBase saved = repository.saveBase(base);
 
         int totalTiendas = 0;
         for (Long farmerId : request.getFarmerIds()) {
-            // Crear asignación de farmer
-            PriorityBaseAssignment assignment = new PriorityBaseAssignment(
-                    null, saved.getId(), farmerId, null, null,
-                    AssignmentStatus.PENDIENTE.name(), null, null, null);
-            repository.saveAssignment(assignment);
+            repository.saveAssignment(PriorityBaseAssignment.pending(saved.getId(), farmerId));
 
             // Jalar tiendas del farmer según el tipo de base
             List<Store> tiendas = queryStoresByType(request.getBaseType(), farmerId, request.getActiveDays(), request.getChurnFilter());
             for (Store store : tiendas) {
-                PriorityBaseStore bs = new PriorityBaseStore(
-                        null, saved.getId(), farmerId, null,
-                        store.getId(), null, null, null, null,
-                        "PENDIENTE", null, null, null);
-                repository.saveBaseStore(bs);
+                repository.saveBaseStore(PriorityBaseStore.pending(saved.getId(), farmerId, store.getId()));
             }
             totalTiendas += tiendas.size();
             log.info("Base {} — farmer {} — {} tiendas jaladas ({})",
@@ -83,7 +74,7 @@ public class PriorityBaseService {
 
             List<PriorityBaseStore> stores = repository.findStoresByBase(base.getId());
             long tiendas    = stores.size();
-            long gestionadas = stores.stream().filter(s -> "GESTIONADA".equals(s.getStatus())).count();
+            long gestionadas = stores.stream().filter(PriorityBaseStore::isGestionada).count();
 
             return toViewDto(base, assignments.size(), (int) completados, (int) enProceso,
                     (int) pendientes, (int) tiendas, (int) gestionadas);
@@ -117,7 +108,7 @@ public class PriorityBaseService {
                              + count(assignments, AssignmentStatus.LEIDA);
             long pendientes  = count(assignments, AssignmentStatus.PENDIENTE);
             List<PriorityBaseStore> stores = repository.findStoresByBase(base.getId());
-            long gestionadas = stores.stream().filter(s -> "GESTIONADA".equals(s.getStatus())).count();
+            long gestionadas = stores.stream().filter(PriorityBaseStore::isGestionada).count();
             return toViewDto(base, assignments.size(), (int) completados, (int) enProceso,
                     (int) pendientes, stores.size(), (int) gestionadas);
         });
@@ -125,12 +116,10 @@ public class PriorityBaseService {
 
     /** Notificaciones para el LÍDER: assignments que pasaron a LEIDA o COMPLETADA recientemente. */
     public List<AssignmentViewDto> getRecentActivityForLider(Long liderId) {
+        LocalDateTime since = LocalDateTime.now(ZoneId.of("America/Bogota")).minusHours(24);
         return repository.findBasesByLider(liderId).stream()
                 .flatMap(base -> repository.findAssignmentsByBase(base.getId()).stream()
-                        .filter(a -> AssignmentStatus.LEIDA.name().equals(a.getStatus())
-                                || AssignmentStatus.COMPLETADA.name().equals(a.getStatus()))
-                        .filter(a -> a.getReadAt() != null
-                                && a.getReadAt().isAfter(LocalDateTime.now(ZoneId.of("America/Bogota")).minusHours(24))))
+                        .filter(a -> a.recentlyActive(since)))
                 .map(a -> {
                     long total       = repository.countStoresByBaseAndFarmer(a.getBaseId(), a.getFarmerId());
                     long gestionadas = repository.countManagedByBaseAndFarmer(a.getBaseId(), a.getFarmerId());
@@ -162,13 +151,8 @@ public class PriorityBaseService {
     public void markEnProceso(Long assignmentId) {
         PriorityBaseAssignment a = repository.findAssignmentById(assignmentId)
                 .orElseThrow(() -> new BusinessException("Asignación no encontrada: " + assignmentId));
-        // Solo avanzar hacia adelante, nunca hacia atrás
-        if (AssignmentStatus.PENDIENTE.name().equals(a.getStatus())
-                || AssignmentStatus.LEIDA.name().equals(a.getStatus())) {
-            a.setStatus(AssignmentStatus.EN_PROCESO.name());
-            if (a.getReadAt() == null) a.setReadAt(LocalDateTime.now(ZoneId.of("America/Bogota")));
-            repository.saveAssignment(a);
-        }
+        a.markEnProceso();
+        repository.saveAssignment(a);
     }
 
     @Transactional
@@ -185,7 +169,7 @@ public class PriorityBaseService {
     public void deleteBase(Long baseId, Long liderId) {
         PriorityBase base = repository.findBaseById(baseId)
                 .orElseThrow(() -> new BusinessException("Base no encontrada: " + baseId));
-        if (!base.getLiderId().equals(liderId)) {
+        if (!base.belongsTo(liderId)) {
             throw new BusinessException("No tienes permiso para eliminar esta base");
         }
         repository.deleteBase(baseId);
@@ -196,11 +180,7 @@ public class PriorityBaseService {
     public void updateStoreStatus(Long baseStoreId, String status, String managementType, String comments) {
         PriorityBaseStore bs = repository.findBaseStoreById(baseStoreId)
                 .orElseThrow(() -> new BusinessException("Tienda de base no encontrada: " + baseStoreId));
-        bs.setStatus(status);
-        bs.setManagementType(managementType);
-        bs.setComments(comments);
-        bs.setManagedAt("GESTIONADA".equals(status) || "NO_CONTACTO".equals(status)
-                ? LocalDateTime.now(ZoneId.of("America/Bogota")) : bs.getManagedAt());
+        bs.updateManagement(status, managementType, comments);
         repository.saveBaseStore(bs);
     }
 
@@ -225,15 +205,12 @@ public class PriorityBaseService {
     private void updateStatus(Long assignmentId, AssignmentStatus newStatus, String comments) {
         PriorityBaseAssignment a = repository.findAssignmentById(assignmentId)
                 .orElseThrow(() -> new BusinessException("Asignación no encontrada: " + assignmentId));
-        a.setStatus(newStatus.name());
-        if (comments != null) a.setComments(comments);
-        if (newStatus == AssignmentStatus.LEIDA && a.getReadAt() == null) a.setReadAt(LocalDateTime.now(ZoneId.of("America/Bogota")));
-        if (newStatus == AssignmentStatus.COMPLETADA) a.setCompletedAt(LocalDateTime.now(ZoneId.of("America/Bogota")));
+        a.transitionTo(newStatus, comments);
         repository.saveAssignment(a);
     }
 
     private long count(List<PriorityBaseAssignment> list, AssignmentStatus status) {
-        return list.stream().filter(a -> status.name().equals(a.getStatus())).count();
+        return list.stream().filter(a -> a.hasStatus(status)).count();
     }
 
     private PriorityBaseViewDto toViewDto(PriorityBase base, int farmers, int completados,

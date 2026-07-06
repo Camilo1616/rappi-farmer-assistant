@@ -20,8 +20,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserService {
 
-    private static final String RAPPI_DOMAIN = "@rappi.com";
-
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
     private final PasswordEncoder encoder;
@@ -30,7 +28,7 @@ public class UserService {
 
     /** Autentica al usuario. Lanza BusinessException si las credenciales son incorrectas. */
     public LoginResult login(String email, String rawPassword) {
-        if (email == null || !email.toLowerCase().endsWith(RAPPI_DOMAIN)) {
+        if (!User.isRappiEmail(email)) {
             throw new BusinessException("El correo debe ser @rappi.com");
         }
         // Leer usuario sin transacción abierta — bcrypt no debe retener una conexión de DB
@@ -39,7 +37,7 @@ public class UserService {
         if (!encoder.matches(rawPassword, user.getPasswordHash())) {
             throw new BusinessException("Contraseña incorrecta");
         }
-        int syncDays = user.getLastLoginAt() == null ? 20 : 14;
+        int syncDays = user.isFirstLogin() ? 20 : 14;
         updateLastLogin(user);
         log.info("Login exitoso — {} ({}) syncDays:{}", user.getFullName(), user.getUserRole(), syncDays);
         return new LoginResult(user, syncDays);
@@ -53,7 +51,7 @@ public class UserService {
 
     @Transactional
     public User createUser(CreateUserRequest request) {
-        if (!request.getEmail().toLowerCase().endsWith(RAPPI_DOMAIN)) {
+        if (!User.isRappiEmail(request.getEmail())) {
             throw new BusinessException("El correo debe ser @rappi.com");
         }
         if (userRepository.existsByEmail(request.getEmail().toLowerCase())) {
@@ -84,27 +82,22 @@ public class UserService {
 
     public List<User> findFarmersByLider(Long liderId) {
         User lider = userRepository.findById(liderId).orElse(null);
-        if (lider == null || lider.getCountryCode() == null || lider.getCountryCode().isBlank()) {
+        if (lider == null || lider.countries().isEmpty()) {
             return List.of();
         }
         java.util.Set<Long> seen = new java.util.HashSet<>();
         List<User> result = new java.util.ArrayList<>();
-        for (String country : lider.getCountryCode().split(",")) {
-            String c = country.trim();
-            if (!c.isBlank()) {
-                userRepository.findByCountryCodeAndRole(c, UserRole.FARMER_MASS.name()).stream()
-                        .filter(u -> seen.add(u.getId()))
-                        .forEach(result::add);
-            }
+        for (String country : lider.countries()) {
+            userRepository.findByCountryCodeAndRole(country, UserRole.FARMER_MASS.name()).stream()
+                    .filter(u -> seen.add(u.getId()))
+                    .forEach(result::add);
         }
         return result;
     }
 
     public List<String> getLiderCountries(Long liderId) {
         return userRepository.findById(liderId)
-                .map(u -> u.getCountryCode() == null || u.getCountryCode().isBlank()
-                        ? new java.util.ArrayList<String>()
-                        : java.util.Arrays.asList(u.getCountryCode().split(",")))
+                .map(User::countries)
                 .orElse(new java.util.ArrayList<>());
     }
 
@@ -189,7 +182,7 @@ public class UserService {
 
     public boolean isCalendarConnected(Long userId) {
         return userRepository.findById(userId)
-                .map(u -> u.getCalendarRefreshToken() != null)
+                .map(User::hasCalendarConnected)
                 .orElse(false);
     }
 
@@ -205,8 +198,7 @@ public class UserService {
     /** Registra latido de actividad del farmer y lo marca como ACTIVO. */
     public void heartbeat(Long userId) {
         userRepository.findById(userId).ifPresent(u -> {
-            u.setLastActivity(java.time.LocalDateTime.now());
-            u.setActivityStatus("ACTIVO");
+            u.markActive();
             userRepository.save(u);
         });
     }
@@ -214,7 +206,7 @@ public class UserService {
     /** Marca al farmer como DESACTIVADO al cerrar sesión. */
     public void markLogout(Long userId) {
         userRepository.findById(userId).ifPresent(u -> {
-            u.setActivityStatus("DESACTIVADO");
+            u.markLoggedOut();
             userRepository.save(u);
         });
     }
@@ -233,11 +225,9 @@ public class UserService {
     public void markInactiveUsers() {
         java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusHours(2);
         userRepository.findByRole(UserRole.FARMER_MASS.name()).stream()
-            .filter(u -> "ACTIVO".equals(u.getActivityStatus())
-                         && u.getLastActivity() != null
-                         && u.getLastActivity().isBefore(threshold))
+            .filter(u -> u.isIdleSince(threshold))
             .forEach(u -> {
-                u.setActivityStatus("INACTIVO");
+                u.markInactive();
                 userRepository.save(u);
                 log.info("Farmer {} marcado INACTIVO — última actividad: {}", u.getEmail(), u.getLastActivity());
             });

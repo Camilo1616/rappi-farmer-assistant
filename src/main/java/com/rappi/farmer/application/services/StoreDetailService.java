@@ -203,8 +203,7 @@ public class StoreDetailService {
                 : null;
         String lastContact = lastMgt != null ? formatLastContact(lastMgt) : null;
         String segment    = resolveDashboardSegment(store, aging, metric);
-        String churnLabel = detectChurnLabel(store.getCurrentStatus());
-        if (churnLabel == null) churnLabel = detectChurnLabel(store.getGestionar());
+        String churnLabel = store.churnLabel();
         String avaLabel   = resolveAvaLabel(store, metric);
         return new StoreViewDto(
                 store.getId(), store.getStoreCode(), store.getBrandId(), store.getStoreName(),
@@ -222,41 +221,21 @@ public class StoreDetailService {
     }
 
     private String resolveDashboardSegment(Store store, int aging, DailyMetric metric) {
-        boolean isSelf = store.getChannel() != null && store.getChannel().toLowerCase().contains("self");
+        boolean isSelf = store.isSelfOnboarding();
         if (!isSelf && aging >= 1 && aging <= 8)  return "Onboarding";
         if (!isSelf && aging > 8  && aging <= 14) return "Aliados";
-        String churn = detectChurnLabel(store.getCurrentStatus());
-        if (churn == null) churn = detectChurnLabel(store.getGestionar());
-        if (churn != null) return "Churn";
+        if (store.churnLabel() != null) return "Churn";
         if (metric != null && metric.getAvaMtd() != null) {
-            BigDecimal pct = toPercent(metric.getAvaMtd());
+            BigDecimal pct = metric.avaMtdPercent();
             if (pct.compareTo(java.math.BigDecimal.valueOf(60)) >= 0) return "Saludable";
             if (pct.compareTo(java.math.BigDecimal.ZERO) > 0) return "AVA Bajando";
         }
         return "Sin clasificar";
     }
 
-    private BigDecimal toPercent(BigDecimal val) {
-        if (val == null) return BigDecimal.ZERO;
-        return val.compareTo(BigDecimal.ONE) <= 0
-                ? val.multiply(BigDecimal.valueOf(100))
-                : val;
-    }
-
-    private static String detectChurnLabel(String raw) {
-        if (raw == null || raw.isBlank()) return null;
-        String up = raw.trim().toUpperCase();
-        if (up.equals("CHURN") || up.startsWith("CHURN:") || up.startsWith("MAX RISK")) return "Churn";
-        if (up.contains("PREVENTION W3") || up.contains("PREVENTION_W3")) return "Prevention W3";
-        if (up.contains("PREVENTION W2") || up.contains("PREVENTION_W2")) return "Prevention W2";
-        if (up.contains("PREVENTION W1") || up.contains("PREVENTION_W1")) return "Prevention W1";
-        if (up.contains("PREVENTION")) return "Prevention W1";
-        return null;
-    }
-
     private String resolveAvaLabel(Store store, DailyMetric metric) {
         if (metric == null || metric.getAvaMtd() == null) return null;
-        BigDecimal pct = toPercent(metric.getAvaMtd());
+        BigDecimal pct = metric.avaMtdPercent();
         if (pct.compareTo(BigDecimal.ZERO) <= 0) return null;
         if (pct.compareTo(java.math.BigDecimal.valueOf(60)) < 0) {
             // Churn Ava = crítico (muy bajo, por debajo de un umbral adicional)

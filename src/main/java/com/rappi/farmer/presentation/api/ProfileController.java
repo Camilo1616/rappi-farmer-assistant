@@ -9,6 +9,7 @@ import com.rappi.farmer.infrastructure.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -85,12 +86,9 @@ public class ProfileController {
     }
 
     @PatchMapping("/{targetId}/promote")
+    @PreAuthorize("hasAnyRole('ADMIN','LIDER')")
     public ResponseEntity<?> promote(@PathVariable Long targetId,
             @RequestHeader("Authorization") String authHeader) {
-        User caller = resolveUser(authHeader);
-        if (!isManagerRole(caller)) {
-            return ResponseEntity.status(403).body(Map.of("message", "Solo un Líder o Administrador puede promover usuarios"));
-        }
         User target = userRepository.findById(targetId)
                 .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
         target.setRole(UserRole.LIDER.name());
@@ -99,12 +97,10 @@ public class ProfileController {
     }
 
     @PatchMapping("/{targetId}/demote")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> demote(@PathVariable Long targetId,
             @RequestHeader("Authorization") String authHeader) {
         User caller = resolveUser(authHeader);
-        if (caller.getUserRole() != UserRole.ADMIN) {
-            return ResponseEntity.status(403).body(Map.of("message", "Solo el Administrador puede bajar de rol"));
-        }
         User target = userRepository.findById(targetId)
                 .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
         if (target.getId().equals(caller.getId())) {
@@ -116,25 +112,17 @@ public class ProfileController {
     }
 
     @PatchMapping("/{targetId}/country")
+    @PreAuthorize("hasAnyRole('ADMIN','LIDER')")
     public ResponseEntity<?> assignCountry(@PathVariable Long targetId,
             @RequestBody CountryRequest req,
             @RequestHeader("Authorization") String authHeader) {
         User caller = resolveUser(authHeader);
-        if (!isManagerRole(caller)) {
-            return ResponseEntity.status(403).body(Map.of("message", "Solo un Líder o Administrador puede asignar países"));
-        }
         User target = userRepository.findById(targetId)
                 .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
         String newCountry = req.countryCode().toUpperCase();
 
         if (target.getUserRole() == UserRole.LIDER) {
-            // Para líderes: agrega el país si no lo tiene ya
-            String existing = target.getCountryCode() != null ? target.getCountryCode() : "";
-            java.util.List<String> countries = new java.util.ArrayList<>(
-                java.util.Arrays.asList(existing.split(",")));
-            countries.removeIf(String::isBlank);
-            if (!countries.contains(newCountry)) countries.add(newCountry);
-            target.setCountryCode(String.join(",", countries));
+            target.addCountry(newCountry);
         } else {
             target.setCountryCode(newCountry);
             target.setFarmerCode(userService.generateFarmerCode(newCountry));
@@ -148,30 +136,20 @@ public class ProfileController {
     }
 
     @DeleteMapping("/{targetId}/country/{code}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> removeCountry(@PathVariable Long targetId,
-            @PathVariable String code,
-            @RequestHeader("Authorization") String authHeader) {
-        User caller = resolveUser(authHeader);
-        if (caller.getUserRole() != UserRole.ADMIN) {
-            return ResponseEntity.status(403).body(Map.of("message", "Solo el Administrador puede quitar países"));
-        }
+            @PathVariable String code) {
         User target = userRepository.findById(targetId)
                 .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
-        String existing = target.getCountryCode() != null ? target.getCountryCode() : "";
-        java.util.List<String> countries = new java.util.ArrayList<>(
-            java.util.Arrays.asList(existing.split(",")));
-        countries.removeIf(c -> c.trim().equalsIgnoreCase(code));
-        target.setCountryCode(String.join(",", countries));
+        target.removeCountry(code);
         userRepository.save(target);
         return ResponseEntity.ok(Map.of("message", "País " + code.toUpperCase() + " removido"));
     }
 
     @GetMapping("/farmers")
+    @PreAuthorize("hasAnyRole('ADMIN','LIDER')")
     public ResponseEntity<?> getFarmers(@RequestHeader("Authorization") String authHeader) {
         User caller = resolveUser(authHeader);
-        if (!isManagerRole(caller)) {
-            return ResponseEntity.status(403).body(Map.of("message", "Acceso denegado"));
-        }
         // ADMIN ve todos los usuarios menos él mismo
         if (caller.getUserRole() == UserRole.ADMIN) {
             return ResponseEntity.ok(userRepository.findAll().stream()
@@ -183,10 +161,6 @@ public class ProfileController {
         return ResponseEntity.ok(farmersDesusPaises.stream()
                 .filter(u -> !u.getId().equals(caller.getId()))
                 .map(this::toDto).toList());
-    }
-
-    private boolean isManagerRole(User user) {
-        return user.getUserRole() == UserRole.LIDER || user.getUserRole() == UserRole.ADMIN;
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────

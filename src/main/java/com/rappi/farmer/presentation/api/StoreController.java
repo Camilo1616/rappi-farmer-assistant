@@ -1,33 +1,26 @@
 package com.rappi.farmer.presentation.api;
 
 import com.rappi.farmer.application.SessionContext;
-import com.rappi.farmer.application.dtos.ManagementViewDto;
-import com.rappi.farmer.application.dtos.RegisterManagementRequest;
 import com.rappi.farmer.application.dtos.StoreViewDto;
-import com.rappi.farmer.application.services.ManagementService;
 import com.rappi.farmer.application.services.StoreDetailService;
-import com.rappi.farmer.domain.entities.Management;
-import com.rappi.farmer.domain.exceptions.BusinessException;
+import com.rappi.farmer.domain.enums.UserRole;
 import com.rappi.farmer.domain.repositories.StoreRepository;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
+/** CRUD y consulta de tiendas. Las gestiones viven en {@link ManagementController}
+ *  y los endpoints de diagnóstico interno en {@link StoreDiagnosticsController}. */
 @RestController
 @RequestMapping("/api/stores")
 @RequiredArgsConstructor
 public class StoreController {
 
     private final StoreDetailService storeDetailService;
-    private final ManagementService managementService;
     private final StoreRepository storeRepository;
-    private final com.rappi.farmer.application.services.AiService aiService;
     private final SessionContext sessionContext;
 
     @GetMapping
@@ -70,24 +63,6 @@ public class StoreController {
         return ResponseEntity.ok(Map.of("analysis", analysis, "lastManagement", lastManagement));
     }
 
-    @PostMapping("/{id}/management")
-    public ResponseEntity<?> registerManagement(@PathVariable Long id,
-            @Valid @RequestBody ManagementRequest request) {
-        try {
-            RegisterManagementRequest req = RegisterManagementRequest.builder()
-                    .storeId(id)
-                    .managementType(request.managementType())
-                    .resultType(request.resultType())
-                    .comments(request.comments())
-                    .build();
-            Management saved = managementService.register(req);
-            aiService.clearRecommendationCache(sessionContext.getCurrentUserId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-        } catch (BusinessException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
-    }
-
     @GetMapping("/by-base-type")
     public ResponseEntity<List<StoreViewDto>> getStoresByBaseType(
             @RequestParam String type,
@@ -110,56 +85,6 @@ public class StoreController {
             default           -> storeDetailService.toViewDtos(storeRepository.findAllActiveByFarmerIds(farmerIds));
         };
         return ResponseEntity.ok(stores);
-    }
-
-    /** Diagnóstico: cuántas tiendas pasan cada filtro de la base ACTIVE/ACTIVE_28 */
-    @GetMapping("/debug-base")
-    public ResponseEntity<Map<String, Object>> debugBase(@RequestParam List<Long> farmerIds) {
-        var jpa = ((com.rappi.farmer.infrastructure.persistence.adapter.StoreRepositoryAdapter)
-            storeRepository).getJpa();
-        long total       = jpa.countDebugTotal(farmerIds);
-        long handoff     = jpa.countDebugHandoff(farmerIds);
-        long fecha7      = jpa.countDebugFecha7(farmerIds);
-        long fecha8a28   = jpa.countDebugFecha8a28(farmerIds);
-        long efectiva    = jpa.countDebugEfectiva(farmerIds);
-        long sinVentas   = jpa.countDebugSinVentas(farmerIds);
-        long final7      = jpa.countDebugFinal7(farmerIds);
-        long final8a28   = jpa.countDebugFinal8a28(farmerIds);
-        return ResponseEntity.ok(Map.of(
-            "1_activas_en_farmers",      total,
-            "2_con_handoff",             handoff,
-            "3a_onboarding_dia7",        fecha7,
-            "3b_onboarding_dias8a28",    fecha8a28,
-            "4_con_gestion_efectiva",    efectiva,
-            "5_sin_ventas_en_metrics",   sinVentas,
-            "FINAL_active7",             final7,
-            "FINAL_active8a28",          final8a28
-        ));
-    }
-
-    /** Diagnóstico: estado de tiendas específicas por código (activa, upload_date, follow_up, etc.) */
-    @GetMapping("/debug-codes")
-    public ResponseEntity<List<Map<String, Object>>> debugCodes(@RequestParam List<String> codes) {
-        var jpa = ((com.rappi.farmer.infrastructure.persistence.adapter.StoreRepositoryAdapter)
-            storeRepository).getJpa();
-        List<Map<String, Object>> result = codes.stream()
-            .map(code -> {
-                var opt = jpa.findFirstByStoreCode(code);
-                if (opt.isEmpty()) return Map.<String, Object>of("code", code, "found", false);
-                var s = opt.get();
-                return Map.<String, Object>of(
-                    "code",           code,
-                    "found",          true,
-                    "active",         s.getActive(),
-                    "userId",         s.getUser() != null ? s.getUser().getId() : null,
-                    "channel",        s.getChannel(),
-                    "hadHandoff",     s.getHadHandoff(),
-                    "uploadDate",     String.valueOf(s.getUploadDate()),
-                    "lastFollowUp",   String.valueOf(s.getLastFollowUp()),
-                    "followUp30d",    String.valueOf(s.getFollowUpLast30d())
-                );
-            }).toList();
-        return ResponseEntity.ok(result);
     }
 
     /** Detalle compacto de una tienda por storeCode — usado por el asistente IA. Requiere Map.ofEntries (>10 pares). */
@@ -193,40 +118,17 @@ public class StoreController {
         String phone = body.getOrDefault("phoneNumber", "").trim();
         if (phone.isBlank()) return ResponseEntity.badRequest().body(Map.of("error", "Teléfono vacío"));
         return storeRepository.findById(id).map(store -> {
+            if (!isAdminOrLider() && !sessionContext.getCurrentUserId().equals(store.getFarmerId())) {
+                return ResponseEntity.status(403).body(Map.of("message", "No puedes editar una tienda que no es tuya"));
+            }
             store.setPhoneNumber(phone);
             storeRepository.save(store);
             return ResponseEntity.ok(Map.of("id", id, "phoneNumber", phone));
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/managements/today")
-    public ResponseEntity<List<ManagementViewDto>> getTodayManagements() {
-        return ResponseEntity.ok(managementService.getTodayManagements());
+    private boolean isAdminOrLider() {
+        UserRole role = sessionContext.getCurrentUserRole();
+        return role == UserRole.ADMIN || role == UserRole.LIDER;
     }
-
-    @PutMapping("/managements/{id}")
-    public ResponseEntity<?> updateManagement(@PathVariable Long id,
-            @Valid @RequestBody ManagementRequest request) {
-        try {
-            Management updated = managementService.update(id, request.managementType(), request.resultType(), request.comments());
-            return ResponseEntity.ok(updated);
-        } catch (BusinessException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
-    }
-
-    @DeleteMapping("/managements/{id}")
-    public ResponseEntity<?> deleteManagement(@PathVariable Long id) {
-        try {
-            managementService.deleteManagement(id);
-            return ResponseEntity.ok(Map.of("message", "Gestión eliminada"));
-        } catch (BusinessException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
-    }
-
-    public record ManagementRequest(
-            @NotBlank String managementType,
-            @NotBlank String resultType,
-            String comments) {}
 }

@@ -56,7 +56,10 @@ public class SecurityConfig {
                                 "/api/auth/google/calendar/callback",
                                 "/api/agm/callback",
                                 "/api/auth/liders",
-                                "/ws/**"
+                                "/ws/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

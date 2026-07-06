@@ -29,8 +29,8 @@ public class ReportService {
                 ? managementRepository.findTodayByUser(userId)
                 : managementRepository.findByDateAndUser(userId, date);
 
-        // Solo las reales (no brandSync)
-        List<Management> real = all.stream().filter(m -> !m.isBrandSync()).toList();
+        // Solo las reales (no propagadas por brand sync)
+        List<Management> real = all.stream().filter(Management::countsTowardMetrics).toList();
 
         long efectivas    = real.stream().filter(m -> "EFECTIVA".equals(m.getResultType())).count();
         long noContacto   = real.stream().filter(m -> "NO_CONTACTO".equals(m.getResultType())).count();
