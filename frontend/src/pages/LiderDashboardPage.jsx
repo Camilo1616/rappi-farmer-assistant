@@ -7,7 +7,7 @@ import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { logout } from '../services/authService'
 import ProfilePage from './ProfilePage'
-import styles from './DashboardPage.module.css'
+import styles from '../layouts/AppLayout.module.css'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace('/api', '')
 

@@ -1,5 +1,8 @@
 import api from './api'
 
+/** @typedef {import('../types/api').components['schemas']['DashboardDataDto']} DashboardDataDto */
+
+/** @returns {Promise<import('axios').AxiosResponse<DashboardDataDto>>} */
 export const getDashboard      = () => api.get('/dashboard')
 export const getLiderDashboard = () => api.get('/dashboard/lider')
 export const getBasesForFarmer = () => api.get('/bases/farmer')
