@@ -1,54 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import api from '../services/api'
-import AiAssistant from '../components/AiAssistant'
-import StoreSection from '../components/StoreSection'
-import MetricCard from '../components/MetricCard'
 import { useDashboard } from '../context/DashboardContext'
-import { RefreshBanner } from '../layouts/AppLayout'
 import styles from '../layouts/AppLayout.module.css'
 
-const SECTIONS = [
-  { key: 'onboardingCritical', title: 'Aliados 1-7',    short: 'Aliados 1-7',  icon: '🚨', color: '#EF4444' },
-  { key: 'aliados',            title: 'Tiendas 8-14',   short: 'Tiendas 8-14', icon: '🔗', color: '#F97316' },
-  { key: 'churnRisk',          title: 'Riesgo Churn',   short: 'Churn',        icon: '⚠️', color: '#EF4444' },
-  { key: 'ava',                title: 'AVA Bajando',    short: 'AVA',          icon: '📉', color: '#F59E0B' },
-  { key: 'healthy',            title: 'Saludables',     short: 'Saludables',   icon: '✅', color: '#22C55E' },
-  { key: 'selfOnboarding',     title: 'Self-Onboarding',short: 'Self',         icon: '🛒', color: '#8B5CF6' },
-  { key: 'insideSales',        title: 'Gestión IS',     short: 'Gestión IS',   icon: '📋', color: '#0EA5E9' },
-]
-
-const CHURN_FILTERS = ['Todos', 'Churn', 'Prevention W1', 'Prevention W2', 'Prevention W3']
-const AVA_FILTERS   = ['Todos', 'Retención', 'Bajando']
-
-const SEGMENT_TO_TAB = {
-  'Onboarding': 'onboardingCritical',
-  'Churn':      'churnRisk',
-  'AVA':        'ava',
-  'Saludable':  'healthy',
-}
-
-/** Vista principal de /dashboard — resumen de cartera con tabs por segmento. */
+/** Vista principal de /dashboard — punto de entrada al Consolidado HO. */
 export default function DashboardHomePage() {
-  const {
-    firstName, dash, dashLoading, loadDash,
-    totalStores, onboardCount, churnCount, healthyCount,
-    sidebarSegment, openFollowUp, goTo,
-  } = useDashboard()
+  const { firstName } = useDashboard()
 
-  const [activeTab, setActiveTab] = useState(SECTIONS[0].key)
-
-  useEffect(() => {
-    const tab = SEGMENT_TO_TAB[sidebarSegment]
-    if (tab) setActiveTab(tab)
-  }, [sidebarSegment])
-
-  const [churnFilter, setChurnFilter] = useState('Todos')
-  const [avaFilter, setAvaFilter]     = useState('Todos')
-  const [search, setSearch]           = useState('')
-  const [hoSyncing, setHoSyncing]         = useState(false)
-  const [hoResult, setHoResult]           = useState(null)
-  const [hoOpen, setHoOpen]               = useState(false)
-  const [hoData, setHoData]               = useState([])
+  const [hoSyncing, setHoSyncing]             = useState(false)
+  const [hoResult, setHoResult]               = useState(null)
+  const [hoOpen, setHoOpen]                   = useState(false)
+  const [hoData, setHoData]                   = useState([])
   const [hoMeetConectado, setHoMeetConectado] = useState(false)
 
   const openConsolidadoHO = async () => {
@@ -66,158 +28,25 @@ export default function DashboardHomePage() {
     }
   }
 
-  const activeSection = SECTIONS.find(s => s.key === activeTab)
-  const rawStores     = dash?.[activeTab] ?? []
-
-  const churnBase = activeTab === 'churnRisk'
-    ? rawStores.filter(s => s.diasSinLogin == null || s.diasSinLogin <= 90)
-    : rawStores
-
-  const filtered = activeTab === 'churnRisk' && churnFilter !== 'Todos'
-    ? churnBase.filter(s => s.churnLabel?.trim().toLowerCase() === churnFilter.trim().toLowerCase())
-    : activeTab === 'ava' && avaFilter !== 'Todos'
-    ? churnBase.filter(s => s.avaLabel?.trim() === avaFilter)
-    : churnBase
-
-  const stores = search.trim()
-    ? filtered.filter(s => {
-        const q = search.toLowerCase()
-        return s.storeName?.toLowerCase().includes(q) ||
-               s.storeCode?.toLowerCase().includes(q) ||
-               s.brandId?.toLowerCase().includes(q)
-      })
-    : filtered
-
   return (
     <>
-      {dash?.needsRefresh && (
-        <RefreshBanner lastImportDate={dash?.lastImportDate} onRefresh={() => goTo('excel')} />
-      )}
       <div className={styles.welcome}>
         <p className={styles.welcomeText}>Hola, <span>{firstName}</span> 👋</p>
-        <p className={styles.welcomeSub}>Resumen de tu cartera para hoy</p>
+        <p className={styles.welcomeSub}>Consolidado de Handoffs — últimos 14 días / próximos 7</p>
       </div>
-
-      <div className={styles.metrics}>
-        <MetricCard label="Total tiendas"     value={totalStores}  color="blue"   icon="🏪" trend="total" />
-        <MetricCard label="Onboarding activo" value={onboardCount} color="orange" icon="🚀" trend="críticos" />
-        <MetricCard label="Riesgo churn"      value={churnCount}   color="red"    icon="⚠️" trend="urgente" />
-        <MetricCard label="Saludables"        value={healthyCount} color="green"  icon="✅" trend="meta" />
-      </div>
-
-      <AiAssistant />
-
-      <div className={styles.tabGrid}>
-        {SECTIONS.map(s => {
-          const count = dash?.[s.key]?.length ?? 0
-          const isActive = activeTab === s.key
-          return (
-            <button
-              key={s.key}
-              className={`${styles.tabCard} ${isActive ? styles.tabCardActive : ''}`}
-              style={isActive ? { borderColor: s.color + '88', background: s.color + '12' } : {}}
-              title={s.title}
-              onClick={() => { setActiveTab(s.key); setChurnFilter('Todos'); setAvaFilter('Todos') }}
-            >
-              <span className={styles.tabCardIcon}>{s.icon}</span>
-              <span className={styles.tabCardLabel} style={isActive ? { color: s.color } : {}}>
-                {s.short}
-              </span>
-              {count > 0 && (
-                <span className={styles.tabCardCount}
-                  style={isActive ? { background: s.color + '30', color: s.color } : {}}>
-                  {count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {activeTab === 'churnRisk' && (
-        <div className={styles.filterBar}>
-          {CHURN_FILTERS.map(f => (
-            <button key={f}
-              className={`${styles.filterChip} ${churnFilter === f ? styles.filterChipActive : ''}`}
-              onClick={() => setChurnFilter(f)}
-            >
-              {f}
-              <span className={styles.filterCount}>
-                {f === 'Todos'
-                  ? churnBase.length
-                  : churnBase.filter(s => s.churnLabel?.trim().toLowerCase() === f.trim().toLowerCase()).length}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {activeTab === 'ava' && (
-        <div className={styles.filterBar}>
-          {AVA_FILTERS.map(f => (
-            <button key={f}
-              className={`${styles.filterChip} ${avaFilter === f ? styles.filterChipActive : ''}`}
-              onClick={() => setAvaFilter(f)}
-            >
-              {f}
-              <span className={styles.filterCount}>
-                {f === 'Todos'
-                  ? rawStores.length
-                  : rawStores.filter(s => s.avaLabel?.trim() === f).length}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className={styles.tableToolbar}>
         <div className={styles.toolbarLeft}>
-          {activeTab === 'onboardingCritical' && (
-            <>
-              <button className={styles.btnHoReport} onClick={openConsolidadoHO} disabled={hoSyncing}>
-                {hoSyncing ? '⏳ Cargando...' : '🤝 Consolidado HO'}
-              </button>
-              {hoResult && (
-                <span className={hoResult.ok ? styles.hoResultOk : styles.hoResultErr}>
-                  {hoResult.msg}
-                </span>
-              )}
-            </>
-          )}
-        </div>
-        <div className={styles.searchBox}>
-          <span className={styles.searchIcon}>🔍</span>
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="Buscar tienda o código..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className={styles.searchClear} onClick={() => setSearch('')}>✕</button>
+          <button className={styles.btnHoReport} onClick={openConsolidadoHO} disabled={hoSyncing}>
+            {hoSyncing ? '⏳ Cargando...' : '🤝 Consolidado HO'}
+          </button>
+          {hoResult && (
+            <span className={hoResult.ok ? styles.hoResultOk : styles.hoResultErr}>
+              {hoResult.msg}
+            </span>
           )}
         </div>
       </div>
-
-      {dashLoading ? (
-        <div className={styles.loadingWrapper}>
-          <div className={styles.loadingSpinner} /> Cargando cartera...
-        </div>
-      ) : (
-        <StoreSection
-          key={activeTab + churnFilter + avaFilter + search}
-          title={activeSection.title}
-          icon={activeSection.icon}
-          color={activeSection.color}
-          stores={stores}
-          onRefresh={loadDash}
-          hideHeader
-          isChurn={activeTab === 'churnRisk'}
-          isAva={activeTab === 'ava' || activeTab === 'healthy'}
-          onFollowUp={s => openFollowUp(s)}
-        />
-      )}
 
       {hoOpen && (
         <div className={styles.hoOverlay} onClick={() => setHoOpen(false)}>

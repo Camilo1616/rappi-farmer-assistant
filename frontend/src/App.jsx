@@ -11,7 +11,6 @@ import DashboardHomePage from './pages/DashboardHomePage'
 // independientes entre sí, así que no hay razón para cargarlos de una).
 const StoresPage           = lazy(() => import('./pages/StoresPage'))
 const BasesPage             = lazy(() => import('./pages/BasesPage'))
-const ExcelUploadPage       = lazy(() => import('./pages/ExcelUploadPage'))
 const ManagementPage        = lazy(() => import('./pages/ManagementPage'))
 const WhatsappDisabledPage  = lazy(() => import('./pages/WhatsappDisabledPage'))
 const ReportsPage           = lazy(() => import('./pages/ReportsPage'))
@@ -64,7 +63,6 @@ function AppRoutes() {
         <Route index element={<DashboardHomePage />} />
         <Route path="stores" element={<Lazy><StoresPage /></Lazy>} />
         <Route path="bases" element={<Lazy><BasesPage /></Lazy>} />
-        <Route path="excel" element={<Lazy><ExcelUploadPage /></Lazy>} />
         <Route path="gestiones" element={<Lazy><ManagementPage /></Lazy>} />
         <Route path="whatsapp" element={<Lazy><WhatsappDisabledPage /></Lazy>} />
         <Route path="reportes" element={<Lazy><ReportsPage /></Lazy>} />
