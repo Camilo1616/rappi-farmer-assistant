@@ -6,13 +6,16 @@ const WS_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api')
 
 let client = null
 
-export const connectWebSocket = (onMessage) => {
+export const connectWebSocket = (onMessage, onAgmMessage) => {
   client = new Client({
     brokerURL: WS_URL,
     reconnectDelay: 5000,
     onConnect: () => {
       client.subscribe('/topic/stores', (msg) => {
         onMessage(JSON.parse(msg.body))
+      })
+      client.subscribe('/topic/agm', (msg) => {
+        onAgmMessage?.(JSON.parse(msg.body))
       })
     },
     onStompError: (frame) => {

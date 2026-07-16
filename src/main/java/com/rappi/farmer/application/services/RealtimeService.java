@@ -37,4 +37,15 @@ public class RealtimeService {
         );
         messagingTemplate.convertAndSend("/topic/stores", payload);
     }
+
+    /** Notifica al agente indicado que hay tareas nuevas en el sheet de AGM IA. */
+    public void agmNewTasks(String agentEmail, int count) {
+        Map<String, Object> payload = Map.of(
+                "type", "AGM_NEW_TASKS",
+                "agente", agentEmail,
+                "count", count
+        );
+        messagingTemplate.convertAndSend("/topic/agm", payload);
+        log.debug("WS → /topic/agm  agente={} count={}", agentEmail, count);
+    }
 }

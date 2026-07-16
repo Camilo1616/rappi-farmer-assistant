@@ -83,6 +83,7 @@ export default function AppLayout() {
 
   const [unread, setUnread] = useState(0)
   const [notifs, setNotifs] = useState([])
+  const [agmAlert, setAgmAlert] = useState(null)
 
   const profileRef = useRef(null)
   const notifRef = useRef(null)
@@ -130,7 +131,14 @@ export default function AppLayout() {
   }
 
   useEffect(() => { loadUnread() }, [])
-  useRealtime(() => { loadUnread() })
+  useRealtime(
+    () => { loadUnread() },
+    (msg) => {
+      if (msg?.type === 'AGM_NEW_TASKS' && msg.agente?.toLowerCase() === user?.email?.toLowerCase()) {
+        setAgmAlert({ count: msg.count })
+      }
+    }
+  )
 
   useEffect(() => {
     heartbeat()
@@ -275,6 +283,16 @@ export default function AppLayout() {
               </div>
             </div>
           </div>
+
+          {agmAlert && (
+            <div className={styles.agmAlertBanner} role="alert">
+              <span>🔔 {agmAlert.count} tarea{agmAlert.count === 1 ? '' : 's'} nueva{agmAlert.count === 1 ? '' : 's'} en Gestión AGM-IA</span>
+              <div>
+                <button onClick={() => { setAgmAlert(null); goTo('agm') }}>Ver ahora</button>
+                <button onClick={() => setAgmAlert(null)}>Cerrar</button>
+              </div>
+            </div>
+          )}
 
           <main className={styles.main}>
             <Outlet />

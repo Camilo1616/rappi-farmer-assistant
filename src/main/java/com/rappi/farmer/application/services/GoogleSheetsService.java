@@ -188,11 +188,42 @@ public class GoogleSheetsService {
 
     /** Devuelve los casos pendientes/asignados a un agente, agrupados por Store. */
     public List<AgmGrupoDto> getCasosPorAgente(String email, String storeFiltro) throws Exception {
+        return getCasosInterno(email, storeFiltro);
+    }
+
+    /** Fila pendiente cruda del sheet, para el job de sync (necesita el agente asignado por fila). */
+    public record FilaPendiente(String storeId, int rowNumber, String agenteAsignado) {}
+
+    /** Devuelve todas las filas pendientes del sheet (cualquier agente) — usado por el job de sync. */
+    public List<FilaPendiente> getFilasPendientes() throws Exception {
         Sheets sheets = sheetsClient();
         List<List<Object>> rows = readTab(sheets, TAB_SOPORTE);
         if (rows.isEmpty()) return List.of();
 
         Map<String, Integer> col = headerIndex(rows.get(0));
+        List<FilaPendiente> resultado = new ArrayList<>();
+        for (int i = 1; i < rows.size(); i++) {
+            List<Object> row = rows.get(i);
+            String storeId = val(row, col, "STORE_ID");
+            if (storeId.isBlank()) continue;
+
+            boolean yaGestionada = esEstadoFinal(val(row, col, "STATUS"))
+                    || !val(row, col, "COMENTARIO INTERNO").isBlank()
+                    || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank();
+            if (yaGestionada) continue;
+
+            resultado.add(new FilaPendiente(storeId, i + 1, val(row, col, "AGENTE_ASIGNADO")));
+        }
+        return resultado;
+    }
+
+    private List<AgmGrupoDto> getCasosInterno(String email, String storeFiltro) throws Exception {
+        Sheets sheets = sheetsClient();
+        List<List<Object>> rows = readTab(sheets, TAB_SOPORTE);
+        if (rows.isEmpty()) return List.of();
+
+        Map<String, Integer> col = headerIndex(rows.get(0));
+        boolean filtrarPorAgente = email != null && !email.isBlank();
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
         String storeNorm = storeFiltro == null ? "" : storeFiltro.trim().toLowerCase();
 
@@ -204,14 +235,18 @@ public class GoogleSheetsService {
         for (int i = 1; i < rows.size(); i++) {
             List<Object> row = rows.get(i);
             String agenteAsignado = val(row, col, "AGENTE_ASIGNADO");
-            if (!emailNorm.equals(agenteAsignado.trim().toLowerCase())) continue;
+            if (filtrarPorAgente && !emailNorm.equals(agenteAsignado.trim().toLowerCase())) continue;
 
             String storeId = val(row, col, "STORE_ID");
             if (storeId.isBlank()) continue;
             if (!storeNorm.isBlank() && !storeId.toLowerCase().contains(storeNorm)) continue;
 
-            // Ya resuelto — no debe seguir apareciendo en la cola de pendientes
-            if (esEstadoFinal(val(row, col, "STATUS"))) continue;
+            // Ya resuelto (o ya diligenciado por otro lado sin actualizar el status) — no debe
+            // seguir apareciendo en la cola de pendientes
+            boolean yaGestionada = esEstadoFinal(val(row, col, "STATUS"))
+                    || !val(row, col, "COMENTARIO INTERNO").isBlank()
+                    || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank();
+            if (yaGestionada) continue;
 
             List<String> links = new ArrayList<>();
             for (String linkCol : List.of("LINK_1", "LINK_2", "LINK_3", "LINK_4", "LINK_5")) {
