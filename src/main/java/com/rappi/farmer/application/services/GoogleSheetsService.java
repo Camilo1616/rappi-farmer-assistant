@@ -297,6 +297,26 @@ public class GoogleSheetsService {
         return resultado;
     }
 
+    /**
+     * Intenta parsear un FECHA_HORA de HISTORIAL_ESTADOS en varios formatos; null si no se pudo.
+     * Cubre tanto "yyyy-MM-dd HH:mm:ss" (formato con el que se escribe hoy) como variantes tipo
+     * "d/M/yyyy H:mm:ss" que quedaron en filas antiguas por un bug de auto-formato de Google Sheets.
+     */
+    private static LocalDate parseFechaHoraFlexible(String value) {
+        if (value == null || value.isBlank()) return null;
+        String v = value.trim();
+        List<DateTimeFormatter> formatos = List.of(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
+                DateTimeFormatter.ofPattern("d/M/yyyy H:mm:ss"),
+                DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
+        );
+        for (DateTimeFormatter f : formatos) {
+            try { return LocalDateTime.parse(v, f).toLocalDate(); } catch (Exception ignored) { }
+        }
+        return parseFechaFlexible(v);
+    }
+
     /** Intenta parsear una fecha en varios formatos comunes del Sheet; null si no se pudo. */
     private static LocalDate parseFechaFlexible(String value) {
         if (value == null || value.isBlank()) return null;
@@ -348,7 +368,6 @@ public class GoogleSheetsService {
         boolean porStore = storeId != null && !storeId.isBlank();
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
         String storeNorm = porStore ? storeId.trim().toLowerCase() : "";
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         List<AgmHistorialEntryDto> resultado = new ArrayList<>();
         for (int i = 1; i < rows.size(); i++) {
@@ -364,11 +383,12 @@ public class GoogleSheetsService {
 
             String fechaHora = val(row, col, "FECHA_HORA");
             if (!porStore && (desde != null || hasta != null)) {
-                try {
-                    LocalDate fecha = LocalDateTime.parse(fechaHora, fmt).toLocalDate();
-                    if (desde != null && fecha.isBefore(desde)) continue;
-                    if (hasta != null && fecha.isAfter(hasta)) continue;
-                } catch (Exception ignored) { /* fecha con formato distinto, se incluye igual */ }
+                LocalDate fecha = parseFechaHoraFlexible(fechaHora);
+                // Si no se pudo interpretar la fecha, se excluye en vez de incluirla "a ciegas":
+                // de lo contrario una fila con formato corrupto aparecería en cualquier rango consultado.
+                if (fecha == null) continue;
+                if (desde != null && fecha.isBefore(desde)) continue;
+                if (hasta != null && fecha.isAfter(hasta)) continue;
             }
 
             resultado.add(new AgmHistorialEntryDto(
@@ -460,8 +480,10 @@ public class GoogleSheetsService {
         );
         ValueRange body = new ValueRange().setValues(List.of(row));
         sheets.spreadsheets().values()
+                // RAW: guarda "yyyy-MM-dd HH:mm:ss" tal cual, sin dejar que Sheets la auto-detecte como
+                // fecha y la reformatee según el locale (eso rompía el filtro por rango en el historial).
                 .append(spreadsheetId, TAB_HISTORIAL_ESTADOS, body)
-                .setValueInputOption("USER_ENTERED")
+                .setValueInputOption("RAW")
                 .execute();
     }
 
@@ -526,7 +548,7 @@ public class GoogleSheetsService {
         ValueRange body = new ValueRange().setValues(List.of(row));
         sheets.spreadsheets().values()
                 .append(spreadsheetId, TAB_HISTORIAL_ESTADOS, body)
-                .setValueInputOption("USER_ENTERED")
+                .setValueInputOption("RAW")
                 .execute();
 
         invalidateTab(TAB_SOPORTE);
