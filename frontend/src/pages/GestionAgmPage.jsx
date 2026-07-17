@@ -6,6 +6,7 @@ import {
   getResumenHoy, deshacerUltimoCambio, guardarFeedbackIA,
 } from '../services/agmService'
 import TimelineList, { statusColor } from '../components/TimelineList'
+import FollowUpModal from '../components/FollowUpModal'
 import styles from './GestionAgmPage.module.css'
 
 const STATUS_OPTIONS = [
@@ -335,6 +336,7 @@ export default function GestionAgmPage() {
   const [savingIdx, setSavingIdx] = useState(null)
   const [msg, setMsg] = useState(null)
   const [historialStoreOpen, setHistorialStoreOpen] = useState(null)
+  const [followUpOpen, setFollowUpOpen] = useState(false)
 
   useEffect(() => {
     getSheetsStatus().then(r => setSheetsStatus(r.data)).catch(() => setSheetsStatus({ connected: false }))
@@ -410,8 +412,13 @@ export default function GestionAgmPage() {
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.title}>Gestión AGM-IA</h1>
-        <p className={styles.sub}>Casos escalados por LINA — conectado al Google Sheet real</p>
+        <div>
+          <h1 className={styles.title}>Gestión AGM-IA</h1>
+          <p className={styles.sub}>Casos escalados por LINA — conectado al Google Sheet real</p>
+        </div>
+        <button className={styles.btnFollowUp} onClick={() => setFollowUpOpen(true)}>
+          Follow Up
+        </button>
       </div>
 
       {sheetsStatus && !sheetsStatus.connected && (
@@ -524,6 +531,13 @@ export default function GestionAgmPage() {
 
       {historialStoreOpen && (
         <StoreHistorialModal storeId={historialStoreOpen} onClose={() => setHistorialStoreOpen(null)} />
+      )}
+
+      {followUpOpen && (
+        <FollowUpModal
+          onClose={() => setFollowUpOpen(false)}
+          onSaved={() => setFollowUpOpen(false)}
+        />
       )}
     </div>
   )

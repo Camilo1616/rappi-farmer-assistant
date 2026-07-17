@@ -174,10 +174,33 @@ public class GoogleSheetsService {
         if (cached != null && System.currentTimeMillis() - cached.fetchedAt() < TAB_CACHE_TTL_MS) {
             return cached.rows();
         }
-        ValueRange range = sheets.spreadsheets().values().get(spreadsheetId, tabName).execute();
+        ValueRange range = getWithRetry(sheets, tabName);
         List<List<Object>> rows = range.getValues() != null ? range.getValues() : List.of();
         tabCache.put(tabName, new CachedTab(rows, System.currentTimeMillis()));
         return rows;
+    }
+
+    /**
+     * Google a veces responde 503 "Authentication backend unavailable" — un error transitorio de su
+     * lado, no del token ni de la hoja. Reintenta un par de veces con backoff corto antes de rendirse.
+     */
+    private ValueRange getWithRetry(Sheets sheets, String tabName) throws IOException {
+        int intentos = 0;
+        while (true) {
+            try {
+                return sheets.spreadsheets().values().get(spreadsheetId, tabName).execute();
+            } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
+                intentos++;
+                boolean transitorio = e.getStatusCode() >= 500;
+                if (!transitorio || intentos >= 3) throw e;
+                log.warn("Google Sheets respondió {} leyendo '{}' (intento {}/3) — reintentando...",
+                        e.getStatusCode(), tabName, intentos);
+                try { Thread.sleep(400L * intentos); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+            }
+        }
     }
 
     private void invalidateTab(String tabName) {

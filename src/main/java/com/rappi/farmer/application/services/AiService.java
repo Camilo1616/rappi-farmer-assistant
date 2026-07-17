@@ -1,6 +1,7 @@
 package com.rappi.farmer.application.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rappi.farmer.application.dtos.AgmHistorialEntryDto;
 import com.rappi.farmer.domain.entities.Store;
 import com.rappi.farmer.presentation.api.AiController;
 import lombok.extern.slf4j.Slf4j;
@@ -426,22 +427,23 @@ public class AiService {
 
     /**
      * Chat de follow-up enfocado en una tienda específica.
-     * La IA recibe el historial completo de gestiones/comentarios de esa tienda.
-     * Si history está vacío genera un resumen automático de los comentarios.
+     * La IA recibe el historial de cambios de estado de esa tienda registrado en AGM-IA (Google Sheet).
+     * Si history está vacío genera un resumen automático de lo que pasó.
      */
-    public String followUpChat(Store store, List<com.rappi.farmer.domain.entities.Management> gestiones,
+    public String followUpChat(Store store, List<AgmHistorialEntryDto> historialAgm,
                                List<AiController.ChatMessage> history, String userMessage) {
-        String storeContext = buildFollowUpContext(store, gestiones);
+        String storeContext = buildFollowUpContext(store, historialAgm);
 
         String systemPrompt = """
-                Asistente de seguimiento de tiendas Rappi. HO=activación Aliados. AVA%=conexión(meta>60%). EFECTIVA=contacto exitoso.
+                Asistente de seguimiento de tiendas Rappi. HO=activación Aliados. AVA%=conexión(meta>60%).
+                El historial viene de la gestión AGM-IA: cada línea es un cambio de estado hecho por un agente.
                 USA MARKDOWN: ### para títulos, **negrita** para datos clave, - para listas.
-                NO repitas la tabla de gestiones (el farmer ya la ve). Máx 300 palabras. Sin inventar.
+                NO repitas la tabla de historial (el farmer ya la ve). Máx 300 palabras. Sin inventar.
                 """ + storeContext;
 
         boolean isFirstMessage = (history == null || history.isEmpty());
         String effectiveMessage = isFirstMessage
-                ? "Analiza el historial de gestiones de esta tienda. El farmer ya ve la tabla de gestiones en pantalla, NO la repitas. Responde SOLO con:\n\n### Problemas recurrentes\n(lista con **negrita** los problemas que se mencionan más de una vez en los comentarios; si no hay, di 'Sin problemas recurrentes identificados')\n\n### Próxima acción recomendada\n(2-3 bullet points concretos basados en los comentarios reales del farmer)"
+                ? "Analiza el historial de gestión AGM-IA de esta tienda. El farmer ya ve la tabla en pantalla, NO la repitas. Responde SOLO con:\n\n### Qué pasó\n(resumen breve de la secuencia de estados y comentarios más relevantes)\n\n### Problemas recurrentes\n(lista con **negrita** los problemas que se mencionan más de una vez en los comentarios; si no hay, di 'Sin problemas recurrentes identificados')\n\n### Próxima acción recomendada\n(2-3 bullet points concretos basados en los comentarios reales del agente)"
                 : userMessage;
 
         List<Map<String, String>> messages = new ArrayList<>();
@@ -464,7 +466,7 @@ public class AiService {
     private static final int MAX_COMMENT_CHARS     = 180;
     private static final int MAX_HISTORY_TURNS     = 6;
 
-    private String buildFollowUpContext(Store store, List<com.rappi.farmer.domain.entities.Management> gestiones) {
+    private String buildFollowUpContext(Store store, List<AgmHistorialEntryDto> historialAgm) {
         StringBuilder sb = new StringBuilder();
         sb.append("\n\nTIENDA: ").append(store.getStoreName());
         if (store.getStoreCode() != null)         sb.append(" | Código: ").append(store.getStoreCode());
@@ -473,28 +475,34 @@ public class AiService {
         if (store.getCurrentStatus() != null)     sb.append(" | Estado: ").append(store.getCurrentStatus());
         sb.append(" | HO: ").append(Boolean.TRUE.equals(store.getHadHandoff()) ? "Sí" : "No").append("\n");
 
-        int total = gestiones.size();
-        List<com.rappi.farmer.domain.entities.Management> recientes = gestiones.stream()
-                .limit(MAX_GESTIONES_CONTEXT).toList();
+        int total = historialAgm.size();
+        // El historial viene más reciente primero — se toman los N más recientes.
+        List<AgmHistorialEntryDto> recientes = historialAgm.stream().limit(MAX_GESTIONES_CONTEXT).toList();
 
-        sb.append("GESTIONES (").append(total).append(" total, mostrando ").append(recientes.size()).append(" más recientes):\n");
+        sb.append("HISTORIAL AGM-IA (").append(total).append(" cambios en total, mostrando ").append(recientes.size()).append(" más recientes):\n");
         if (recientes.isEmpty()) {
-            sb.append("Sin gestiones registradas.\n");
+            sb.append("Sin historial de gestión AGM registrado para esta tienda.\n");
         } else {
-            for (com.rappi.farmer.domain.entities.Management m : recientes) {
-                String fecha = m.getManagementDate() != null ? m.getManagementDate().toLocalDate().toString() : "?";
-                String farmer = m.getFarmerName() != null && !m.getFarmerName().isBlank() ? " [" + m.getFarmerName() + "]" : "";
-                String comentario = m.getComments() != null && !m.getComments().isBlank()
-                        ? m.getComments().substring(0, Math.min(m.getComments().length(), MAX_COMMENT_CHARS))
-                        : "(sin comentario)";
-                sb.append(fecha)
-                  .append(" [").append(m.getManagementType()).append("] ")
-                  .append("[").append(m.getResultType()).append("]")
-                  .append(farmer)
+            for (AgmHistorialEntryDto h : recientes) {
+                String agente = h.agente() != null && !h.agente().isBlank() ? " [" + h.agente() + "]" : "";
+                String comentario = combinarComentarios(h);
+                sb.append(h.fechaHora() != null ? h.fechaHora() : "?")
+                  .append(" [").append(h.status() != null && !h.status().isBlank() ? h.status() : "sin status").append("]")
+                  .append(agente)
                   .append(" — ").append(comentario).append("\n");
             }
         }
         return sb.toString();
+    }
+
+    private String combinarComentarios(AgmHistorialEntryDto h) {
+        String interno = h.comentarioInterno() != null ? h.comentarioInterno().trim() : "";
+        String aliado  = h.comentarioAliado()  != null ? h.comentarioAliado().trim()  : "";
+        StringBuilder sb = new StringBuilder();
+        if (!interno.isBlank()) sb.append("Interno: ").append(interno);
+        if (!aliado.isBlank()) sb.append(sb.length() > 0 ? " | " : "").append("Aliado: ").append(aliado);
+        if (sb.length() == 0) return "(sin comentario)";
+        return sb.length() > MAX_COMMENT_CHARS ? sb.substring(0, MAX_COMMENT_CHARS) : sb.toString();
     }
 
     /** No-op: el caché de recomendación vive solo en BD (ver AiController). */

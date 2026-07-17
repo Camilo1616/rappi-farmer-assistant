@@ -3,7 +3,9 @@ package com.rappi.farmer.presentation.api;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rappi.farmer.application.SessionContext;
+import com.rappi.farmer.application.dtos.AgmHistorialEntryDto;
 import com.rappi.farmer.application.services.AiService;
+import com.rappi.farmer.application.services.GoogleSheetsService;
 import com.rappi.farmer.domain.entities.Management;
 import com.rappi.farmer.domain.entities.Store;
 import com.rappi.farmer.domain.exceptions.RateLimitException;
@@ -33,6 +35,7 @@ public class AiController {
     private final AiService aiService;
     private final StoreRepository storeRepository;
     private final ManagementRepository managementRepository;
+    private final GoogleSheetsService sheetsService;
     private final DailyAiRecommendationJpaRepository recRepository;
     private final SessionContext sessionContext;
     private final ObjectMapper objectMapper;
@@ -304,8 +307,9 @@ public class AiController {
 
     /**
      * Chat de follow-up de una tienda específica.
-     * Alimenta a la IA con el historial completo de comentarios dejados para esa tienda.
-     * En la primera llamada (history vacío) genera automáticamente un resumen.
+     * Alimenta a la IA con el historial de cambios de estado de esa tienda registrado en AGM-IA
+     * (Google Sheet, pestaña HISTORIAL_ESTADOS — cruzado por storeCode). En la primera llamada
+     * (history vacío) genera automáticamente un resumen de lo que pasó.
      */
     @PostMapping("/followup-chat")
     public ResponseEntity<?> followUpChat(@RequestBody FollowUpChatRequest request) {
@@ -316,9 +320,10 @@ public class AiController {
         if (store == null) {
             return ResponseEntity.status(404).body(Map.of("error", "Tienda no encontrada"));
         }
-        List<Management> gestiones = managementRepository.findAllByStoreId(request.storeId());
         try {
-            String reply = aiService.followUpChat(store, gestiones, request.history(), request.message());
+            List<AgmHistorialEntryDto> historialAgm = store.getStoreCode() == null
+                    ? List.of() : sheetsService.getHistorial(null, store.getStoreCode(), null, null);
+            String reply = aiService.followUpChat(store, historialAgm, request.history(), request.message());
             return ResponseEntity.ok(Map.of("reply", reply));
         } catch (RateLimitException rle) {
             return ResponseEntity.status(429).body(Map.of(
@@ -331,21 +336,20 @@ public class AiController {
         }
     }
 
-    /** Devuelve todo el historial de gestiones de una tienda. */
+    /** Devuelve el historial de gestión AGM-IA de una tienda (cruzado por storeCode). */
     @GetMapping("/followup-history/{storeId}")
     public ResponseEntity<?> followUpHistory(@PathVariable Long storeId) {
-        List<Management> gestiones = managementRepository.findAllByStoreId(storeId);
-        List<Map<String, Object>> result = gestiones.stream().map(m -> {
-            Map<String, Object> map = new java.util.LinkedHashMap<>();
-            map.put("id", m.getId());
-            map.put("date", m.getManagementDate());
-            map.put("managementType", m.getManagementType());
-            map.put("resultType", m.getResultType());
-            map.put("comments", m.getComments());
-            map.put("farmerName", m.getFarmerName());
-            return map;
-        }).toList();
-        return ResponseEntity.ok(result);
+        Store store = storeRepository.findById(storeId).orElse(null);
+        if (store == null || store.getStoreCode() == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        try {
+            List<AgmHistorialEntryDto> historial = sheetsService.getHistorial(null, store.getStoreCode(), null, null);
+            return ResponseEntity.ok(historial);
+        } catch (Exception e) {
+            log.error("Error leyendo historial AGM de storeId={}: {}", storeId, e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el historial: " + e.getMessage()));
+        }
     }
 
     public record ChatMessage(String role, String content) {}

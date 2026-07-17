@@ -4,6 +4,7 @@ import api from '../services/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import GestionFlowModal from './GestionFlowModal'
+import { statusColor } from './TimelineList'
 import styles from './FollowUpModal.module.css'
 
 function Md({ children }) {
@@ -49,20 +50,11 @@ function getCountryCode(storeCode) {
   return COUNTRY_MAP[prefix] ? prefix : null
 }
 
-const RESULT_LABEL = {
-  EFECTIVA: { label: 'Efectiva', color: '#22C55E' },
-  NO_CONTACTO: { label: 'No contacto', color: '#F97316' },
-  NO_RESPONDE: { label: 'No responde', color: '#8B93A8' },
-  PROBLEMA_TECNICO: { label: 'Problema técnico', color: '#EF4444' },
-  REQUIERE_SEGUIMIENTO: { label: 'Seguimiento', color: '#3B82F6' },
-  BRAND_SYNC: { label: 'Brand sync', color: '#F59E0B' },
-}
-
 function HistoryTable({ items }) {
   if (!items.length) return (
     <div className={styles.emptyChat}>
       <span className={styles.emptyChatIcon}>📋</span>
-      <p>Sin gestiones registradas para esta tienda aún.</p>
+      <p>Sin historial de gestión AGM-IA para esta tienda aún.</p>
     </div>
   )
   return (
@@ -71,28 +63,30 @@ function HistoryTable({ items }) {
         <thead>
           <tr>
             <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Resultado</th>
-            <th>Farmer</th>
+            <th>Status</th>
+            <th>Agente</th>
             <th>Comentario</th>
+            <th>Ticket</th>
           </tr>
         </thead>
         <tbody>
-          {items.map(item => {
-            const rs = RESULT_LABEL[item.resultType] ?? { label: item.resultType, color: '#8B93A8' }
-            const date = item.date ? new Date(item.date) : null
-            const dateStr = date ? date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'
+          {items.map((item, i) => {
+            const color = statusColor(item.status)
+            const comentario = [
+              item.comentarioInterno && `Interno: ${item.comentarioInterno}`,
+              item.comentarioAliado && `Aliado: ${item.comentarioAliado}`,
+            ].filter(Boolean).join(' · ') || '—'
             return (
-              <tr key={item.id}>
-                <td className={styles.histTdDate}>{dateStr}</td>
-                <td className={styles.histTdType}>{item.managementType ?? '—'}</td>
+              <tr key={i}>
+                <td className={styles.histTdDate}>{item.fechaHora ?? '—'}</td>
                 <td>
-                  <span className={styles.histTag} style={{ color: rs.color, background: rs.color + '18' }}>
-                    {rs.label}
+                  <span className={styles.histTag} style={{ color, background: color + '18' }}>
+                    {item.status || 'Sin status'}
                   </span>
                 </td>
-                <td className={styles.histTdFarmer}>{item.farmerName ?? '—'}</td>
-                <td className={styles.histTdComment}>{item.comments ?? '—'}</td>
+                <td className={styles.histTdFarmer}>{item.agente ?? '—'}</td>
+                <td className={styles.histTdComment}>{comentario}</td>
+                <td className={styles.histTdType}>{item.ticket ? `${item.ticket} (${item.statusTicket || 'sin status'})` : '—'}</td>
               </tr>
             )
           })}

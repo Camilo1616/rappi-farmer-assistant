@@ -6,7 +6,6 @@ import { logout, heartbeat } from '../services/authService'
 import { clearStores } from '../services/importService'
 import { getUnreadCount, getNotifications, markAllNotifRead } from '../services/dashboardService'
 import ConfirmModal from '../components/ConfirmModal'
-import FollowUpModal from '../components/FollowUpModal'
 import { DashboardProvider } from '../context/DashboardContext'
 import styles from './AppLayout.module.css'
 
@@ -78,9 +77,6 @@ export default function AppLayout() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null)
 
-  const [followUpOpen, setFollowUpOpen] = useState(false)
-  const [followUpStore, setFollowUpStore] = useState(null)
-
   const [unread, setUnread] = useState(0)
   const [notifs, setNotifs] = useState([])
   const [agmAlert, setAgmAlert] = useState(null)
@@ -150,9 +146,7 @@ export default function AppLayout() {
 
   const BOTTOM_NAV = NAV_ITEMS.filter(n => ['dashboard', 'stores', 'management', 'agm'].includes(n.key))
 
-  const openFollowUp = (store) => { setFollowUpStore(store ?? null); setFollowUpOpen(true) }
-
-  const ctxValue = { firstName, openFollowUp, goTo }
+  const ctxValue = { firstName, goTo }
 
   return (
     <DashboardProvider value={ctxValue}>
@@ -244,12 +238,6 @@ export default function AppLayout() {
             <button className={styles.hamburger} onClick={() => setSidebarMobileOpen(o => !o)} aria-label="Menú">☰</button>
             <h1 className={styles.pageTitle}>{NAV_ITEMS.find(n => n.key === activeNav)?.label}</h1>
             <div className={styles.topbarRight}>
-              <button
-                className={styles.btnFollowUp}
-                onClick={() => openFollowUp(null)}
-              >
-                Follow Up
-              </button>
               <span className={styles.liveIndicator}><span className={styles.liveDot} /> En vivo</span>
               <span className={styles.date}>{getTodayLabel()}</span>
 
@@ -323,13 +311,6 @@ export default function AppLayout() {
           ))}
         </nav>
 
-        {followUpOpen && (
-          <FollowUpModal
-            initialStore={followUpStore}
-            onClose={() => { setFollowUpOpen(false); setFollowUpStore(null) }}
-            onSaved={() => { setFollowUpOpen(false); setFollowUpStore(null) }}
-          />
-        )}
       </div>
     </DashboardProvider>
   )

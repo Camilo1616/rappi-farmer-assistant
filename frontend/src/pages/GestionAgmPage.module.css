@@ -6,7 +6,29 @@
 
 .pageHeader {
   margin-bottom: 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
+
+.btnFollowUp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(255,68,31,0.1);
+  color: #FF6B4A;
+  border: 1px solid rgba(255,68,31,0.25);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btnFollowUp:hover { background: rgba(255,68,31,0.2); }
 
 .title {
   font-size: 1.4rem;
