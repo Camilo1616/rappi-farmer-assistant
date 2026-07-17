@@ -247,10 +247,13 @@ public class GoogleSheetsService {
         if (rows.isEmpty()) return List.of();
 
         Map<String, Integer> col = headerIndex(rows.get(0));
-        log.info("Cabeceras detectadas en '{}': {}", TAB_SOPORTE, col.keySet());
         boolean filtrarPorAgente = email != null && !email.isBlank();
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
         String storeNorm = storeFiltro == null ? "" : storeFiltro.trim().toLowerCase();
+
+        // FECHA_ASIGNACION en "soporte" suele venir vacía — se usa como base del SLA el primer
+        // registro de HISTORIAL_ESTADOS de cada store (cuándo apareció el caso por primera vez).
+        Map<String, LocalDateTime> primerToque = primerToquePorStore(sheets);
 
         // Mapa temporal de storeId -> lista de tareas + metadata, preservando orden de aparición
         LinkedHashMap<String, List<AgmTareaDto>> tareasPorStore = new LinkedHashMap<>();
@@ -283,14 +286,9 @@ public class GoogleSheetsService {
             String tipoSoporte = val(row, col, "TIPO_SOPORTE");
             String explicacion = val(row, col, "EXPLICACION");
             SlaCatalog.SlaInfo sla = SlaCatalog.resolve(tipoSoporte, explicacion);
-            String fechaAsignacionRaw = val(row, col, "FECHA_ASIGNACION");
-            LocalDate fechaAsignacionFila = parseFechaFlexible(fechaAsignacionRaw);
-            String fechaLimite = fechaAsignacionFila == null ? null
-                    : fechaAsignacionFila.atStartOfDay().plusHours(sla.slaHoras()).toString();
-            if (fechaAsignacionFila == null) {
-                log.info("Sin fechaLimite para storeId={} fila={} — FECHA_ASIGNACION cruda='{}'",
-                        storeId, i + 1, fechaAsignacionRaw);
-            }
+            LocalDateTime fechaBase = primerToque.get(storeId.trim().toLowerCase());
+            String fechaLimite = fechaBase == null ? null
+                    : fechaBase.plusHours(sla.slaHoras()).toString();
 
             AgmTareaDto tarea = new AgmTareaDto(
                     i + 1, // rowNumber 1-based (i=0 es la fila 1 de encabezados, así que fila real = i+1)
@@ -376,6 +374,19 @@ public class GoogleSheetsService {
 
     /** Último FECHA_HORA registrado en HISTORIAL_ESTADOS por cada Store_ID (clave normalizada a minúsculas). */
     private Map<String, LocalDateTime> ultimoToquePorStore(Sheets sheets) throws IOException {
+        return toquesPorStore(sheets, false);
+    }
+
+    /**
+     * Primer FECHA_HORA registrado en HISTORIAL_ESTADOS por cada Store_ID — se usa como "fecha de
+     * asignación" real para el cálculo de SLA, ya que FECHA_ASIGNACION en la pestaña "soporte" suele
+     * venir vacía. Es el momento en que el caso apareció por primera vez en el historial de LINA.
+     */
+    private Map<String, LocalDateTime> primerToquePorStore(Sheets sheets) throws IOException {
+        return toquesPorStore(sheets, true);
+    }
+
+    private Map<String, LocalDateTime> toquesPorStore(Sheets sheets, boolean primero) throws IOException {
         List<List<Object>> rows = readTab(sheets, TAB_HISTORIAL_ESTADOS);
         Map<String, LocalDateTime> result = new HashMap<>();
         if (rows.isEmpty()) return result;
@@ -388,7 +399,7 @@ public class GoogleSheetsService {
             if (storeId.isBlank()) continue;
             try {
                 LocalDateTime fecha = LocalDateTime.parse(val(row, col, "FECHA_HORA"), fmt);
-                result.merge(storeId, fecha, (a, b) -> a.isAfter(b) ? a : b);
+                result.merge(storeId, fecha, (a, b) -> (primero ? a.isBefore(b) : a.isAfter(b)) ? a : b);
             } catch (Exception ignored) { /* fila con fecha inválida, se omite */ }
         }
         return result;
