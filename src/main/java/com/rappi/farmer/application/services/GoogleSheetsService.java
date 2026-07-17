@@ -251,10 +251,6 @@ public class GoogleSheetsService {
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
         String storeNorm = storeFiltro == null ? "" : storeFiltro.trim().toLowerCase();
 
-        // FECHA_ASIGNACION en "soporte" suele venir vacía — se usa la misma columna pero leída
-        // desde HISTORIAL_ESTADOS, donde sí viene poblada.
-        Map<String, LocalDateTime> fechaAsignacionPorStoreHist = fechaAsignacionDesdeHistorial(sheets);
-
         // Mapa temporal de storeId -> lista de tareas + metadata, preservando orden de aparición
         LinkedHashMap<String, List<AgmTareaDto>> tareasPorStore = new LinkedHashMap<>();
         Map<String, String[]> metaPorStore = new LinkedHashMap<>(); // storeId -> [pais, storeName, telefono]
@@ -286,7 +282,7 @@ public class GoogleSheetsService {
             String tipoSoporte = val(row, col, "TIPO_SOPORTE");
             String explicacion = val(row, col, "EXPLICACION");
             SlaCatalog.SlaInfo sla = SlaCatalog.resolve(tipoSoporte, explicacion);
-            LocalDateTime fechaBase = fechaAsignacionPorStoreHist.get(storeId.trim().toLowerCase());
+            LocalDateTime fechaBase = parseFechaHoraCompleta(val(row, col, "FECHA_ASIGNACION"));
             String fechaLimite = fechaBase == null ? null
                     : fechaBase.plusHours(sla.slaHoras()).toString();
 
@@ -385,29 +381,9 @@ public class GoogleSheetsService {
         return result;
     }
 
-    /**
-     * FECHA_ASIGNACION registrada en HISTORIAL_ESTADOS por cada Store_ID — a diferencia de la
-     * columna homónima en la pestaña "soporte" (que suele venir vacía), esta sí viene poblada.
-     * Se usa como fecha base real para calcular el vencimiento del SLA.
-     */
-    private Map<String, LocalDateTime> fechaAsignacionDesdeHistorial(Sheets sheets) throws IOException {
-        List<List<Object>> rows = readTab(sheets, TAB_HISTORIAL_ESTADOS);
-        Map<String, LocalDateTime> result = new HashMap<>();
-        if (rows.isEmpty()) return result;
-
-        Map<String, Integer> col = headerIndex(rows.get(0));
-        for (int i = 1; i < rows.size(); i++) {
-            List<Object> row = rows.get(i);
-            String storeId = val(row, col, "STORE_ID").trim().toLowerCase();
-            if (storeId.isBlank() || result.containsKey(storeId)) continue;
-            LocalDateTime fecha = parseFechaHoraCompleta(val(row, col, "FECHA_ASIGNACION"));
-            if (fecha != null) result.put(storeId, fecha);
-        }
-        return result;
-    }
-
     private static final List<DateTimeFormatter> FORMATOS_FECHA_HORA = List.of(
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd H:mm:ss"),
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
             DateTimeFormatter.ofPattern("d/M/yyyy H:mm:ss"),
             DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
