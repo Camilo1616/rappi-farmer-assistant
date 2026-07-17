@@ -19,6 +19,8 @@ export default function HistorialGestionTab() {
   const [error, setError] = useState(null)
   const [entries, setEntries] = useState([])
   const [openDay, setOpenDay] = useState(null)
+  const [statusFiltro, setStatusFiltro] = useState(null)
+  const [storeFiltro, setStoreFiltro] = useState('')
 
   const load = (desde, hasta) => {
     setLoading(true); setError(null)
@@ -46,20 +48,29 @@ export default function HistorialGestionTab() {
 
   const irAHoy = () => {
     setDateFrom(todayStr()); setDateTo(todayStr())
+    setStatusFiltro(null); setStoreFiltro('')
     load(todayStr(), todayStr())
   }
 
+  // Conteo por status sobre TODO lo traído (para los chips de filtro, antes de aplicar filtros)
+  const conteoTotal = {}
+  entries.forEach(e => { conteoTotal[e.status || 'Sin status'] = (conteoTotal[e.status || 'Sin status'] || 0) + 1 })
+
+  const filtradas = entries.filter(e =>
+    (!statusFiltro || (e.status || 'Sin status') === statusFiltro) &&
+    (!storeFiltro.trim() || (e.storeId || '').toLowerCase().includes(storeFiltro.trim().toLowerCase()))
+  )
+
   // Agrupar por día (YYYY-MM-DD extraído de "yyyy-MM-dd HH:mm:ss")
   const porDia = {}
-  for (const e of entries) {
+  for (const e of filtradas) {
     const dia = (e.fechaHora || '').slice(0, 10) || 'Sin fecha'
     porDia[dia] = porDia[dia] || []
     porDia[dia].push(e)
   }
   const dias = Object.keys(porDia).sort().reverse()
 
-  const conteoTotal = {}
-  entries.forEach(e => { conteoTotal[e.status || 'Sin status'] = (conteoTotal[e.status || 'Sin status'] || 0) + 1 })
+  const hayFiltrosActivos = !!statusFiltro || !!storeFiltro.trim()
 
   return (
     <div className={styles.card}>
@@ -73,7 +84,9 @@ export default function HistorialGestionTab() {
         <label className={styles.label} style={{ margin: 0 }}>Hasta:</label>
         <input className={styles.input} style={{ width: 'auto' }} type="date"
           value={dateTo} min={dateFrom} max={todayStr()} onChange={handleDateToChange} />
-        {(dateFrom !== todayStr() || dateTo !== todayStr()) && (
+        <input className={styles.input} style={{ width: 160 }} type="text" placeholder="Buscar Store ID"
+          value={storeFiltro} onChange={e => setStoreFiltro(e.target.value)} />
+        {(dateFrom !== todayStr() || dateTo !== todayStr() || hayFiltrosActivos) && (
           <button className={styles.btnGhost} onClick={irAHoy}>Ir a hoy</button>
         )}
       </div>
@@ -84,18 +97,33 @@ export default function HistorialGestionTab() {
       {!loading && !error && entries.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 16px' }}>
           <span className={styles.dayBadge} style={{ color: '#F0F2F8', borderColor: '#F0F2F855' }}>
-            Total: {entries.length}
+            Total: {filtradas.length}{hayFiltrosActivos ? ` de ${entries.length}` : ''}
           </span>
-          {Object.entries(conteoTotal).map(([status, n]) => (
-            <span key={status} className={styles.dayBadge} style={{ color: statusColor(status), borderColor: statusColor(status) + '55' }}>
-              {status} × {n}
-            </span>
-          ))}
+          {Object.entries(conteoTotal).map(([status, n]) => {
+            const activo = statusFiltro === status
+            return (
+              <button key={status}
+                className={styles.dayBadge}
+                style={{
+                  color: statusColor(status), borderColor: statusColor(status) + (activo ? 'FF' : '55'),
+                  background: activo ? statusColor(status) + '22' : 'transparent',
+                  cursor: 'pointer',
+                }}
+                title="Filtrar por este status"
+                onClick={() => setStatusFiltro(activo ? null : status)}>
+                {status} × {n}
+              </button>
+            )
+          })}
         </div>
       )}
 
-      {!loading && !error && dias.length === 0 && (
+      {!loading && !error && entries.length === 0 && (
         <p className={styles.emptyText}>No hay gestiones registradas en este periodo.</p>
+      )}
+
+      {!loading && !error && entries.length > 0 && dias.length === 0 && (
+        <p className={styles.emptyText}>Ninguna gestión coincide con el filtro aplicado.</p>
       )}
 
       {!loading && !error && dias.map(dia => {
