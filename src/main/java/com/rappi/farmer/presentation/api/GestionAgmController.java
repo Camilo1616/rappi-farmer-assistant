@@ -88,13 +88,17 @@ public class GestionAgmController {
         }
     }
 
-    /** Historial: sin storeId = "mi historial" (últimos N días); con storeId = timeline completo de esa tienda. */
+    /** Historial: sin storeId = "mi historial" (filtrado por rango de fecha); con storeId = timeline completo de esa tienda. */
     @GetMapping("/historial")
-    public ResponseEntity<?> getHistorial(@RequestParam(required = false) String storeId,
-                                           @RequestParam(defaultValue = "7") int days) {
+    public ResponseEntity<?> getHistorial(
+            @RequestParam(required = false) String storeId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate desde,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate hasta) {
         try {
             String email = sessionContext.getCurrentUserEmail();
-            return ResponseEntity.ok(sheetsService.getHistorial(email, storeId, days));
+            java.time.LocalDate d = desde != null ? desde : java.time.LocalDate.now();
+            java.time.LocalDate h = hasta != null ? hasta : java.time.LocalDate.now();
+            return ResponseEntity.ok(sheetsService.getHistorial(email, storeId, d, h));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {

@@ -335,10 +335,11 @@ public class GoogleSheetsService {
 
     /**
      * Historial de cambios de estado. Si {@code storeId} viene, muestra el timeline completo de esa
-     * tienda (cualquier agente). Si no, muestra "mi historial": solo los cambios hechos por {@code email}
-     * en los últimos {@code days} días. Más reciente primero.
+     * tienda (cualquier agente), sin filtro de fecha. Si no, muestra "mi historial": solo los cambios
+     * hechos por {@code email}, filtrados por rango de fecha [{@code desde}, {@code hasta}] inclusive
+     * (cualquiera puede venir null para dejar ese extremo abierto). Más reciente primero.
      */
-    public List<AgmHistorialEntryDto> getHistorial(String email, String storeId, int days) throws Exception {
+    public List<AgmHistorialEntryDto> getHistorial(String email, String storeId, LocalDate desde, LocalDate hasta) throws Exception {
         Sheets sheets = sheetsClient();
         List<List<Object>> rows = readTab(sheets, TAB_HISTORIAL_ESTADOS);
         if (rows.isEmpty()) return List.of();
@@ -347,7 +348,6 @@ public class GoogleSheetsService {
         boolean porStore = storeId != null && !storeId.isBlank();
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
         String storeNorm = porStore ? storeId.trim().toLowerCase() : "";
-        LocalDateTime desde = LocalDateTime.now().minusDays(Math.max(days, 1));
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         List<AgmHistorialEntryDto> resultado = new ArrayList<>();
@@ -363,9 +363,11 @@ public class GoogleSheetsService {
             }
 
             String fechaHora = val(row, col, "FECHA_HORA");
-            if (!porStore) {
+            if (!porStore && (desde != null || hasta != null)) {
                 try {
-                    if (LocalDateTime.parse(fechaHora, fmt).isBefore(desde)) continue;
+                    LocalDate fecha = LocalDateTime.parse(fechaHora, fmt).toLocalDate();
+                    if (desde != null && fecha.isBefore(desde)) continue;
+                    if (hasta != null && fecha.isAfter(hasta)) continue;
                 } catch (Exception ignored) { /* fecha con formato distinto, se incluye igual */ }
             }
 
@@ -386,8 +388,9 @@ public class GoogleSheetsService {
 
     /** Resumen del día: cuántos cambios hizo el agente hoy, agrupados por status resultante. */
     public AgmResumenDiaDto getResumenHoy(String email) throws Exception {
-        List<AgmHistorialEntryDto> historialHoy = getHistorial(email, null, 1).stream()
-                .filter(h -> h.fechaHora() != null && h.fechaHora().startsWith(LocalDate.now().toString()))
+        LocalDate hoy = LocalDate.now();
+        List<AgmHistorialEntryDto> historialHoy = getHistorial(email, null, hoy, hoy).stream()
+                .filter(h -> h.fechaHora() != null && h.fechaHora().startsWith(hoy.toString()))
                 .toList();
         Map<String, Long> porStatus = historialHoy.stream()
                 .collect(Collectors.groupingBy(
@@ -484,7 +487,7 @@ public class GoogleSheetsService {
      */
     public void deshacerUltimoCambio(DeshacerAgmGestionRequest req) throws Exception {
         Sheets sheets = sheetsClient();
-        List<AgmHistorialEntryDto> historial = getHistorial(null, req.storeId(), 0); // más reciente primero
+        List<AgmHistorialEntryDto> historial = getHistorial(null, req.storeId(), null, null); // más reciente primero
         if (historial.size() < 2) {
             throw new IllegalStateException("No hay un estado anterior registrado para deshacer en esta tienda");
         }
