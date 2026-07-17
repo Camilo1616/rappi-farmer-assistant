@@ -1,49 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   getSheetsStatus, connectSheets, getCasos, guardarGestion, getHistorial,
-  getResumenHoy, deshacerUltimoCambio, guardarFeedbackIA,
+  getResumenHoy, guardarFeedbackIA,
 } from '../services/agmService'
 import TimelineList, { statusColor } from '../components/TimelineList'
+import AgmTaskModal from '../components/AgmTaskModal'
 import FollowUpModal from '../components/FollowUpModal'
 import styles from './GestionAgmPage.module.css'
 
-const STATUS_OPTIONS = [
-  'Pendiente', 'On track', 'Confirmado', 'Escalado', 'Baja',
-  'Sin Información', 'Asignada a otra área', 'Esperando Respuesta',
-]
-
-const ESTADOS_FINALES = new Set([
-  'imposible contacto', 'confirmado', 'baja', 'asignada a otra área', 'gestión incompleta',
-])
-
-function esc(v) { return v ?? '' }
-
-/** Convierte una fecha del Sheet (dd/MM/yyyy o yyyy-MM-dd) al formato que exige <input type="date">. */
-function toInputDate(value) {
-  if (!value) return ''
-  const v = value.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
-  const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (m) {
-    const [, d, mo, y] = m
-    return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`
-  }
-  return ''
-}
-
-/** Convierte yyyy-MM-dd (lo que da el input) a dd/MM/yyyy, formato usado en el Sheet. */
+/** Convierte yyyy-MM-dd (lo que da el input del modal) a dd/MM/yyyy, formato usado en el Sheet. */
 function toSheetDate(value) {
   if (!value) return value
   const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!m) return value
   const [, y, mo, d] = m
   return `${d}/${mo}/${y}`
-}
-
-function estadoEsFinal(status) {
-  return ESTADOS_FINALES.has((status || '').trim().toLowerCase())
 }
 
 /* ── Historial completo de una tienda (qué agentes la tocaron y cuándo) ── */
@@ -87,45 +60,6 @@ function StoreHistorialModal({ storeId, onClose }) {
   )
 }
 
-function ConversacionModal({ tarea, storeId, onClose }) {
-  const [historial, setHistorial] = useState(null)
-  const [loadingHist, setLoadingHist] = useState(true)
-
-  useEffect(() => {
-    getHistorial({ storeId })
-      .then(r => setHistorial(r.data))
-      .catch(() => setHistorial([]))
-      .finally(() => setLoadingHist(false))
-  }, [storeId])
-
-  return createPortal(
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-        <h2 className={styles.modalTitle}>Conversación IA - Aliado</h2>
-        <p className={styles.modalStore}><strong>Store ID:</strong> {storeId}</p>
-
-        <div className={styles.sectionTitle}>Links relacionados</div>
-        {(!tarea.links || tarea.links.length === 0)
-          ? <p className={styles.emptyText}>No hay links relacionados.</p>
-          : tarea.links.map((l, i) => (
-              <p key={i}><a href={l} target="_blank" rel="noreferrer">Ver link {i + 1}</a></p>
-            ))}
-
-        <div className={styles.sectionTitle}>Historial de conversación (IA)</div>
-        <div className={styles.historial}>{tarea.historial || 'Sin historial'}</div>
-
-        <div className={styles.sectionTitle}>📅 Historial de gestión de esta tienda</div>
-        {loadingHist
-          ? <p className={styles.emptyText}>Cargando...</p>
-          : <TimelineList entries={historial} />}
-
-        <button className={styles.btnPrimary} onClick={onClose}>Cerrar</button>
-      </div>
-    </div>,
-    document.body
-  )
-}
-
 function ResumenHoyBanner({ email }) {
   const [resumen, setResumen] = useState(null)
 
@@ -145,128 +79,6 @@ function ResumenHoyBanner({ email }) {
           </span>
         ))}
       </div>
-    </div>
-  )
-}
-
-function TareaCard({ tarea, idx, storeId, agente, onChange, onSave, onRefresh, saving }) {
-  const [modalOpen, setModalOpen] = useState(false)
-  const [motivoBaja, setMotivoBaja] = useState('')
-  const [tipoBlacklist, setTipoBlacklist] = useState('')
-  const [deshaciendo, setDeshaciendo] = useState(false)
-  const [deshacerMsg, setDeshacerMsg] = useState(null)
-  const soloLectura = estadoEsFinal(tarea.status)
-
-  const handleDeshacer = async () => {
-    if (!confirm('¿Deshacer el último cambio de esta tienda? Esto revierte al estado anterior.')) return
-    setDeshaciendo(true); setDeshacerMsg(null)
-    try {
-      await deshacerUltimoCambio({ storeId, rowNumber: tarea.rowNumber, agente })
-      onRefresh()
-    } catch (e) {
-      setDeshacerMsg(e.response?.data?.message || 'Error al deshacer')
-    } finally {
-      setDeshaciendo(false)
-    }
-  }
-
-  const update = (patch) => onChange(idx, patch)
-
-  return (
-    <div className={styles.taskCard}>
-      <div className={styles.sectionTitle}>Tarea {idx + 1}</div>
-
-      {soloLectura && (
-        <div className={styles.readOnlyNote}>
-          🔒 Este caso está cerrado ({esc(tarea.status)}) y no puede modificarse. Solo lectura.
-        </div>
-      )}
-
-      <div className={styles.grid2}>
-        <div><span className={styles.dato}><b>Tipo soporte:</b> {esc(tarea.tipoSoporte)}</span></div>
-        <div><span className={styles.dato}><b>Explicación:</b> {esc(tarea.explicacion)}</span></div>
-      </div>
-
-      <button className={styles.btnGhost} onClick={() => setModalOpen(true)}>
-        👁 Ver conversación e historial
-      </button>
-
-      <label className={styles.label}>Status *</label>
-      <select className={styles.input} value={tarea.status || ''} disabled={soloLectura}
-        onChange={e => update({ status: e.target.value })}>
-        <option value="">Selecciona</option>
-        {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-      </select>
-
-      {tarea.status === 'Baja' && (
-        <div className={styles.grid2}>
-          <div>
-            <label className={styles.label}>Motivo baja *</label>
-            <select className={styles.input} disabled={soloLectura} value={motivoBaja}
-              onChange={e => setMotivoBaja(e.target.value)}>
-              <option value="">Selecciona</option>
-              <option>Churn</option>
-              <option>Test</option>
-            </select>
-          </div>
-          <div>
-            <label className={styles.label}>Tipo blacklist *</label>
-            <select className={styles.input} disabled={soloLectura} value={tipoBlacklist}
-              onChange={e => setTipoBlacklist(e.target.value)}>
-              <option value="">Selecciona</option>
-              <option>Permanente</option>
-              <option>Temporal</option>
-            </select>
-          </div>
-        </div>
-      )}
-
-      <label className={styles.label}>Comentario interno *</label>
-      <textarea className={styles.textarea} disabled={soloLectura}
-        value={tarea.comentarioInterno || ''} onChange={e => update({ comentarioInterno: e.target.value })} />
-
-      <label className={styles.label}>Comentario para el aliado</label>
-      <textarea className={styles.textarea} disabled={soloLectura}
-        value={tarea.comentarioAliado || ''} onChange={e => update({ comentarioAliado: e.target.value })} />
-
-      <div className={styles.grid2}>
-        <div>
-          <label className={styles.label}>Fecha escalamiento</label>
-          <input className={styles.input} type="date" disabled={soloLectura}
-            value={toInputDate(tarea.fechaEscalamiento)} onChange={e => update({ fechaEscalamiento: e.target.value })} />
-        </div>
-        <div>
-          <label className={styles.label}>Ticket</label>
-          <input className={styles.input} type="text" disabled={soloLectura}
-            value={tarea.ticket || ''} onChange={e => update({ ticket: e.target.value })} />
-        </div>
-      </div>
-
-      <label className={styles.label}>Status ticket</label>
-      <select className={styles.input} disabled={soloLectura}
-        value={tarea.statusTicket || ''} onChange={e => update({ statusTicket: e.target.value })}>
-        <option value="">Selecciona</option>
-        <option>Pendiente</option>
-        <option>Resuelto</option>
-      </select>
-
-      {!soloLectura && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button className={styles.btnPrimary} disabled={saving || !tarea.status}
-            onClick={() => onSave(idx, { motivoBaja, tipoBlacklist })}>
-            {saving ? 'Guardando...' : `Guardar gestión tarea ${idx + 1}`}
-          </button>
-          <button className={styles.btnGhost} disabled={deshaciendo} onClick={handleDeshacer}
-            title="Revierte esta tienda al estado anterior al último cambio guardado">
-            {deshaciendo ? 'Deshaciendo...' : '↩ Deshacer último cambio'}
-          </button>
-        </div>
-      )}
-      {deshacerMsg && <div className={styles.readOnlyNote}>⚠ {deshacerMsg}</div>}
-
-      {modalOpen && (
-        <ConversacionModal tarea={tarea} storeId={storeId} onClose={() => setModalOpen(false)} />
-      )}
     </div>
   )
 }
@@ -332,11 +144,11 @@ export default function GestionAgmPage() {
   const [buscado, setBuscado] = useState(false)
   const [error, setError] = useState(null)
   const [grupos, setGrupos] = useState([])
-  const [indexGrupo, setIndexGrupo] = useState(0)
-  const [savingIdx, setSavingIdx] = useState(null)
+  const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
   const [historialStoreOpen, setHistorialStoreOpen] = useState(null)
   const [followUpOpen, setFollowUpOpen] = useState(false)
+  const [selected, setSelected] = useState(null) // { grupoIndex, tareaIndex }
 
   useEffect(() => {
     getSheetsStatus().then(r => setSheetsStatus(r.data)).catch(() => setSheetsStatus({ connected: false }))
@@ -363,7 +175,6 @@ export default function GestionAgmPage() {
     try {
       const { data } = await getCasos(storeFiltro || undefined)
       setGrupos(data)
-      setIndexGrupo(0)
       setBuscado(true)
     } catch (e) {
       setError(e.response?.data?.message || 'Error al leer el Sheet')
@@ -374,18 +185,27 @@ export default function GestionAgmPage() {
     }
   }
 
-  const grupo = grupos[indexGrupo]
+  // Todas las tareas de todos los stores, aplanadas en filas — una fila por tarea pendiente.
+  const filas = useMemo(() => grupos.flatMap((g, gi) =>
+    g.tareas.map((t, ti) => ({ ...t, grupoIndex: gi, tareaIndex: ti, grupo: g }))
+  ), [grupos])
 
-  const handleTareaChange = (idx, patch) => {
-    setGrupos(prev => prev.map((g, gi) => gi !== indexGrupo ? g : {
+  const selectedGrupo = selected ? grupos[selected.grupoIndex] : null
+  const selectedTarea = selectedGrupo ? selectedGrupo.tareas[selected.tareaIndex] : null
+
+  const handleTareaChange = (patch) => {
+    if (!selected) return
+    setGrupos(prev => prev.map((g, gi) => gi !== selected.grupoIndex ? g : {
       ...g,
-      tareas: g.tareas.map((t, ti) => ti !== idx ? t : { ...t, ...patch }),
+      tareas: g.tareas.map((t, ti) => ti !== selected.tareaIndex ? t : { ...t, ...patch }),
     }))
   }
 
-  const handleGuardar = async (idx, extra) => {
-    const tarea = grupo.tareas[idx]
-    setSavingIdx(idx); setMsg(null)
+  const handleGuardar = async (extra) => {
+    if (!selected) return
+    const grupo = grupos[selected.grupoIndex]
+    const tarea = grupo.tareas[selected.tareaIndex]
+    setSaving(true); setMsg(null)
     try {
       await guardarGestion({
         rowNumber: tarea.rowNumber,
@@ -401,11 +221,12 @@ export default function GestionAgmPage() {
         tipoBlacklist: extra?.tipoBlacklist,
       })
       setMsg({ type: 'ok', text: 'Gestión guardada correctamente' })
+      setSelected(null)
       handleBuscar()
     } catch (e) {
       setMsg({ type: 'err', text: e.response?.data?.message || 'Error al guardar' })
     } finally {
-      setSavingIdx(null)
+      setSaving(false)
     }
   }
 
@@ -417,7 +238,7 @@ export default function GestionAgmPage() {
           <p className={styles.sub}>Casos escalados por LINA — conectado al Google Sheet real</p>
         </div>
         <button className={styles.btnFollowUp} onClick={() => setFollowUpOpen(true)}>
-          Follow Up
+          Buscar otra tienda
         </button>
       </div>
 
@@ -449,7 +270,7 @@ export default function GestionAgmPage() {
 
       {tab === 'gestion' && (
         <div className={styles.card}>
-          <div className={styles.sectionTitle}>Buscar mis tareas asignadas</div>
+          <div className={styles.sectionTitle}>Mis tareas asignadas</div>
           <p className={styles.emptyText}>Correo: {user?.email}</p>
           <label className={styles.label}>Buscar por Store ID</label>
           <input className={styles.input} type="text" placeholder="Opcional"
@@ -462,66 +283,52 @@ export default function GestionAgmPage() {
 
           {buscado && !error && (
             <div className={styles.contador}>
-              {grupos.length === 0
+              {filas.length === 0
                 ? <b>🎉 No hay pendientes para tu correo/filtro.</b>
-                : <b>Store {indexGrupo + 1} de {grupos.length}</b>}
+                : <b>{filas.length} tarea{filas.length !== 1 ? 's' : ''} pendiente{filas.length !== 1 ? 's' : ''} en {grupos.length} tienda{grupos.length !== 1 ? 's' : ''}</b>}
             </div>
           )}
 
-          {grupo && (
-            <div className={styles.grupoBox}>
-              <div className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                Store agrupado
-                {grupo.diasSinTocar != null && (
-                  <span className={styles.dayBadge} style={{
-                    color: grupo.diasSinTocar >= 3 ? '#EF4444' : grupo.diasSinTocar >= 1 ? '#F59E0B' : '#22C55E',
-                    borderColor: (grupo.diasSinTocar >= 3 ? '#EF4444' : grupo.diasSinTocar >= 1 ? '#F59E0B' : '#22C55E') + '55',
-                    cursor: 'pointer',
-                  }} onClick={() => setHistorialStoreOpen(grupo.storeId)}
-                    title="Ver quién y cuándo gestionó esta tienda">
-                    ⏱ {grupo.diasSinTocar === 0 ? 'Gestionado hoy' : `${grupo.diasSinTocar} día${grupo.diasSinTocar !== 1 ? 's' : ''} sin tocar`}
-                  </span>
-                )}
-                {grupo.diasSinTocar == null && (() => {
-                  const tieneAvance = grupo.tareas.some(t =>
-                    (t.status && t.status.trim()) || (t.comentarioInterno && t.comentarioInterno.trim()) || (t.ticket && t.ticket.trim()))
-                  return (
-                    <span className={styles.dayBadge} style={{
-                      color: tieneAvance ? '#94A3B8' : '#EF4444',
-                      borderColor: (tieneAvance ? '#94A3B8' : '#EF4444') + '55',
-                      cursor: 'pointer',
-                    }}
-                      onClick={() => setHistorialStoreOpen(grupo.storeId)}
-                      title="Ver quién y cuándo gestionó esta tienda">
-                      ⏱ {tieneAvance ? 'Gestionado (sin fecha registrada en el Sheet)' : 'Sin gestionar aún'} — clic para ver detalle
-                    </span>
-                  )
-                })()}
-              </div>
-              <div className={styles.grid2}>
-                <div>
-                  <div className={styles.dato}><b>País:</b> {grupo.pais}</div>
-                  <div className={styles.dato}><b>Store ID:</b> {grupo.storeId}</div>
-                  <div className={styles.dato}><b>Nombre:</b> {grupo.storeName}</div>
-                </div>
-                <div>
-                  <div className={styles.dato}><b>Teléfono:</b> {grupo.telefono}</div>
-                  <div className={styles.dato}><b>Tareas pendientes del Store:</b> {grupo.tareas.length}</div>
-                  <div className={styles.dato}><b>Fecha de asignación:</b> {grupo.fechaAsignacion || '—'}</div>
-                </div>
-              </div>
-
-              {grupo.tareas.map((t, i) => (
-                <TareaCard key={t.rowNumber ?? i} tarea={t} idx={i} storeId={grupo.storeId} agente={user?.email}
-                  onChange={handleTareaChange} onSave={handleGuardar} onRefresh={handleBuscar} saving={savingIdx === i} />
-              ))}
-
-              <div className={styles.nav}>
-                <button className={styles.btnGhost} disabled={indexGrupo === 0}
-                  onClick={() => setIndexGrupo(i => i - 1)}>Anterior Store</button>
-                <button className={styles.btnGhost} disabled={indexGrupo >= grupos.length - 1}
-                  onClick={() => setIndexGrupo(i => i + 1)}>Siguiente Store</button>
-              </div>
+          {filas.length > 0 && (
+            <div className={styles.tareasTableWrap}>
+              <table className={styles.tareasTable}>
+                <thead>
+                  <tr>
+                    <th>País</th>
+                    <th>Store</th>
+                    <th>Tipo soporte</th>
+                    <th>Status</th>
+                    <th>Días</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filas.map((f, i) => (
+                    <tr key={f.rowNumber ?? i} className={styles.tareaRow}
+                      onClick={() => setSelected({ grupoIndex: f.grupoIndex, tareaIndex: f.tareaIndex })}>
+                      <td>{f.grupo.pais}</td>
+                      <td>
+                        <div className={styles.tareaRowStore}>{f.grupo.storeName}</div>
+                        <div className={styles.tareaRowStoreCode}>{f.grupo.storeId}</div>
+                      </td>
+                      <td>{f.tipoSoporte}</td>
+                      <td>
+                        <span className={styles.dayBadge} style={{ color: statusColor(f.status), borderColor: statusColor(f.status) + '55' }}>
+                          {f.status || 'Pendiente'}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          title="Ver quién y cuándo gestionó esta tienda"
+                          onClick={e => { e.stopPropagation(); setHistorialStoreOpen(f.grupo.storeId) }}
+                          style={{ textDecoration: 'underline', cursor: 'pointer' }}
+                        >
+                          {f.grupo.diasSinTocar ?? '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -531,6 +338,20 @@ export default function GestionAgmPage() {
 
       {historialStoreOpen && (
         <StoreHistorialModal storeId={historialStoreOpen} onClose={() => setHistorialStoreOpen(null)} />
+      )}
+
+      {selected && selectedGrupo && selectedTarea && (
+        <AgmTaskModal
+          grupo={selectedGrupo}
+          tarea={selectedTarea}
+          storeId={selectedGrupo.storeId}
+          agente={user?.email}
+          onClose={() => setSelected(null)}
+          onChange={handleTareaChange}
+          onSave={handleGuardar}
+          onRefresh={handleBuscar}
+          saving={saving}
+        />
       )}
 
       {followUpOpen && (

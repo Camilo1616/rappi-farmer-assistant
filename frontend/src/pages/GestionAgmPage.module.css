@@ -360,6 +360,61 @@
   margin: 0 0 8px;
 }
 
+/* ── Tabla de tareas AGM (fusión con Follow Up) ── */
+.tareasTableWrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tareasTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.tareasTable th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tareasTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.tareaRow {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.tareaRow:hover {
+  background: var(--bg-secondary);
+}
+
+.tareaRow:last-child td {
+  border-bottom: none;
+}
+
+.tareaRowStore {
+  font-weight: 700;
+}
+
+.tareaRowStoreCode {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .historial {
   white-space: pre-wrap;
   background: var(--bg-input);
