@@ -231,8 +231,9 @@ public class GoogleSheetsService {
             if (storeId.isBlank()) continue;
 
             boolean yaGestionada = esEstadoFinal(val(row, col, "STATUS"))
-                    || !val(row, col, "COMENTARIO INTERNO").isBlank()
-                    || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank();
+                    || (!esEsperandoRespuesta(val(row, col, "STATUS"))
+                        && (!val(row, col, "COMENTARIO INTERNO").isBlank()
+                            || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank()));
             if (yaGestionada) continue;
 
             resultado.add(new FilaPendiente(storeId, i + 1, val(row, col, "AGENTE_ASIGNADO")));
@@ -267,8 +268,9 @@ public class GoogleSheetsService {
             // Ya resuelto (o ya diligenciado por otro lado sin actualizar el status) — no debe
             // seguir apareciendo en la cola de pendientes
             boolean yaGestionada = esEstadoFinal(val(row, col, "STATUS"))
-                    || !val(row, col, "COMENTARIO INTERNO").isBlank()
-                    || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank();
+                    || (!esEsperandoRespuesta(val(row, col, "STATUS"))
+                        && (!val(row, col, "COMENTARIO INTERNO").isBlank()
+                            || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank()));
             if (yaGestionada) continue;
 
             List<String> links = new ArrayList<>();
@@ -600,6 +602,12 @@ public class GoogleSheetsService {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** "Esperando Respuesta" no es un estado final: la fila ya tiene comentario diligenciado pero
+     *  debe seguir apareciendo en la cola para poder hacerle seguimiento al aliado. */
+    private static boolean esEsperandoRespuesta(String status) {
+        return status != null && "esperando respuesta".equals(status.trim().toLowerCase());
+    }
 
     private static boolean esEstadoFinal(String status) {
         if (status == null) return false;
