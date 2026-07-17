@@ -247,6 +247,7 @@ public class GoogleSheetsService {
         if (rows.isEmpty()) return List.of();
 
         Map<String, Integer> col = headerIndex(rows.get(0));
+        log.info("Cabeceras detectadas en '{}': {}", TAB_SOPORTE, col.keySet());
         boolean filtrarPorAgente = email != null && !email.isBlank();
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
         String storeNorm = storeFiltro == null ? "" : storeFiltro.trim().toLowerCase();
@@ -282,9 +283,14 @@ public class GoogleSheetsService {
             String tipoSoporte = val(row, col, "TIPO_SOPORTE");
             String explicacion = val(row, col, "EXPLICACION");
             SlaCatalog.SlaInfo sla = SlaCatalog.resolve(tipoSoporte, explicacion);
-            LocalDate fechaAsignacionFila = parseFechaFlexible(val(row, col, "FECHA_ASIGNACION"));
+            String fechaAsignacionRaw = val(row, col, "FECHA_ASIGNACION");
+            LocalDate fechaAsignacionFila = parseFechaFlexible(fechaAsignacionRaw);
             String fechaLimite = fechaAsignacionFila == null ? null
                     : fechaAsignacionFila.atStartOfDay().plusHours(sla.slaHoras()).toString();
+            if (fechaAsignacionFila == null) {
+                log.info("Sin fechaLimite para storeId={} fila={} — FECHA_ASIGNACION cruda='{}'",
+                        storeId, i + 1, fechaAsignacionRaw);
+            }
 
             AgmTareaDto tarea = new AgmTareaDto(
                     i + 1, // rowNumber 1-based (i=0 es la fila 1 de encabezados, así que fila real = i+1)
