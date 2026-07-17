@@ -23,7 +23,9 @@ public class AgmSeenRowEntity {
     @Column(name = "store_id", length = 100, nullable = false)
     private String storeId;
 
-    @Column(name = "row_number", nullable = false, unique = true)
+    // row_number es palabra reservada en MySQL 8.0.14+ (función de ventana ROW_NUMBER) —
+    // sin comillas, Hibernate genera un INSERT/UPDATE inválido contra esta columna.
+    @Column(name = "`row_number`", nullable = false, unique = true)
     private Integer rowNumber;
 
     @Column(name = "first_seen_at")
