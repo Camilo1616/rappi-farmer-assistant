@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDailyReport, getPortfolioReport } from '../services/reportService'
+import HistorialGestionTab from '../components/HistorialGestionTab'
 import styles from './ReportsPage.module.css'
 
 const META_EFECTIVAS    = 15
@@ -153,6 +154,8 @@ export default function ReportsPage() {
           onClick={() => setTab('daily')}>📋 Gestiones del día</button>
         <button className={`${styles.tab} ${tab === 'portfolio' ? styles.tabActive : ''}`}
           onClick={() => setTab('portfolio')}>🏪 Estado de cartera</button>
+        <button className={`${styles.tab} ${tab === 'historial' ? styles.tabActive : ''}`}
+          onClick={() => setTab('historial')}>📅 Historial de gestión</button>
       </div>
 
       {loading && <div className={styles.loading}>Cargando...</div>}
@@ -344,6 +347,9 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Historial de gestión ── */}
+      {tab === 'historial' && <HistorialGestionTab />}
     </div>
   )
 }

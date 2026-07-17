@@ -5,6 +5,7 @@ import {
   getSheetsStatus, connectSheets, getCasos, guardarGestion, getHistorial,
   getResumenHoy, deshacerUltimoCambio, guardarFeedbackIA,
 } from '../services/agmService'
+import TimelineList, { statusColor } from '../components/TimelineList'
 import styles from './GestionAgmPage.module.css'
 
 const STATUS_OPTIONS = [
@@ -15,12 +16,6 @@ const STATUS_OPTIONS = [
 const ESTADOS_FINALES = new Set([
   'imposible contacto', 'confirmado', 'baja', 'asignada a otra área', 'gestión incompleta',
 ])
-
-const STATUS_COLOR = {
-  'confirmado': '#22C55E', 'on track': '#3B82F6', 'baja': '#EF4444',
-  'escalado': '#F97316', 'pendiente': '#6B7280', 'esperando respuesta': '#F59E0B',
-  'sin información': '#A855F7', 'asignada a otra área': '#94A3B8', 'imposible contacto': '#EF4444',
-}
 
 function esc(v) { return v ?? '' }
 
@@ -48,37 +43,6 @@ function toSheetDate(value) {
 
 function estadoEsFinal(status) {
   return ESTADOS_FINALES.has((status || '').trim().toLowerCase())
-}
-
-function statusColor(status) {
-  return STATUS_COLOR[(status || '').trim().toLowerCase()] || '#6B7280'
-}
-
-/* ── Timeline de cambios (usado en el modal por tienda y en "Mi Historial") ── */
-function TimelineList({ entries, showStore }) {
-  if (!entries || entries.length === 0) {
-    return <p className={styles.emptyText}>Sin cambios registrados todavía.</p>
-  }
-  return (
-    <div className={styles.timeline}>
-      {entries.map((h, i) => (
-        <div key={i} className={styles.timelineRow}>
-          <span className={styles.timelineDot} style={{ background: statusColor(h.status) }} />
-          <div className={styles.timelineBody}>
-            <div className={styles.timelineHeader}>
-              <span className={styles.timelineStatus} style={{ color: statusColor(h.status) }}>{h.status || '—'}</span>
-              {showStore && <span className={styles.timelineStore}>{h.storeId}</span>}
-              <span className={styles.timelineDate}>{h.fechaHora}</span>
-            </div>
-            {h.agente && <div className={styles.timelineMeta}>Agente: {h.agente}</div>}
-            {h.comentarioInterno && <div className={styles.timelineComment}><b>Interno:</b> {h.comentarioInterno}</div>}
-            {h.comentarioAliado && <div className={styles.timelineComment}><b>Aliado:</b> {h.comentarioAliado}</div>}
-            {h.ticket && <div className={styles.timelineMeta}>Ticket: {h.ticket} ({h.statusTicket || 'sin status'})</div>}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 /* ── Historial completo de una tienda (qué agentes la tocaron y cuándo) ── */
@@ -356,86 +320,9 @@ function FeedbackIaTab() {
   )
 }
 
-/* ── Tab "Mi Historial" — agrupado por día, con contadores por status ── */
-function MiHistorialTab() {
-  const [days, setDays] = useState(7)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [entries, setEntries] = useState([])
-  const [openDay, setOpenDay] = useState(null)
-
-  const load = (d) => {
-    setLoading(true); setError(null)
-    getHistorial({ days: d })
-      .then(r => setEntries(r.data))
-      .catch(e => setError(e.response?.data?.message || 'Error al leer el historial'))
-      .finally(() => setLoading(false))
-  }
-
-  useEffect(() => { load(days) }, [days])
-
-  // Agrupar por día (YYYY-MM-DD extraído de "yyyy-MM-dd HH:mm:ss")
-  const porDia = {}
-  for (const e of entries) {
-    const dia = (e.fechaHora || '').slice(0, 10) || 'Sin fecha'
-    porDia[dia] = porDia[dia] || []
-    porDia[dia].push(e)
-  }
-  const dias = Object.keys(porDia).sort().reverse()
-
-  return (
-    <div className={styles.card}>
-      <div className={styles.sectionTitle}>📅 Mi historial de gestiones</div>
-      <p className={styles.emptyText}>Aquí ves qué tareas gestionaste y cuándo — incluye ayer y días anteriores.</p>
-
-      <div style={{ display: 'flex', gap: 8, margin: '10px 0 16px' }}>
-        {[7, 15, 30].map(d => (
-          <button key={d}
-            className={styles.btnGhost}
-            style={days === d ? { borderColor: 'var(--rappi-orange)', color: 'var(--rappi-orange)' } : {}}
-            onClick={() => setDays(d)}>
-            Últimos {d} días
-          </button>
-        ))}
-      </div>
-
-      {loading && <p className={styles.emptyText}>Cargando...</p>}
-      {error && <div className={styles.readOnlyNote}>⚠ {error}</div>}
-
-      {!loading && !error && dias.length === 0 && (
-        <p className={styles.emptyText}>No has gestionado ninguna tarea en este periodo.</p>
-      )}
-
-      {!loading && !error && dias.map(dia => {
-        const items = porDia[dia]
-        const conteo = {}
-        items.forEach(e => { conteo[e.status || 'Sin status'] = (conteo[e.status || 'Sin status'] || 0) + 1 })
-        const abierto = openDay === dia
-        return (
-          <div key={dia} className={styles.dayGroup}>
-            <button className={styles.dayHeader} onClick={() => setOpenDay(abierto ? null : dia)}>
-              <span>{dia}</span>
-              <span className={styles.dayCount}>{items.length} cambios</span>
-              <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {Object.entries(conteo).map(([status, n]) => (
-                  <span key={status} className={styles.dayBadge} style={{ color: statusColor(status), borderColor: statusColor(status) + '55' }}>
-                    {status} × {n}
-                  </span>
-                ))}
-              </span>
-              <span style={{ marginLeft: 'auto' }}>{abierto ? '▲' : '▼'}</span>
-            </button>
-            {abierto && <TimelineList entries={items} showStore />}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 export default function GestionAgmPage() {
   const { user } = useAuth()
-  const [tab, setTab] = useState('gestion') // 'gestion' | 'historial'
+  const [tab, setTab] = useState('gestion') // 'gestion' | 'feedback'
   const [sheetsStatus, setSheetsStatus] = useState(null)
   const [connecting, setConnecting] = useState(false)
 
@@ -546,11 +433,9 @@ export default function GestionAgmPage() {
 
       <ResumenHoyBanner email={user?.email} />
 
-      <div className={styles.topActions} style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+      <div className={styles.topActions} style={{ gridTemplateColumns: '1fr 1fr' }}>
         <button className={`${styles.btnTab} ${tab === 'gestion' ? styles.btnTabActive : ''}`}
           onClick={() => setTab('gestion')}>Gestión Tareas</button>
-        <button className={`${styles.btnTab} ${tab === 'historial' ? styles.btnTabActive : ''}`}
-          onClick={() => setTab('historial')}>Mi Historial</button>
         <button className={`${styles.btnTab} ${tab === 'feedback' ? styles.btnTabActive : ''}`}
           onClick={() => setTab('feedback')}>Feedback IA</button>
       </div>
@@ -634,7 +519,6 @@ export default function GestionAgmPage() {
         </div>
       )}
 
-      {tab === 'historial' && <MiHistorialTab />}
       {tab === 'feedback' && <FeedbackIaTab />}
 
       {historialStoreOpen && (
