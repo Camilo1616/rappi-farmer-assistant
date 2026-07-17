@@ -154,9 +154,9 @@ export default function GestionAgmPage() {
     getSheetsStatus().then(r => setSheetsStatus(r.data)).catch(() => setSheetsStatus({ connected: false }))
   }, [])
 
-  // Refresca los temporizadores de SLA cada minuto sin volver a golpear el Sheet.
+  // Refresca los temporizadores de SLA cada segundo sin volver a golpear el Sheet.
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000)
+    const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
   }, [])
 

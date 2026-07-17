@@ -17,17 +17,18 @@ export function slaColor(ms) {
   return '#22C55E'
 }
 
-/** "Vencido hace 3h", "en 2d 5h", "en 45m"... */
+function pad(n) { return String(n).padStart(2, '0') }
+
+/** Countdown regresivo con segundos: "2d 05:12:33", "05:12:33", "Vencido hace 00:03:10"... */
 export function formatCountdown(ms) {
   if (ms == null) return 'Sin SLA'
   const vencido = ms <= 0
   const abs = Math.abs(ms)
-  const mins = Math.floor(abs / 60_000)
+  const secs = Math.floor(abs / 1000)
+  const mins = Math.floor(secs / 60)
   const hours = Math.floor(mins / 60)
   const days = Math.floor(hours / 24)
-  let texto
-  if (days > 0) texto = `${days}d ${hours % 24}h`
-  else if (hours > 0) texto = `${hours}h ${mins % 60}m`
-  else texto = `${mins}m`
-  return vencido ? `Vencido hace ${texto}` : `en ${texto}`
+  const reloj = `${pad(hours % 24)}:${pad(mins % 60)}:${pad(secs % 60)}`
+  const texto = days > 0 ? `${days}d ${reloj}` : reloj
+  return vencido ? `Vencido hace ${texto}` : texto
 }

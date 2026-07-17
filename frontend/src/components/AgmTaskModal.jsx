@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { deshacerUltimoCambio } from '../services/agmService'
 import { remainingMs, slaColor, formatCountdown } from '../utils/sla'
@@ -37,7 +37,13 @@ function TareaForm({ tarea, storeId, agente, onChange, onSave, onRefresh, saving
   const [verConversacion, setVerConversacion] = useState(false)
   const [deshaciendo, setDeshaciendo] = useState(false)
   const [deshacerMsg, setDeshacerMsg] = useState(null)
+  const [now, setNow] = useState(Date.now())
   const soloLectura = estadoEsFinal(tarea.status)
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   const handleDeshacer = async () => {
     if (!confirm('¿Deshacer el último cambio de esta tienda? Esto revierte al estado anterior.')) return
@@ -67,8 +73,8 @@ function TareaForm({ tarea, storeId, agente, onChange, onSave, onRefresh, saving
 
       <div className={pageStyles.dato}>
         <b>Prioridad:</b> {tarea.categoria || 'Sin categorizar'} · SLA {tarea.slaHoras ?? '—'}h ·{' '}
-        <span style={{ color: slaColor(remainingMs(tarea.fechaLimite)), fontWeight: 700 }}>
-          {formatCountdown(remainingMs(tarea.fechaLimite))}
+        <span style={{ color: slaColor(remainingMs(tarea.fechaLimite, now)), fontWeight: 700 }}>
+          {formatCountdown(remainingMs(tarea.fechaLimite, now))}
         </span>
       </div>
 
