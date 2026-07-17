@@ -4,7 +4,6 @@ import com.rappi.farmer.application.SessionContext;
 import com.rappi.farmer.domain.entities.Management;
 import com.rappi.farmer.domain.repositories.DailyMetricRepository;
 import com.rappi.farmer.domain.repositories.ManagementRepository;
-import com.rappi.farmer.domain.repositories.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +16,7 @@ import java.util.*;
 public class ReportService {
 
     private final ManagementRepository managementRepository;
-    private final StoreRepository storeRepository;
     private final DailyMetricRepository dailyMetricRepository;
-    private final DashboardService dashboardService;
     private final SessionContext sessionContext;
 
     @Transactional(readOnly = true)
@@ -74,85 +71,6 @@ public class ReportService {
         result.put("activacion", activacion);
         result.put("metas",      metas);
         result.put("rows",       rows);
-        return result;
-    }
-
-    public Map<String, Object> getPortfolioReport() {
-        var dash = dashboardService.load();
-
-        // sinClasificar = total - suma de secciones conocidas
-        int total        = dash.getTotalCount();
-        int onboarding   = dash.getOnboardingCount();
-        int aliados      = dash.getAliadosCount();
-        int churn        = dash.getChurnCount();
-        int ava          = dash.getAvaCount();
-        int healthy      = dash.getHealthyCount();
-        int selfOnboardingCount = dash.getSelfOnboardingCount();
-        int sinClasificar = total - onboarding - aliados - churn - ava - healthy - selfOnboardingCount;
-
-        // sinVentas y sinTelefono desde las listas del dashboard
-        var allStores = new java.util.ArrayList<com.rappi.farmer.application.dtos.StoreViewDto>();
-        allStores.addAll(dash.getOnboardingCritical());
-        allStores.addAll(dash.getAliados());
-        allStores.addAll(dash.getChurnRisk());
-        allStores.addAll(dash.getAva());
-        allStores.addAll(dash.getHealthy());
-
-        long sinTelefono = allStores.stream().filter(s -> s.getPhoneNumber() == null || s.getPhoneNumber().isBlank()).count();
-        long sinVentas   = allStores.stream().filter(s -> s.getOrdersL4W() == null || s.getOrdersL4W() == 0).count();
-
-        // Listas de tiendas por sección (para modal de detalle)
-        java.util.function.Function<com.rappi.farmer.application.dtos.StoreViewDto, Map<String,Object>> toRow = s -> {
-            Map<String,Object> r = new LinkedHashMap<>();
-            r.put("id",          s.getId());
-            r.put("storeName",   s.getStoreName());
-            r.put("storeCode",   s.getStoreCode());
-            r.put("phoneNumber", s.getPhoneNumber());
-            r.put("aging",       s.getAging());
-            r.put("currentStatus", s.getCurrentStatus());
-            return r;
-        };
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total",         total);
-        result.put("onboarding",    onboarding);
-        result.put("aliados",       aliados);
-        result.put("churn",         churn);
-        result.put("ava",           ava);
-        result.put("healthy",       healthy);
-        result.put("sinClasificar", Math.max(0, sinClasificar));
-        result.put("sinVentas",     sinVentas);
-        result.put("sinTelefono",   sinTelefono);
-        // Tiendas sin clasificar = activas que no están en ninguna sección del dashboard
-        Long userId = sessionContext.getCurrentUserId();
-        java.util.Set<Long> clasificadas = new java.util.HashSet<>();
-        dash.getOnboardingCritical().forEach(s -> clasificadas.add(s.getId()));
-        dash.getAliados().forEach(s -> clasificadas.add(s.getId()));
-        dash.getChurnRisk().forEach(s -> clasificadas.add(s.getId()));
-        dash.getAva().forEach(s -> clasificadas.add(s.getId()));
-        dash.getHealthy().forEach(s -> clasificadas.add(s.getId()));
-
-        List<Map<String, Object>> storesSinClasificar = storeRepository.findActiveByUser(userId).stream()
-                .filter(s -> !clasificadas.contains(s.getId()))
-                .map(s -> {
-                    Map<String, Object> r = new LinkedHashMap<>();
-                    r.put("id",            s.getId());
-                    r.put("storeName",     s.getStoreName());
-                    r.put("storeCode",     s.getStoreCode());
-                    r.put("phoneNumber",   s.getPhoneNumber());
-                    r.put("aging",         s.getAging());
-                    r.put("currentStatus", s.getCurrentStatus());
-                    return r;
-                }).toList();
-
-        result.put("selfOnboarding",       dash.getSelfOnboardingCount());
-        result.put("storesOnboarding",     dash.getOnboardingCritical().stream().map(toRow).toList());
-        result.put("storesAliados",        dash.getAliados().stream().map(toRow).toList());
-        result.put("storesChurn",          dash.getChurnRisk().stream().map(toRow).toList());
-        result.put("storesAva",            dash.getAva().stream().map(toRow).toList());
-        result.put("storesHealthy",        dash.getHealthy().stream().map(toRow).toList());
-        result.put("storesSelfOnboarding", dash.getSelfOnboarding().stream().map(toRow).toList());
-        result.put("storesSinClasificar", storesSinClasificar);
         return result;
     }
 }

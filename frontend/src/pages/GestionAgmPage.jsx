@@ -500,6 +500,7 @@ export default function GestionAgmPage() {
                 <div>
                   <div className={styles.dato}><b>Teléfono:</b> {grupo.telefono}</div>
                   <div className={styles.dato}><b>Tareas pendientes del Store:</b> {grupo.tareas.length}</div>
+                  <div className={styles.dato}><b>Fecha de asignación:</b> {grupo.fechaAsignacion || '—'}</div>
                 </div>
               </div>
 

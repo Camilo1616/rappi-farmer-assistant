@@ -20,9 +20,4 @@ public class ReportController {
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(reportService.getDailyReport(date));
     }
-
-    @GetMapping("/portfolio")
-    public ResponseEntity<Map<String, Object>> portfolio() {
-        return ResponseEntity.ok(reportService.getPortfolioReport());
-    }
 }

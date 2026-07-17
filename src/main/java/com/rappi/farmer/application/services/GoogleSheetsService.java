@@ -291,7 +291,8 @@ public class GoogleSheetsService {
                     : parseFechaFlexible(fechaAsignacionPorStore.get(storeId));
             Long diasSinTocar = referencia == null ? null
                     : java.time.temporal.ChronoUnit.DAYS.between(referencia, LocalDate.now());
-            resultado.add(new AgmGrupoDto(meta[0], storeId, meta[1], meta[2], entry.getValue(), diasSinTocar));
+            resultado.add(new AgmGrupoDto(meta[0], storeId, meta[1], meta[2], entry.getValue(), diasSinTocar,
+                    fechaAsignacionPorStore.get(storeId)));
         }
         return resultado;
     }

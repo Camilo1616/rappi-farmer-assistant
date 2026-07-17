@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getDailyReport, getPortfolioReport } from '../services/reportService'
+import { getDailyReport } from '../services/reportService'
 import HistorialGestionTab from '../components/HistorialGestionTab'
 import styles from './ReportsPage.module.css'
 
@@ -11,57 +11,6 @@ const TIPO_LABEL  = { WHATSAPP:'WhatsApp', LLAMADA:'Llamada', SAC:'SAC', SEGUIMI
 const RESULT_LABEL = { EFECTIVA:'Efectiva', NO_CONTACTO:'No contacto', NO_RESPONDE:'No responde', PROBLEMA_TECNICO:'Problema técnico', REQUIERE_SEGUIMIENTO:'Req. seguimiento' }
 const TIPO_COLOR  = { WHATSAPP:'#22C55E', LLAMADA:'#3B82F6', SAC:'#F59E0B', SEGUIMIENTO:'#8B5CF6', ACTIVACION:'#EC4899' }
 const RESULT_COLOR = { EFECTIVA:'#22C55E', NO_CONTACTO:'#6B7280', NO_RESPONDE:'#F59E0B', PROBLEMA_TECNICO:'#EF4444', REQUIERE_SEGUIMIENTO:'#8B5CF6' }
-
-const PORTFOLIO_SECTIONS = [
-  { key:'onboarding',    label:'Onboarding',    color:'#3B82F6', icon:'🚀', storesKey:'storesOnboarding' },
-  { key:'aliados',       label:'Aliados AVA',   color:'#F97316', icon:'🔗', storesKey:'storesAliados' },
-  { key:'churn',         label:'Riesgo Churn',  color:'#EF4444', icon:'⚠️', storesKey:'storesChurn' },
-  { key:'ava',           label:'AVA Bajando',   color:'#F59E0B', icon:'📉', storesKey:'storesAva' },
-  { key:'healthy',       label:'Saludables',    color:'#22C55E', icon:'✅', storesKey:'storesHealthy' },
-  { key:'selfOnboarding', label:'Self-Onboarding', color:'#8B5CF6', icon:'🛒', storesKey:'storesSelfOnboarding' },
-  { key:'sinClasificar',  label:'Sin clasificar',  color:'#6B7280', icon:'❓', storesKey:'storesSinClasificar' },
-]
-
-function StoresModal({ section, stores, onClose }) {
-  const [search, setSearch] = useState('')
-  const filtered = (stores ?? []).filter(s =>
-    !search || s.storeName?.toLowerCase().includes(search.toLowerCase()) || s.storeCode?.toLowerCase().includes(search.toLowerCase())
-  )
-  return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <span style={{ color: section.color }}>{section.icon} {section.label}</span>
-          <span className={styles.modalCount}>{stores?.length ?? 0} tiendas</span>
-          <button className={styles.modalClose} onClick={onClose}>✕</button>
-        </div>
-        <div className={styles.modalSearch}>
-          <span>🔍</span>
-          <input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
-            className={styles.modalSearchInput} autoFocus />
-          {search && <button className={styles.clearBtn} onClick={() => setSearch('')}>✕</button>}
-        </div>
-        <div className={styles.modalList}>
-          {filtered.length === 0 && <div className={styles.empty}>Sin resultados</div>}
-          {filtered.map(s => (
-            <div key={s.id} className={styles.modalRow}>
-              <div className={styles.modalStoreInfo}>
-                <span className={styles.storeName}>{s.storeName}</span>
-                <span className={styles.storeCode}>{s.storeCode}</span>
-              </div>
-              <div className={styles.modalStoreMeta}>
-                {s.phoneNumber
-                  ? <span className={styles.phoneOk}>📱 {s.phoneNumber}</span>
-                  : <span className={styles.phoneNo}>Sin teléfono</span>}
-                {s.currentStatus && <span className={styles.statusTag}>{s.currentStatus}</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function StatCard({ label, value, sub, color, progress, progressMax, progressOk }) {
   const pct = progressMax ? Math.min(100, Math.round((value / progressMax) * 100)) : null
@@ -93,26 +42,23 @@ const todayStr = () => {
 
 export default function ReportsPage() {
   const [daily,        setDaily]        = useState(null)
-  const [portfolio,    setPortfolio]    = useState(null)
   const [loading,      setLoading]      = useState(true)
   const [tab,          setTab]          = useState('daily')
   const [typeFilter,   setTypeFilter]   = useState(null)
   const [resultFilter, setResultFilter] = useState(null)
-  const [modalSection, setModalSection] = useState(null)
   const [dateFrom,     setDateFrom]     = useState(todayStr())
   const [dateTo,       setDateTo]       = useState(todayStr())
 
-  const load = async (from, to) => {
+  const load = async (from) => {
     setLoading(true)
     try {
-      const [d, p] = await Promise.all([getDailyReport(from), getPortfolioReport()])
+      const d = await getDailyReport(from)
       setDaily(d.data)
-      setPortfolio(p.data)
     } catch {}
     setLoading(false)
   }
 
-  useEffect(() => { load(dateFrom, dateTo) }, [])  // eslint-disable-line
+  useEffect(() => { load(dateFrom) }, [])  // eslint-disable-line
 
   const handleDateFromChange = (e) => {
     const from = e.target.value
@@ -120,13 +66,13 @@ export default function ReportsPage() {
     setTypeFilter(null)
     setResultFilter(null)
     if (from > dateTo) setDateTo(from)
-    load(from, dateTo)
+    load(from)
   }
 
   const handleDateToChange = (e) => {
     const to = e.target.value
     setDateTo(to)
-    load(dateFrom, to)
+    load(dateFrom)
   }
 
   const rows = daily?.rows ?? []
@@ -143,22 +89,20 @@ export default function ReportsPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Reportes</h1>
-          <p className={styles.sub}>Resumen de actividad y estado de cartera</p>
+          <p className={styles.sub}>Resumen de actividad de gestión</p>
         </div>
-        <button className={styles.btnRefresh} onClick={() => load(dateFrom, dateTo)}>🔄 Actualizar</button>
+        <button className={styles.btnRefresh} onClick={() => load(dateFrom)}>🔄 Actualizar</button>
       </div>
 
       {/* Tabs */}
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${tab === 'daily' ? styles.tabActive : ''}`}
           onClick={() => setTab('daily')}>📋 Gestiones del día</button>
-        <button className={`${styles.tab} ${tab === 'portfolio' ? styles.tabActive : ''}`}
-          onClick={() => setTab('portfolio')}>🏪 Estado de cartera</button>
         <button className={`${styles.tab} ${tab === 'historial' ? styles.tabActive : ''}`}
           onClick={() => setTab('historial')}>📅 Historial de gestión</button>
       </div>
 
-      {loading && <div className={styles.loading}>Cargando...</div>}
+      {loading && tab === 'daily' && <div className={styles.loading}>Cargando...</div>}
 
       {/* ── Gestiones del día ── */}
       {!loading && tab === 'daily' && daily && (
@@ -187,7 +131,7 @@ export default function ReportsPage() {
               <button className={styles.btnToday} onClick={() => {
                 setDateFrom(todayStr()); setDateTo(todayStr())
                 setTypeFilter(null); setResultFilter(null)
-                load(todayStr(), todayStr())
+                load(todayStr())
               }}>
                 Ir a hoy
               </button>
@@ -287,63 +231,6 @@ export default function ReportsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* ── Estado de cartera ── */}
-      {!loading && tab === 'portfolio' && portfolio && (
-        <div className={styles.section}>
-          <div className={styles.portfolioTotal}>
-            <span className={styles.portfolioTotalNum}>{portfolio.total}</span>
-            <span className={styles.portfolioTotalLabel}>tiendas activas</span>
-          </div>
-
-          <div className={styles.portfolioGrid}>
-            {PORTFOLIO_SECTIONS.map(sec => {
-              const val = portfolio[sec.key] ?? 0
-              const pct = portfolio.total > 0 ? Math.round((val / portfolio.total) * 100) : 0
-              const clickable = sec.storesKey && (portfolio[sec.storesKey]?.length ?? 0) > 0
-              return (
-                <div key={sec.key}
-                  className={`${styles.portfolioCard} ${clickable ? styles.portfolioCardClickable : ''}`}
-                  onClick={() => clickable && setModalSection(sec)}>
-                  <div className={styles.portfolioIcon}>{sec.icon}</div>
-                  <div className={styles.portfolioLabel}>{sec.label}</div>
-                  <div className={styles.portfolioVal} style={{ color: sec.color }}>{val}</div>
-                  <div className={styles.portfolioBar}>
-                    <div className={styles.portfolioBarFill} style={{ width: `${pct}%`, background: sec.color }} />
-                  </div>
-                  <div className={styles.portfolioPct}>{pct}%</div>
-                  {clickable && <div className={styles.portfolioHint}>Ver tiendas →</div>}
-                </div>
-              )
-            })}
-          </div>
-
-          {modalSection && (
-            <StoresModal
-              section={modalSection}
-              stores={portfolio[modalSection.storesKey]}
-              onClose={() => setModalSection(null)}
-            />
-          )}
-
-          <div className={styles.alertsRow}>
-            <div className={styles.alertCard} style={{ borderColor: '#EF444433' }}>
-              <span style={{ color: '#EF4444', fontSize: '1.1rem' }}>📵</span>
-              <div>
-                <div className={styles.alertVal}>{portfolio.sinTelefono}</div>
-                <div className={styles.alertLabel}>Sin teléfono</div>
-              </div>
-            </div>
-            <div className={styles.alertCard} style={{ borderColor: '#F59E0B33' }}>
-              <span style={{ color: '#F59E0B', fontSize: '1.1rem' }}>📉</span>
-              <div>
-                <div className={styles.alertVal}>{portfolio.sinVentas}</div>
-                <div className={styles.alertLabel}>Sin ventas</div>
-              </div>
-            </div>
           </div>
         </div>
       )}

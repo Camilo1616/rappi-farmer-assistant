@@ -9,5 +9,6 @@ public record AgmGrupoDto(
         String storeName,
         String telefono,
         List<AgmTareaDto> tareas,
-        Long diasSinTocar // null si nunca se ha registrado un cambio para este store
+        Long diasSinTocar, // null si nunca se ha registrado un cambio para este store
+        String fechaAsignacion // tal como viene del Sheet (columna FECHA_ASIGNACION), sin normalizar
 ) {}
