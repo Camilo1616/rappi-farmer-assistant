@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { deshacerUltimoCambio } from '../services/agmService'
+import { remainingMs, slaColor, formatCountdown } from '../utils/sla'
 import AgmStoreChat from './AgmStoreChat'
 import styles from './FollowUpModal.module.css'
 import pageStyles from '../pages/GestionAgmPage.module.css'
@@ -62,6 +63,13 @@ function TareaForm({ tarea, storeId, agente, onChange, onSave, onRefresh, saving
       <div className={pageStyles.grid2}>
         <div><span className={pageStyles.dato}><b>Tipo soporte:</b> {esc(tarea.tipoSoporte)}</span></div>
         <div><span className={pageStyles.dato}><b>Explicación:</b> {esc(tarea.explicacion)}</span></div>
+      </div>
+
+      <div className={pageStyles.dato}>
+        <b>Prioridad:</b> {tarea.categoria || 'Sin categorizar'} · SLA {tarea.slaHoras ?? '—'}h ·{' '}
+        <span style={{ color: slaColor(remainingMs(tarea.fechaLimite)), fontWeight: 700 }}>
+          {formatCountdown(remainingMs(tarea.fechaLimite))}
+        </span>
       </div>
 
       <button className={pageStyles.btnGhost} onClick={() => setVerConversacion(v => !v)}>

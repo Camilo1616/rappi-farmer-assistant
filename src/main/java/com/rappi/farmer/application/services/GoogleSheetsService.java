@@ -279,11 +279,18 @@ public class GoogleSheetsService {
                 if (!l.isBlank()) links.add(l);
             }
 
+            String tipoSoporte = val(row, col, "TIPO_SOPORTE");
+            String explicacion = val(row, col, "EXPLICACION");
+            SlaCatalog.SlaInfo sla = SlaCatalog.resolve(tipoSoporte, explicacion);
+            LocalDate fechaAsignacionFila = parseFechaFlexible(val(row, col, "FECHA_ASIGNACION"));
+            String fechaLimite = fechaAsignacionFila == null ? null
+                    : fechaAsignacionFila.atStartOfDay().plusHours(sla.slaHoras()).toString();
+
             AgmTareaDto tarea = new AgmTareaDto(
                     i + 1, // rowNumber 1-based (i=0 es la fila 1 de encabezados, así que fila real = i+1)
                     storeId,
-                    val(row, col, "TIPO_SOPORTE"),
-                    val(row, col, "EXPLICACION"),
+                    tipoSoporte,
+                    explicacion,
                     val(row, col, "STATUS"),
                     val(row, col, "COMENTARIO INTERNO"),
                     val(row, col, "COMENTARIO PARA EL ALIADO"),
@@ -293,7 +300,10 @@ public class GoogleSheetsService {
                     val(row, col, "STATUS TICKET"),
                     val(row, col, "HISTORIAL_CONVERSACIÓN").isBlank()
                             ? val(row, col, "HISTORIAL_CONVERSACION") : val(row, col, "HISTORIAL_CONVERSACIÓN"),
-                    links
+                    links,
+                    sla.categoria(),
+                    sla.slaHoras(),
+                    fechaLimite
             );
 
             tareasPorStore.computeIfAbsent(storeId, k -> new ArrayList<>()).add(tarea);

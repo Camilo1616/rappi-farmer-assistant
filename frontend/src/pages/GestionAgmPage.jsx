@@ -7,6 +7,7 @@ import {
 } from '../services/agmService'
 import TimelineList, { statusColor } from '../components/TimelineList'
 import AgmTaskModal from '../components/AgmTaskModal'
+import { remainingMs, slaColor, formatCountdown } from '../utils/sla'
 import styles from './GestionAgmPage.module.css'
 
 /** Convierte yyyy-MM-dd (lo que da el input del modal) a dd/MM/yyyy, formato usado en el Sheet. */
@@ -147,9 +148,16 @@ export default function GestionAgmPage() {
   const [msg, setMsg] = useState(null)
   const [historialStoreOpen, setHistorialStoreOpen] = useState(null)
   const [selected, setSelected] = useState(null) // { grupoIndex, tareaIndex }
+  const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
     getSheetsStatus().then(r => setSheetsStatus(r.data)).catch(() => setSheetsStatus({ connected: false }))
+  }, [])
+
+  // Refresca los temporizadores de SLA cada minuto sin volver a golpear el Sheet.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
   }, [])
 
   const handleConnect = async () => {
@@ -183,10 +191,19 @@ export default function GestionAgmPage() {
     }
   }
 
-  // Todas las tareas de todos los stores, aplanadas en filas — una fila por tarea pendiente.
-  const filas = useMemo(() => grupos.flatMap((g, gi) =>
-    g.tareas.map((t, ti) => ({ ...t, grupoIndex: gi, tareaIndex: ti, grupo: g }))
-  ), [grupos])
+  // Todas las tareas de todos los stores, aplanadas en filas y priorizadas por urgencia de SLA
+  // (las que están más cerca de vencer o ya vencieron van primero; sin SLA calculable van al final).
+  const filas = useMemo(() => {
+    const planas = grupos.flatMap((g, gi) =>
+      g.tareas.map((t, ti) => ({ ...t, grupoIndex: gi, tareaIndex: ti, grupo: g, remaining: remainingMs(t.fechaLimite, now) }))
+    )
+    return planas.sort((a, b) => {
+      if (a.remaining == null && b.remaining == null) return 0
+      if (a.remaining == null) return 1
+      if (b.remaining == null) return -1
+      return a.remaining - b.remaining
+    })
+  }, [grupos, now])
 
   const selectedGrupo = selected ? grupos[selected.grupoIndex] : null
   const selectedTarea = selectedGrupo ? selectedGrupo.tareas[selected.tareaIndex] : null
@@ -289,6 +306,7 @@ export default function GestionAgmPage() {
               <table className={styles.tareasTable}>
                 <thead>
                   <tr>
+                    <th>Prioridad</th>
                     <th>País</th>
                     <th>Store</th>
                     <th>Tipo soporte</th>
@@ -300,6 +318,12 @@ export default function GestionAgmPage() {
                   {filas.map((f, i) => (
                     <tr key={f.rowNumber ?? i} className={styles.tareaRow}
                       onClick={() => setSelected({ grupoIndex: f.grupoIndex, tareaIndex: f.tareaIndex })}>
+                      <td>
+                        <div className={styles.slaBadge} style={{ color: slaColor(f.remaining) }}>
+                          ⏱ {formatCountdown(f.remaining)}
+                        </div>
+                        <div className={styles.slaCategoria}>{f.categoria}</div>
+                      </td>
                       <td>{f.grupo.pais}</td>
                       <td>
                         <div className={styles.tareaRowStore}>{f.grupo.storeName}</div>

@@ -16,5 +16,8 @@ public record AgmTareaDto(
         String ticket,
         String statusTicket,
         String historial,
-        List<String> links
+        List<String> links,
+        String categoria,     // categoría de SLA resuelta desde SlaCatalog (heurística por keywords)
+        Integer slaHoras,     // horas totales de SLA para esa categoría
+        String fechaLimite    // ISO-8601 (LocalDateTime), null si no hay FECHA_ASIGNACION para calcularlo
 ) {}

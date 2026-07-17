@@ -415,6 +415,18 @@
   color: var(--text-muted);
 }
 
+.slaBadge {
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.slaCategoria {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .historial {
   white-space: pre-wrap;
   background: var(--bg-input);
