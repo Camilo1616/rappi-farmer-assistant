@@ -251,9 +251,9 @@ public class GoogleSheetsService {
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
         String storeNorm = storeFiltro == null ? "" : storeFiltro.trim().toLowerCase();
 
-        // FECHA_ASIGNACION en "soporte" suele venir vacía — se usa como base del SLA el primer
-        // registro de HISTORIAL_ESTADOS de cada store (cuándo apareció el caso por primera vez).
-        Map<String, LocalDateTime> primerToque = primerToquePorStore(sheets);
+        // FECHA_ASIGNACION en "soporte" suele venir vacía — se usa la misma columna pero leída
+        // desde HISTORIAL_ESTADOS, donde sí viene poblada.
+        Map<String, LocalDateTime> fechaAsignacionPorStoreHist = fechaAsignacionDesdeHistorial(sheets);
 
         // Mapa temporal de storeId -> lista de tareas + metadata, preservando orden de aparición
         LinkedHashMap<String, List<AgmTareaDto>> tareasPorStore = new LinkedHashMap<>();
@@ -286,7 +286,7 @@ public class GoogleSheetsService {
             String tipoSoporte = val(row, col, "TIPO_SOPORTE");
             String explicacion = val(row, col, "EXPLICACION");
             SlaCatalog.SlaInfo sla = SlaCatalog.resolve(tipoSoporte, explicacion);
-            LocalDateTime fechaBase = primerToque.get(storeId.trim().toLowerCase());
+            LocalDateTime fechaBase = fechaAsignacionPorStoreHist.get(storeId.trim().toLowerCase());
             String fechaLimite = fechaBase == null ? null
                     : fechaBase.plusHours(sla.slaHoras()).toString();
 
@@ -342,18 +342,9 @@ public class GoogleSheetsService {
      * "d/M/yyyy H:mm:ss" que quedaron en filas antiguas por un bug de auto-formato de Google Sheets.
      */
     private static LocalDate parseFechaHoraFlexible(String value) {
-        if (value == null || value.isBlank()) return null;
-        String v = value.trim();
-        List<DateTimeFormatter> formatos = List.of(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-                DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
-                DateTimeFormatter.ofPattern("d/M/yyyy H:mm:ss"),
-                DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
-        );
-        for (DateTimeFormatter f : formatos) {
-            try { return LocalDateTime.parse(v, f).toLocalDate(); } catch (Exception ignored) { }
-        }
-        return parseFechaFlexible(v);
+        LocalDateTime completa = parseFechaHoraCompleta(value);
+        if (completa != null) return completa.toLocalDate();
+        return parseFechaFlexible(value);
     }
 
     /** Intenta parsear una fecha en varios formatos comunes del Sheet; null si no se pudo. */
@@ -377,32 +368,59 @@ public class GoogleSheetsService {
         return toquesPorStore(sheets, false);
     }
 
-    /**
-     * Primer FECHA_HORA registrado en HISTORIAL_ESTADOS por cada Store_ID — se usa como "fecha de
-     * asignación" real para el cálculo de SLA, ya que FECHA_ASIGNACION en la pestaña "soporte" suele
-     * venir vacía. Es el momento en que el caso apareció por primera vez en el historial de LINA.
-     */
-    private Map<String, LocalDateTime> primerToquePorStore(Sheets sheets) throws IOException {
-        return toquesPorStore(sheets, true);
-    }
-
     private Map<String, LocalDateTime> toquesPorStore(Sheets sheets, boolean primero) throws IOException {
         List<List<Object>> rows = readTab(sheets, TAB_HISTORIAL_ESTADOS);
         Map<String, LocalDateTime> result = new HashMap<>();
         if (rows.isEmpty()) return result;
 
         Map<String, Integer> col = headerIndex(rows.get(0));
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         for (int i = 1; i < rows.size(); i++) {
             List<Object> row = rows.get(i);
             String storeId = val(row, col, "STORE_ID").trim().toLowerCase();
             if (storeId.isBlank()) continue;
-            try {
-                LocalDateTime fecha = LocalDateTime.parse(val(row, col, "FECHA_HORA"), fmt);
-                result.merge(storeId, fecha, (a, b) -> (primero ? a.isBefore(b) : a.isAfter(b)) ? a : b);
-            } catch (Exception ignored) { /* fila con fecha inválida, se omite */ }
+            LocalDateTime fecha = parseFechaHoraCompleta(val(row, col, "FECHA_HORA"));
+            if (fecha == null) continue;
+            result.merge(storeId, fecha, (a, b) -> (primero ? a.isBefore(b) : a.isAfter(b)) ? a : b);
         }
         return result;
+    }
+
+    /**
+     * FECHA_ASIGNACION registrada en HISTORIAL_ESTADOS por cada Store_ID — a diferencia de la
+     * columna homónima en la pestaña "soporte" (que suele venir vacía), esta sí viene poblada.
+     * Se usa como fecha base real para calcular el vencimiento del SLA.
+     */
+    private Map<String, LocalDateTime> fechaAsignacionDesdeHistorial(Sheets sheets) throws IOException {
+        List<List<Object>> rows = readTab(sheets, TAB_HISTORIAL_ESTADOS);
+        Map<String, LocalDateTime> result = new HashMap<>();
+        if (rows.isEmpty()) return result;
+
+        Map<String, Integer> col = headerIndex(rows.get(0));
+        for (int i = 1; i < rows.size(); i++) {
+            List<Object> row = rows.get(i);
+            String storeId = val(row, col, "STORE_ID").trim().toLowerCase();
+            if (storeId.isBlank() || result.containsKey(storeId)) continue;
+            LocalDateTime fecha = parseFechaHoraCompleta(val(row, col, "FECHA_ASIGNACION"));
+            if (fecha != null) result.put(storeId, fecha);
+        }
+        return result;
+    }
+
+    private static final List<DateTimeFormatter> FORMATOS_FECHA_HORA = List.of(
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
+            DateTimeFormatter.ofPattern("d/M/yyyy H:mm:ss"),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
+    );
+
+    /** Igual que {@link #parseFechaHoraFlexible} pero conservando la hora, no solo la fecha. */
+    private static LocalDateTime parseFechaHoraCompleta(String value) {
+        if (value == null || value.isBlank()) return null;
+        String v = value.trim();
+        for (DateTimeFormatter f : FORMATOS_FECHA_HORA) {
+            try { return LocalDateTime.parse(v, f); } catch (Exception ignored) { }
+        }
+        return null;
     }
 
     /**
