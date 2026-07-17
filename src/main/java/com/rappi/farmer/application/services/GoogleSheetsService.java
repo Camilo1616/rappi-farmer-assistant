@@ -224,16 +224,24 @@ public class GoogleSheetsService {
         if (rows.isEmpty()) return List.of();
 
         Map<String, Integer> col = headerIndex(rows.get(0));
+        Map<String, LocalDateTime> ultimoToque = ultimoToquePorStore(sheets);
+        LocalDate hoy = LocalDate.now();
+
         List<FilaPendiente> resultado = new ArrayList<>();
         for (int i = 1; i < rows.size(); i++) {
             List<Object> row = rows.get(i);
             String storeId = val(row, col, "STORE_ID");
             if (storeId.isBlank()) continue;
 
-            boolean yaGestionada = esEstadoFinal(val(row, col, "STATUS"))
-                    || (!esEsperandoRespuesta(val(row, col, "STATUS"))
+            String status = val(row, col, "STATUS");
+            LocalDateTime ultimo = ultimoToque.get(storeId.trim().toLowerCase());
+            boolean tocadaHoy = ultimo != null && ultimo.toLocalDate().equals(hoy);
+
+            boolean yaGestionada = esEstadoFinal(status)
+                    || (!esEsperandoRespuesta(status)
                         && (!val(row, col, "COMENTARIO INTERNO").isBlank()
-                            || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank()));
+                            || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank()))
+                    || (esEsperandoRespuesta(status) && tocadaHoy);
             if (yaGestionada) continue;
 
             resultado.add(new FilaPendiente(storeId, i + 1, val(row, col, "AGENTE_ASIGNADO")));
@@ -251,6 +259,11 @@ public class GoogleSheetsService {
         String emailNorm = email == null ? "" : email.trim().toLowerCase();
         String storeNorm = storeFiltro == null ? "" : storeFiltro.trim().toLowerCase();
 
+        // "Esperando Respuesta" se deja visible para poder hacerle seguimiento, pero si ya se tocó
+        // hoy no debe reaparecer el mismo día — reaparece mañana si sigue sin resolverse.
+        Map<String, LocalDateTime> ultimoToque = ultimoToquePorStore(sheets);
+        LocalDate hoy = LocalDate.now();
+
         // Mapa temporal de storeId -> lista de tareas + metadata, preservando orden de aparición
         LinkedHashMap<String, List<AgmTareaDto>> tareasPorStore = new LinkedHashMap<>();
         Map<String, String[]> metaPorStore = new LinkedHashMap<>(); // storeId -> [pais, storeName, telefono]
@@ -265,12 +278,18 @@ public class GoogleSheetsService {
             if (storeId.isBlank()) continue;
             if (!storeNorm.isBlank() && !storeId.toLowerCase().contains(storeNorm)) continue;
 
+            String status = val(row, col, "STATUS");
+            LocalDateTime ultimo = ultimoToque.get(storeId.trim().toLowerCase());
+            boolean tocadaHoy = ultimo != null && ultimo.toLocalDate().equals(hoy);
+
             // Ya resuelto (o ya diligenciado por otro lado sin actualizar el status) — no debe
-            // seguir apareciendo en la cola de pendientes
-            boolean yaGestionada = esEstadoFinal(val(row, col, "STATUS"))
-                    || (!esEsperandoRespuesta(val(row, col, "STATUS"))
+            // seguir apareciendo en la cola de pendientes. "Esperando Respuesta" es la excepción
+            // que sí se deja ver para seguimiento, salvo que ya se haya tocado hoy mismo.
+            boolean yaGestionada = esEstadoFinal(status)
+                    || (!esEsperandoRespuesta(status)
                         && (!val(row, col, "COMENTARIO INTERNO").isBlank()
-                            || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank()));
+                            || !val(row, col, "COMENTARIO PARA EL ALIADO").isBlank()))
+                    || (esEsperandoRespuesta(status) && tocadaHoy);
             if (yaGestionada) continue;
 
             List<String> links = new ArrayList<>();
@@ -314,8 +333,6 @@ public class GoogleSheetsService {
             });
             fechaAsignacionPorStore.putIfAbsent(storeId, val(row, col, "FECHA_ASIGNACION"));
         }
-
-        Map<String, LocalDateTime> ultimoToque = ultimoToquePorStore(sheets);
 
         List<AgmGrupoDto> resultado = new ArrayList<>();
         for (var entry : tareasPorStore.entrySet()) {
