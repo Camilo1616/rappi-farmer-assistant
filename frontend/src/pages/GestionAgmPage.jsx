@@ -7,7 +7,6 @@ import {
 } from '../services/agmService'
 import TimelineList, { statusColor } from '../components/TimelineList'
 import AgmTaskModal from '../components/AgmTaskModal'
-import FollowUpModal from '../components/FollowUpModal'
 import styles from './GestionAgmPage.module.css'
 
 /** Convierte yyyy-MM-dd (lo que da el input del modal) a dd/MM/yyyy, formato usado en el Sheet. */
@@ -147,7 +146,6 @@ export default function GestionAgmPage() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
   const [historialStoreOpen, setHistorialStoreOpen] = useState(null)
-  const [followUpOpen, setFollowUpOpen] = useState(false)
   const [selected, setSelected] = useState(null) // { grupoIndex, tareaIndex }
 
   useEffect(() => {
@@ -237,9 +235,6 @@ export default function GestionAgmPage() {
           <h1 className={styles.title}>Gestión AGM-IA</h1>
           <p className={styles.sub}>Casos escalados por LINA — conectado al Google Sheet real</p>
         </div>
-        <button className={styles.btnFollowUp} onClick={() => setFollowUpOpen(true)}>
-          Buscar otra tienda
-        </button>
       </div>
 
       {sheetsStatus && !sheetsStatus.connected && (
@@ -351,13 +346,6 @@ export default function GestionAgmPage() {
           onSave={handleGuardar}
           onRefresh={handleBuscar}
           saving={saving}
-        />
-      )}
-
-      {followUpOpen && (
-        <FollowUpModal
-          onClose={() => setFollowUpOpen(false)}
-          onSaved={() => setFollowUpOpen(false)}
         />
       )}
     </div>

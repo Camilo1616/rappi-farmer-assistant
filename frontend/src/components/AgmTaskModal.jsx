@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { globalSearchStores } from '../services/storeService'
 import { deshacerUltimoCambio } from '../services/agmService'
 import AgmStoreChat from './AgmStoreChat'
 import styles from './FollowUpModal.module.css'
@@ -159,23 +158,18 @@ function TareaForm({ tarea, storeId, agente, onChange, onSave, onRefresh, saving
 }
 
 /**
- * Modal de detalle de una tarea AGM: trae historial + chat IA de la tienda (cruzando
- * storeCode -> id interno) y, junto a eso, el formulario que guarda la gestión en el Sheet.
+ * Modal de detalle de una tarea AGM: trae historial + chat IA de la tienda (cruzando por
+ * storeCode, aunque la tienda no exista aún en la base local) y, junto a eso, el formulario
+ * que guarda la gestión en el Sheet.
  */
 export default function AgmTaskModal({ grupo, tarea, storeId, agente, onClose, onChange, onSave, onRefresh, saving }) {
-  const [dbStore, setDbStore] = useState(null)
-  const [lookupError, setLookupError] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    globalSearchStores(storeId).then(r => {
-      if (cancelled) return
-      const match = (r.data ?? []).find(s => s.storeCode === storeId) ?? r.data?.[0] ?? null
-      if (match) setDbStore(match)
-      else setLookupError(true)
-    }).catch(() => !cancelled && setLookupError(true))
-    return () => { cancelled = true }
-  }, [storeId])
+  // AgmStoreChat cruza por storeCode cuando no hay `id` de la base local — no hace falta
+  // resolver la tienda de antemano, así el historial e IA cargan igual aunque no esté cargada.
+  const store = {
+    storeCode: storeId,
+    storeName: grupo.storeName || storeId,
+    phoneNumber: grupo.telefono,
+  }
 
   const gestionSlot = (
     <TareaForm
@@ -194,27 +188,11 @@ export default function AgmTaskModal({ grupo, tarea, storeId, agente, onClose, o
       <div className={styles.modal} style={{ gridTemplateColumns: '1fr' }}>
         <div className={styles.rightPanel}>
           <div className={styles.leftHeader} style={{ padding: '14px 18px 0' }}>
-            <span className={styles.leftTitle}>{grupo.storeName || storeId}</span>
+            <span className={styles.leftTitle}>{store.storeName}</span>
             <button className={styles.closeBtn} onClick={onClose}>✕</button>
           </div>
 
-          {!dbStore && !lookupError && (
-            <div className={styles.emptyChat}>
-              <span className={styles.emptyChatIcon}>⏳</span>
-              <p>Cargando historial e IA de la tienda...</p>
-            </div>
-          )}
-
-          {lookupError && (
-            <>
-              <div className={pageStyles.readOnlyNote} style={{ margin: '0 18px' }}>
-                ⚠ No se encontró la tienda {storeId} en la base — solo se muestra el formulario de gestión.
-              </div>
-              <div style={{ padding: '0 18px 18px' }}>{gestionSlot}</div>
-            </>
-          )}
-
-          {dbStore && <AgmStoreChat store={dbStore} gestionSlot={gestionSlot} />}
+          <AgmStoreChat store={store} gestionSlot={gestionSlot} />
         </div>
       </div>
     </div>,

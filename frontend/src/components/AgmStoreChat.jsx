@@ -103,7 +103,7 @@ export default function AgmStoreChat({ store, gestionSlot, onGestionarDefault })
       loadHistory()
       loadSummary()
     }
-  }, [store?.id])
+  }, [store?.id, store?.storeCode])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -125,10 +125,17 @@ export default function AgmStoreChat({ store, gestionSlot, onGestionarDefault })
     }, 1000)
   }
 
+  // Tiendas AGM que aún no existen en la base local no tienen `id` — se cruzan por storeCode.
+  const storeIdent = store.id
+    ? { storeId: store.id }
+    : { storeCode: store.storeCode, storeName: store.storeName }
+
   const loadHistory = async () => {
     setHistLoading(true)
     try {
-      const r = await api.get(`/ai/followup-history/${store.id}`)
+      const r = store.id
+        ? await api.get(`/ai/followup-history/${store.id}`)
+        : await api.get(`/ai/followup-history/by-code/${encodeURIComponent(store.storeCode)}`)
       setHistoryLog(r.data ?? [])
     } catch { setHistoryLog([]) }
     finally { setHistLoading(false) }
@@ -137,7 +144,7 @@ export default function AgmStoreChat({ store, gestionSlot, onGestionarDefault })
   const loadSummary = async () => {
     setLoading(true)
     try {
-      const r = await api.post('/ai/followup-chat', { storeId: store.id, history: [], message: '' })
+      const r = await api.post('/ai/followup-chat', { ...storeIdent, history: [], message: '' })
       const reply = r.data?.reply ?? r.data?.error ?? '—'
       const aiMsg = { role: 'assistant', content: reply }
       setMessages([aiMsg])
@@ -158,7 +165,7 @@ export default function AgmStoreChat({ store, gestionSlot, onGestionarDefault })
     setLoading(true)
     const newHistory = [...history, userMsg]
     try {
-      const r = await api.post('/ai/followup-chat', { storeId: store.id, history: newHistory, message: text })
+      const r = await api.post('/ai/followup-chat', { ...storeIdent, history: newHistory, message: text })
       const reply = r.data?.reply ?? '—'
       const aiMsg = { role: 'assistant', content: reply }
       setMessages(prev => [...prev, aiMsg])

@@ -316,7 +316,7 @@ public class AiController {
         if (!aiService.isAvailable()) {
             return ResponseEntity.status(503).body(Map.of("error", "IA no disponible"));
         }
-        Store store = storeRepository.findById(request.storeId()).orElse(null);
+        Store store = resolveStore(request.storeId(), request.storeCode(), request.storeName());
         if (store == null) {
             return ResponseEntity.status(404).body(Map.of("error", "Tienda no encontrada"));
         }
@@ -343,18 +343,43 @@ public class AiController {
         if (store == null || store.getStoreCode() == null) {
             return ResponseEntity.ok(List.of());
         }
+        return readHistorialByCode(store.getStoreCode());
+    }
+
+    /**
+     * Igual que {@link #followUpHistory}, pero para tiendas que aún no existen en la base local
+     * (por ejemplo, casos AGM de tiendas no cargadas en el Excel) — cruza directo por storeCode.
+     */
+    @GetMapping("/followup-history/by-code/{storeCode}")
+    public ResponseEntity<?> followUpHistoryByCode(@PathVariable String storeCode) {
+        return readHistorialByCode(storeCode);
+    }
+
+    private ResponseEntity<?> readHistorialByCode(String storeCode) {
         try {
-            List<AgmHistorialEntryDto> historial = sheetsService.getHistorial(null, store.getStoreCode(), null, null);
+            List<AgmHistorialEntryDto> historial = sheetsService.getHistorial(null, storeCode, null, null);
             return ResponseEntity.ok(historial);
         } catch (Exception e) {
-            log.error("Error leyendo historial AGM de storeId={}: {}", storeId, e.getMessage());
+            log.error("Error leyendo historial AGM de storeCode={}: {}", storeCode, e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("message", "Error al leer el historial: " + e.getMessage()));
         }
     }
 
+    /** Resuelve la tienda por id (base local) o, si no existe, arma una transitoria a partir del storeCode/storeName del Sheet. */
+    private Store resolveStore(Long storeId, String storeCode, String storeName) {
+        if (storeId != null) return storeRepository.findById(storeId).orElse(null);
+        if (storeCode == null || storeCode.isBlank()) return null;
+        return storeRepository.findByStoreCode(storeCode).orElseGet(() -> {
+            Store transient_ = new Store();
+            transient_.setStoreCode(storeCode);
+            transient_.setStoreName(storeName != null ? storeName : storeCode);
+            return transient_;
+        });
+    }
+
     public record ChatMessage(String role, String content) {}
     public record ChatRequest(List<ChatMessage> history, String message) {}
-    public record FollowUpChatRequest(Long storeId, List<ChatMessage> history, String message) {}
+    public record FollowUpChatRequest(Long storeId, String storeCode, String storeName, List<ChatMessage> history, String message) {}
 
     public record GenerateMessageRequest(
             String storeName, int agingDays, String agingStage, String segment,
