@@ -626,17 +626,28 @@ public class GoogleSheetsService {
                 "asignada a otra area", "gestión incompleta", "gestion incompleta").contains(s);
     }
 
+    /**
+     * Las cabeceras del Sheet a veces llevan tildes (FECHA_ASIGNACIÓN) y a veces no
+     * (FECHA_ASIGNACION) según quién las haya escrito — se normaliza sin acentos para que
+     * el lookup por nombre de columna sea consistente sin tener que mantener alias a mano.
+     */
+    private static String normalizarHeader(String s) {
+        String sinTildes = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return sinTildes.trim().toUpperCase();
+    }
+
     private Map<String, Integer> headerIndex(List<Object> headerRow) {
         Map<String, Integer> map = new HashMap<>();
         for (int i = 0; i < headerRow.size(); i++) {
-            String h = String.valueOf(headerRow.get(i)).trim().toUpperCase();
+            String h = normalizarHeader(String.valueOf(headerRow.get(i)));
             if (!h.isBlank()) map.putIfAbsent(h, i);
         }
         return map;
     }
 
     private String val(List<Object> row, Map<String, Integer> col, String header) {
-        Integer idx = col.get(header.toUpperCase());
+        Integer idx = col.get(normalizarHeader(header));
         if (idx == null || idx >= row.size()) return "";
         Object v = row.get(idx);
         return v == null ? "" : v.toString();
