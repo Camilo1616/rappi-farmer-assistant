@@ -65,3 +65,22 @@
 .payRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 14px;
   border-top: 1px solid var(--border); font-size: .9rem; }
 .payForm { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px 14px; }
+.seg { display: flex; gap: 6px; margin-bottom: 10px; }
+.segBtn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card);
+  color: var(--text-secondary); font-weight: 600; cursor: pointer; font-family: inherit; }
+.segOn { background: var(--bg-input); color: var(--text-primary); border-color: var(--rappi-orange); }
+.rangeNav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.rangeLabel { flex: 1; text-align: center; font-weight: 600; }
+.table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.table th, .table td { padding: 8px 4px; text-align: right; border-bottom: 1px solid var(--border); }
+.table th:first-child, .table td:first-child { text-align: left; }
+.table th { color: var(--text-secondary); font-size: .7rem; font-weight: 600; }
+.barRow { display: grid; grid-template-columns: 64px 1fr 54px; gap: 8px; align-items: center; padding: 4px 0; font-size: .8rem; }
+.barTrack { height: 10px; border-radius: 99px; background: var(--bg-input); position: relative; overflow: hidden; }
+.barHarv { position: absolute; inset: 0 auto 0 0; background: rgba(34,197,94,.35); border-radius: 99px; }
+.barSold { position: absolute; inset: 0 auto 0 0; background: var(--rappi-orange); border-radius: 99px; }
+.searchBox { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
+.result { border-top: 1px solid var(--border); padding: 10px 2px; }
+.resultHead { width: 100%; display: flex; justify-content: space-between; gap: 8px; background: none; border: none;
+  color: inherit; font-family: inherit; text-align: left; cursor: pointer; padding: 0; }
+.detail { margin-top: 8px; font-size: .85rem; display: grid; gap: 4px; color: var(--text-secondary); }

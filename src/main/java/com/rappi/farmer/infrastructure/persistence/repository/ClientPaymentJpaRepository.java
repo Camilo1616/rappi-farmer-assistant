@@ -16,4 +16,6 @@ public interface ClientPaymentJpaRepository extends JpaRepository<ClientPaymentE
     @Query("select p.clientId, p.type, coalesce(sum(p.amount), 0) from ClientPaymentEntity p "
             + "where p.day <= :day group by p.clientId, p.type")
     List<Object[]> sumUpTo(@Param("day") LocalDate day);
+
+    List<ClientPaymentEntity> findTop3ByClientIdAndDayLessThanEqualOrderByDayDescIdDesc(Long clientId, LocalDate day);
 }

@@ -22,4 +22,17 @@ public interface DispatchLineJpaRepository extends JpaRepository<DispatchLineEnt
     @Query("select e.clientId, coalesce(sum(e.deliveredBoxes * e.unitPrice), 0) from DispatchLineEntity e "
             + "where e.day <= :day group by e.clientId")
     List<Object[]> billedUpTo(@Param("day") LocalDate day);
+
+    /** Por dia y categoria: [dia, categoria, entregadas, pedidas, valor facturado]. */
+    @Query("select e.day, e.category, coalesce(sum(e.deliveredBoxes), 0), coalesce(sum(e.orderedBoxes), 0), "
+            + "coalesce(sum(e.deliveredBoxes * e.unitPrice), 0) from DispatchLineEntity e "
+            + "where e.day between :from and :to group by e.day, e.category")
+    List<Object[]> summaryByDay(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** Ultimas compras de un cliente: [dia, cajas entregadas, valor], mas reciente primero. */
+    @Query("select e.day, coalesce(sum(e.deliveredBoxes), 0), coalesce(sum(e.deliveredBoxes * e.unitPrice), 0) "
+            + "from DispatchLineEntity e where e.clientId = :clientId and e.day <= :day and e.deliveredBoxes > 0 "
+            + "group by e.day order by e.day desc")
+    List<Object[]> lastPurchases(@Param("clientId") Long clientId, @Param("day") LocalDate day,
+                                 org.springframework.data.domain.Pageable page);
 }

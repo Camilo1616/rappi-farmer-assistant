@@ -1,6 +1,8 @@
 package com.rappi.farmer.presentation.api;
 
+import com.rappi.farmer.application.services.ClientSearchService;
 import com.rappi.farmer.application.services.DispatchService;
+import com.rappi.farmer.application.services.HarvestReportService;
 import com.rappi.farmer.application.services.PortfolioService;
 import com.rappi.farmer.domain.enums.PaymentType;
 import com.rappi.farmer.domain.enums.FruitCategory;
@@ -30,6 +32,8 @@ public class DispatchController {
 
     private final DispatchService service;
     private final PortfolioService portfolio;
+    private final HarvestReportService reports;
+    private final ClientSearchService clientSearch;
 
     public record HarvestRequest(@NotNull LocalDate date, @NotNull FruitCategory category, @NotNull @Min(0) Integer boxes) {}
     public record LineRequest(@NotNull LocalDate date, @NotNull Long clientId, @NotNull FruitCategory category,
@@ -95,6 +99,18 @@ public class DispatchController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         portfolio.deletePayment(id);
         return ResponseEntity.ok(portfolio.getPortfolio(date));
+    }
+
+    @GetMapping("/report")
+    public ResponseEntity<?> report(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(reports.getReport(from, to));
+    }
+
+    @GetMapping("/clients/search")
+    public ResponseEntity<?> searchClients(@RequestParam(defaultValue = "") String q,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(clientSearch.search(q, date != null ? date : LocalDate.now()));
     }
 
     @ExceptionHandler(InsufficientStockException.class)

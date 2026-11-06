@@ -14,3 +14,6 @@ export const createClient = (data) => api.post('/despacho/clients', data).then(r
 export const getPortfolio = (date) => api.get('/despacho/portfolio', { params: { date } }).then(r => r.data)
 export const addPayment = (data) => api.post('/despacho/payments', data).then(r => r.data)
 export const deletePayment = (id, date) => api.delete(`/despacho/payments/${id}`, { params: { date } }).then(r => r.data)
+
+export const getReport = (from, to) => api.get('/despacho/report', { params: { from, to } }).then(r => r.data)
+export const searchClients = (q, date) => api.get('/despacho/clients/search', { params: { q, date } }).then(r => r.data)
