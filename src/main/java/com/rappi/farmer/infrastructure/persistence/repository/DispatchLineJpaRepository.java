@@ -35,4 +35,9 @@ public interface DispatchLineJpaRepository extends JpaRepository<DispatchLineEnt
             + "group by e.day order by e.day desc")
     List<Object[]> lastPurchases(@Param("clientId") Long clientId, @Param("day") LocalDate day,
                                  org.springframework.data.domain.Pageable page);
+
+    /** Cajas entregadas por cliente hasta el dia (sin bolsas): base del empaque que debe cada cliente. */
+    @Query("select e.clientId, coalesce(sum(e.deliveredBoxes), 0) from DispatchLineEntity e "
+            + "where e.day <= :day and e.category <> 'BOLSAS' group by e.clientId")
+    List<Object[]> returnableBoxesUpTo(@Param("day") LocalDate day);
 }

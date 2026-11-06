@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Map;
 
 /** Errores de negocio del modulo de despacho (despacho, cultivos y viajes). */
-@RestControllerAdvice(assignableTypes = {DispatchController.class, CultivoController.class, TripController.class})
+@RestControllerAdvice(assignableTypes = {DispatchController.class, CultivoController.class, TripController.class, CollectionController.class})
 public class DespachoExceptionHandler {
 
     @ExceptionHandler(InsufficientStockException.class)

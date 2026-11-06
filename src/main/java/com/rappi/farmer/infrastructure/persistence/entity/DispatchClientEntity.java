@@ -24,4 +24,7 @@ public class DispatchClientEntity {
 
     @Column(name = "opening_balance")
     private BigDecimal openingBalance = BigDecimal.ZERO;
+
+    @Column(name = "opening_packaging")
+    private Integer openingPackaging = 0;
 }

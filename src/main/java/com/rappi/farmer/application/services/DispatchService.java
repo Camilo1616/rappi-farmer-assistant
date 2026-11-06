@@ -189,11 +189,18 @@ public class DispatchService {
     /** Crea un cliente con su saldo anterior (saldo de arranque cuadrado con cartera). */
     @Transactional
     public DispatchClientEntity createClient(Long sectorId, String name, BigDecimal openingBalance) {
+        return createClient(sectorId, name, openingBalance, 0);
+    }
+
+    /** Igual, con las cajas vacias (empaque) que el cliente debe al arrancar. */
+    @Transactional
+    public DispatchClientEntity createClient(Long sectorId, String name, BigDecimal openingBalance, Integer openingPackaging) {
         sectorRepo.findById(sectorId).orElseThrow(() -> new BusinessException("Sector no encontrado"));
         DispatchClientEntity c = new DispatchClientEntity();
         c.setSectorId(sectorId);
         c.setName(name.trim());
         c.setOpeningBalance(openingBalance == null ? BigDecimal.ZERO : openingBalance);
+        c.setOpeningPackaging(openingPackaging == null || openingPackaging < 0 ? 0 : openingPackaging);
         return clientRepo.save(c);
     }
 

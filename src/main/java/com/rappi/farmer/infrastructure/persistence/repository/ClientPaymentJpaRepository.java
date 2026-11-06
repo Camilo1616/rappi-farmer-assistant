@@ -18,4 +18,6 @@ public interface ClientPaymentJpaRepository extends JpaRepository<ClientPaymentE
     List<Object[]> sumUpTo(@Param("day") LocalDate day);
 
     List<ClientPaymentEntity> findTop3ByClientIdAndDayLessThanEqualOrderByDayDescIdDesc(Long clientId, LocalDate day);
+
+    List<ClientPaymentEntity> findByRunId(Long runId);
 }

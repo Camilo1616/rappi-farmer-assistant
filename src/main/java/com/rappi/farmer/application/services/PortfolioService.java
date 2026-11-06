@@ -59,7 +59,8 @@ public class PortfolioService {
             for (DispatchClientEntity c : bySector.getOrDefault(s.getId(), List.of())) {
                 Map<String, BigDecimal> pm = paid.getOrDefault(c.getId(), Map.of());
                 BigDecimal b = billed.getOrDefault(c.getId(), BigDecimal.ZERO);
-                BigDecimal disc = pm.getOrDefault(PaymentType.DESCUENTO.name(), BigDecimal.ZERO);
+                BigDecimal disc = pm.getOrDefault(PaymentType.DESCUENTO.name(), BigDecimal.ZERO)
+                        .add(pm.getOrDefault(PaymentType.FALTANTE.name(), BigDecimal.ZERO));
                 BigDecimal abonos = pm.getOrDefault(PaymentType.ABONO.name(), BigDecimal.ZERO);
                 BigDecimal deps = pm.getOrDefault(PaymentType.CONSIGNACION.name(), BigDecimal.ZERO);
                 BigDecimal balance = balance(c.getOpeningBalance(), b, disc, abonos, deps);

@@ -2,7 +2,7 @@ package com.rappi.farmer.domain.enums;
 
 /** Movimientos que bajan el saldo de un cliente. */
 public enum PaymentType {
-    ABONO("Abono"), CONSIGNACION("Consignación"), DESCUENTO("Descuento");
+    ABONO("Abono"), CONSIGNACION("Consignación"), DESCUENTO("Descuento"), FALTANTE("Faltante de fresa");
 
     private final String label;
 
@@ -14,8 +14,8 @@ public enum PaymentType {
         return label;
     }
 
-    /** Abonos y consignaciones son dinero que entra; el descuento solo reduce la deuda. */
+    /** Abonos y consignaciones son dinero que entra; descuento y faltante solo reducen la deuda. */
     public boolean isCashIn() {
-        return this != DESCUENTO;
+        return this == ABONO || this == CONSIGNACION;
     }
 }

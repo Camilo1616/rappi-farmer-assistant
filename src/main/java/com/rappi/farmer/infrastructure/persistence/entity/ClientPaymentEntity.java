@@ -32,6 +32,15 @@ public class ClientPaymentEntity {
     @Column(name = "note")
     private String note;
 
+    @Column(name = "method")
+    private String method;
+
+    @Column(name = "received_by")
+    private String receivedBy;
+
+    @Column(name = "run_id")
+    private Long runId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

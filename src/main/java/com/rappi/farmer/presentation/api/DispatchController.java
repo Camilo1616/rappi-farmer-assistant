@@ -41,7 +41,8 @@ public class DispatchController {
     public record SectorRequest(@NotBlank String name) {}
     public record PaymentRequest(@NotNull LocalDate date, @NotNull Long clientId, @NotNull PaymentType type,
                                  @NotNull BigDecimal amount, String note) {}
-    public record ClientRequest(@NotNull Long sectorId, @NotBlank String name, BigDecimal openingBalance) {}
+    public record ClientRequest(@NotNull Long sectorId, @NotBlank String name, BigDecimal openingBalance,
+                                Integer openingPackaging) {}
 
     @GetMapping("/day")
     public ResponseEntity<?> day(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -79,7 +80,7 @@ public class DispatchController {
 
     @PostMapping("/clients")
     public ResponseEntity<?> client(@Valid @RequestBody ClientRequest r) {
-        return ResponseEntity.ok(service.createClient(r.sectorId(), r.name(), r.openingBalance()));
+        return ResponseEntity.ok(service.createClient(r.sectorId(), r.name(), r.openingBalance(), r.openingPackaging()));
     }
 
     @GetMapping("/portfolio")

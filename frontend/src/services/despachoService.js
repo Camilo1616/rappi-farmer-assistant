@@ -33,3 +33,17 @@ export const savePreset = (data, date) => api.put('/viajes/presets', data, { par
 export const deletePreset = (id, date) => api.delete(`/viajes/presets/${id}`, { params: { date } }).then(r => r.data)
 
 export const getProfit = (from, to) => api.get('/despacho/profit', { params: { from, to } }).then(r => r.data)
+
+// ── Cobro presencial (todas devuelven las hojas del día para refrescar) ──
+export const getRuns = (date) => api.get('/cobros/day', { params: { date } }).then(r => r.data)
+export const createRun = (data) => api.post('/cobros', data).then(r => r.data)
+export const deleteRun = (id) => api.delete(`/cobros/${id}`).then(r => r.data)
+export const addRunClient = (id, clientId) => api.post(`/cobros/${id}/clients`, { clientId }).then(r => r.data)
+export const removeRunItem = (itemId) => api.delete(`/cobros/items/${itemId}`).then(r => r.data)
+export const collectItem = (itemId, data) => api.post(`/cobros/items/${itemId}/collect`, data).then(r => r.data)
+export const resolveItem = (itemId, data) => api.post(`/cobros/items/${itemId}/resolve`, data).then(r => r.data)
+export const reviewItem = (itemId, needsReview) => api.put(`/cobros/items/${itemId}/review`, { needsReview }).then(r => r.data)
+export const deleteRunPayment = (paymentId) => api.delete(`/cobros/payments/${paymentId}`).then(r => r.data)
+export const deleteEmpties = (id) => api.delete(`/cobros/empties/${id}`).then(r => r.data)
+export const handoverRun = (id, data) => api.put(`/cobros/${id}/handover`, data).then(r => r.data)
+export const reopenRun = (id) => api.put(`/cobros/${id}/reopen`).then(r => r.data)

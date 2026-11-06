@@ -9,6 +9,7 @@ import CarteraPanel from '../components/CarteraPanel'
 import ReportPanel from '../components/ReportPanel'
 import CultivosPanel from '../components/CultivosPanel'
 import ViajesPanel from '../components/ViajesPanel'
+import CobrosPanel from '../components/CobrosPanel'
 import ProfitCard from '../components/ProfitCard'
 import NumberField from '../components/NumberField'
 import ClientSearch from '../components/ClientSearch'
@@ -82,7 +83,7 @@ export default function DespachoPage() {
   const [tab, setTab] = useState('despacho')
   const [showAdmin, setShowAdmin] = useState(false)
   const [sectorName, setSectorName] = useState('')
-  const [client, setClient] = useState({ sectorId: '', name: '', openingBalance: '' })
+  const [client, setClient] = useState({ sectorId: '', name: '', openingBalance: '', openingPackaging: '' })
 
   const load = useCallback(() =>
     getDay(date).then(setDay).catch(() => setError('No se pudo cargar el día')), [date])
@@ -118,12 +119,14 @@ export default function DespachoPage() {
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${tab === 'despacho' ? styles.tabOn : ''}`} onClick={() => setTab('despacho')}>Despacho</button>
         <button className={`${styles.tab} ${tab === 'cartera' ? styles.tabOn : ''}`} onClick={() => setTab('cartera')}>Cartera</button>
+        <button className={`${styles.tab} ${tab === 'cobros' ? styles.tabOn : ''}`} onClick={() => setTab('cobros')}>Cobros</button>
         <button className={`${styles.tab} ${tab === 'cultivos' ? styles.tabOn : ''}`} onClick={() => setTab('cultivos')}>Cultivos</button>
         <button className={`${styles.tab} ${tab === 'viajes' ? styles.tabOn : ''}`} onClick={() => setTab('viajes')}>Viajes</button>
         <button className={`${styles.tab} ${tab === 'reportes' ? styles.tabOn : ''}`} onClick={() => setTab('reportes')}>Reportes</button>
       </div>
 
       {tab === 'cartera' ? <CarteraPanel date={date} onError={setError} />
+        : tab === 'cobros' ? <CobrosPanel date={date} sectors={day.sectors} onError={setError} />
         : tab === 'cultivos' ? <CultivosPanel date={date} onError={setError} />
         : tab === 'viajes' ? <ViajesPanel date={date} onError={setError} />
         : tab === 'reportes' ? <ReportPanel date={date} onError={setError} /> : (<>
@@ -212,8 +215,9 @@ export default function DespachoPage() {
               e.preventDefault()
               run(async () => {
                 await createClient({ sectorId: Number(client.sectorId), name: client.name,
-                  openingBalance: Number(client.openingBalance) || 0 })
-                setClient({ ...client, name: '', openingBalance: '' })
+                  openingBalance: Number(client.openingBalance) || 0,
+                  openingPackaging: Number(client.openingPackaging) || 0 })
+                setClient({ ...client, name: '', openingBalance: '', openingPackaging: '' })
               })
             }}>
               <select className={styles.input} value={client.sectorId} required
@@ -225,6 +229,8 @@ export default function DespachoPage() {
                 onChange={e => setClient({ ...client, name: e.target.value })} required />
               <input className={styles.input} type="number" placeholder="Saldo anterior ($)" value={client.openingBalance}
                 onChange={e => setClient({ ...client, openingBalance: e.target.value })} />
+              <input className={styles.input} type="number" placeholder="Vacías que debe" value={client.openingPackaging}
+                onChange={e => setClient({ ...client, openingPackaging: e.target.value })} />
               <button className={styles.btn} type="submit">Crear cliente</button>
             </form>
             <div className={styles.sectionTitle}>Precio por caja</div>
