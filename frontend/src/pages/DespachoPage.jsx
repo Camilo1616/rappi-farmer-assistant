@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { logout } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -14,7 +14,25 @@ import PedidosPanel from '../components/PedidosPanel'
 import ProfitCard from '../components/ProfitCard'
 import NumberField from '../components/NumberField'
 import ClientSearch from '../components/ClientSearch'
+import AppShell from '../components/AppShell'
+import VentasTable from '../components/VentasTable'
+import ApkDownload from '../components/ApkDownload'
+import Icon from '../components/Icon'
+import '../styles/app-theme.css'
 import styles from './DespachoPage.module.css'
+
+const NAV = [
+  { key: 'ventas', label: 'Ventas', icon: 'tag' },
+  { key: 'pedidos', label: 'Pedidos', icon: 'clipboard' },
+  { key: 'cobros', label: 'Cobros', icon: 'dollar' },
+  { key: 'cartera', label: 'Cartera', icon: 'card' },
+  { key: 'cultivos', label: 'Cultivos', icon: 'layers' },
+  { key: 'viajes', label: 'Viajes', icon: 'truck' },
+  { key: 'reportes', label: 'Reportes', icon: 'chart' },
+  { key: 'app', label: 'Descargar app', icon: 'smartphone' },
+]
+// En celular estas van dentro del botón "Más" de la barra inferior
+const MORE = ['cultivos', 'viajes', 'reportes', 'app']
 
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
 const todayStr = () => new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en hora local
@@ -42,15 +60,15 @@ function ClientCard({ client, stock, save }) {
   return (
     <div>
       <button className={styles.clientHead} onClick={() => setOpen(o => !o)}>
-        <span><strong>{client.name}</strong>
+        <span><strong>{client.name}</strong>{client.overdue && <span className={styles.moraTag}>En mora</span>}
           <div className={styles.small}>Pedido {client.orderedBoxes} · Entrega {client.deliveredBoxes}</div></span>
-        <span className={styles.meta}>{money(client.invoiceTotal)} {open ? '▲' : '▼'}</span>
+        <span className={styles.meta}>{money(client.invoiceTotal)} <Icon name={open ? 'up' : 'down'} size={14} /></span>
       </button>
       {open && client.overdue && (
         <div className={styles.moraBox} style={{ marginTop: 8 }}>
           <strong>Cliente en mora:</strong> debe {money(client.balance)}
           {client.daysSincePayment != null ? ` · ${client.daysSincePayment} días sin pagar` : ' · nunca ha registrado un pago'}.
-          Revisa antes de despacharle más fresa.
+          Revisa antes de despacharle más producto.
         </div>
       )}
       {open && (
@@ -84,14 +102,26 @@ function ClientCard({ client, stock, save }) {
 export default function DespachoPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const [date, setDate] = useState(todayStr())
   const [day, setDay] = useState(null)
   const [error, setError] = useState('')
   const [openSectors, setOpenSectors] = useState({})
-  const [tab, setTab] = useState('despacho')
+  const [view, setView] = useState('tabla')
+  const [mode, setMode] = useState('entrega')
   const [showAdmin, setShowAdmin] = useState(false)
   const [sectorName, setSectorName] = useState('')
   const [client, setClient] = useState({ sectorId: '', name: '', openingBalance: '', openingPackaging: '' })
+
+  // La sección vive en la URL (?s=cobros): al volver desde la ficha de un cliente queda donde estaba
+  const tab = NAV.some(n => n.key === params.get('s')) ? params.get('s') : 'ventas'
+  const setTab = (k) => setParams(k === 'ventas' ? {} : { s: k })
+
+  useEffect(() => {
+    const prev = document.title
+    document.title = 'Panel de ventas'
+    return () => { document.title = prev }
+  }, [])
 
   const load = useCallback(() =>
     getDay(date).then(setDay).catch(() => setError('No se pudo cargar el día')), [date])
@@ -104,61 +134,59 @@ export default function DespachoPage() {
     catch (e) { setError(e.response?.data?.message || 'Error inesperado'); load() }
   }
   const saveLine = (cid, cat, ordered, delivered) => run(() => setLine(date, cid, cat, ordered, delivered))
+  const doLogout = () => { logout(); navigate('/login') }
 
-  if (!day) return <div className={styles.page}>{error || 'Cargando…'}</div>
-  const s = day.summary
+  const current = NAV.find(n => n.key === tab)
+  const subtitle = new Date(date + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
+  const s = day?.summary
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <div className={styles.title}>🍓 Despacho{user?.fullName ? ` · ${user.fullName.split(' ')[0]}` : ''}</div>
-        <button className={`${styles.btn} ${styles.btnGhost}`}
-          onClick={() => { logout(); navigate('/login') }}>Salir</button>
-      </div>
+  const dateBar = (
+    <div className={styles.dateRow}>
+      <button className={styles.nav} onClick={() => setDate(shiftDay(date, -1))} aria-label="Día anterior"><Icon name="left" size={18} /></button>
+      <input className={styles.date} type="date" value={date} onChange={e => e.target.value && setDate(e.target.value)} />
+      <button className={styles.nav} onClick={() => setDate(shiftDay(date, 1))} aria-label="Día siguiente"><Icon name="right" size={18} /></button>
+      {date !== todayStr() && <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setDate(todayStr())}>Hoy</button>}
+    </div>
+  )
 
-      <div className={styles.dateRow}>
-        <button className={styles.nav} onClick={() => setDate(shiftDay(date, -1))} aria-label="Día anterior">‹</button>
-        <input className={styles.date} type="date" value={date} onChange={e => e.target.value && setDate(e.target.value)} />
-        <button className={styles.nav} onClick={() => setDate(shiftDay(date, 1))} aria-label="Día siguiente">›</button>
-      </div>
-
-      <ClientSearch date={date} />
-
-      <div className={styles.tabs}>
-        <button className={`${styles.tab} ${tab === 'despacho' ? styles.tabOn : ''}`} onClick={() => setTab('despacho')}>Despacho</button>
-        <button className={`${styles.tab} ${tab === 'pedidos' ? styles.tabOn : ''}`} onClick={() => setTab('pedidos')}>Pedidos</button>
-        <button className={`${styles.tab} ${tab === 'cartera' ? styles.tabOn : ''}`} onClick={() => setTab('cartera')}>Cartera</button>
-        <button className={`${styles.tab} ${tab === 'cobros' ? styles.tabOn : ''}`} onClick={() => setTab('cobros')}>Cobros</button>
-        <button className={`${styles.tab} ${tab === 'cultivos' ? styles.tabOn : ''}`} onClick={() => setTab('cultivos')}>Cultivos</button>
-        <button className={`${styles.tab} ${tab === 'viajes' ? styles.tabOn : ''}`} onClick={() => setTab('viajes')}>Viajes</button>
-        <button className={`${styles.tab} ${tab === 'reportes' ? styles.tabOn : ''}`} onClick={() => setTab('reportes')}>Reportes</button>
-      </div>
-
-      {tab === 'pedidos' ? <PedidosPanel date={date} onError={setError} onChanged={load} />
-        : tab === 'cartera' ? <CarteraPanel date={date} onError={setError} />
-        : tab === 'cobros' ? <CobrosPanel date={date} sectors={day.sectors} onError={setError} />
-        : tab === 'cultivos' ? <CultivosPanel date={date} onError={setError} />
-        : tab === 'viajes' ? <ViajesPanel date={date} onError={setError} />
-        : tab === 'reportes' ? <ReportPanel date={date} onError={setError} /> : (<>
+  let content
+  if (tab === 'app') {
+    content = <ApkDownload />
+  } else if (!day) {
+    content = <div className={styles.small}>{error || 'Cargando…'}</div>
+  } else if (tab === 'pedidos') {
+    content = <PedidosPanel date={date} onError={setError} onChanged={load} />
+  } else if (tab === 'cartera') {
+    content = <CarteraPanel date={date} onError={setError} />
+  } else if (tab === 'cobros') {
+    content = <CobrosPanel date={date} sectors={day.sectors} onError={setError} />
+  } else if (tab === 'cultivos') {
+    content = <CultivosPanel date={date} onError={setError} />
+  } else if (tab === 'viajes') {
+    content = <ViajesPanel date={date} onError={setError} />
+  } else if (tab === 'reportes') {
+    content = <ReportPanel date={date} onError={setError} />
+  } else {
+    content = (<>
       <div className={styles.cards}>
-        <div className={styles.card}><div className={styles.cardLabel}>Cosechado hoy</div><div className={styles.cardValue}>{s.harvestedBoxes}</div></div>
+        <div className={styles.card}><div className={styles.cardLabel}>Recibido hoy</div><div className={styles.cardValue}>{s.harvestedBoxes}</div></div>
         <div className={styles.card}><div className={styles.cardLabel}>Arrastre de ayer</div><div className={styles.cardValue}>{s.carryoverBoxes}</div></div>
         <div className={styles.card}><div className={styles.cardLabel}>Despachado</div><div className={styles.cardValue}>{s.deliveredBoxes}</div></div>
         <div className={styles.card}><div className={styles.cardLabel}>Vendido hoy</div><div className={styles.cardValue}>{money(s.salesTotal)}</div></div>
       </div>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Fresa disponible por categoría</h2>
+        <h2 className={styles.sectionTitle}>Disponible por categoría</h2>
         <div className={styles.stockGrid}>
           {day.stock.map(c => (
             <div key={c.category} className={`${styles.stock} ${c.available <= 0 ? styles.stockEmpty : ''}`}>
               <div className={styles.stockName}>{c.label}
-                {c.carryover > 0 && <span className={styles.first}>🔥 {c.carryover} sale primero</span>}</div>
+                {c.carryover > 0 && <span className={styles.first}>{c.carryover} sale primero</span>}</div>
               <div className={styles.avail}>{c.available}</div>
               <div className={styles.small}>{money(c.price)} / caja</div>
               {c.cultivoHarvested > 0 && <div className={styles.small}>De cultivos: {c.cultivoHarvested}</div>}
-              <div className={styles.mini}><span className={styles.small}>{c.cultivoHarvested > 0 ? 'Ajuste' : 'Cosecha'}</span>
-                <NumberField label={`Cosecha ${c.label}`} value={c.harvested - c.cultivoHarvested}
+              <div className={styles.mini}><span className={styles.small}>{c.cultivoHarvested > 0 ? 'Ajuste' : 'Entrada'}</span>
+                <NumberField label={`Entrada ${c.label}`} value={c.harvested - c.cultivoHarvested}
                   onCommit={n => run(() => setHarvest(date, c.category, n))} /></div>
             </div>
           ))}
@@ -166,24 +194,34 @@ export default function DespachoPage() {
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Clientes por sector</h2>
-        {day.sectors.length === 0 && <div className={styles.small}>Aún no hay sectores. Créalos en “Administrar”.</div>}
-        {day.sectors.map(sec => (
-          <div key={sec.id} className={styles.sector}>
-            <button className={styles.sectorHead} onClick={() => setOpenSectors(o => ({ ...o, [sec.id]: !o[sec.id] }))}>
-              <span>{sec.name}<div className={styles.small}>{sec.clients.length} cliente{sec.clients.length !== 1 ? 's' : ''}</div></span>
-              <span className={styles.meta}>Entrega {sec.deliveredBoxes} / Pedido {sec.orderedBoxes}<br />
-                {money(sec.invoiceTotal)} {openSectors[sec.id] ? '▲' : '▼'}</span>
-            </button>
-            {openSectors[sec.id] && sec.clients.map(c => (
-              <ClientCard key={c.id} client={c} stock={day.stock} save={saveLine} />
-            ))}
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Ventas por cliente</h2>
+          <div className={styles.segmented}>
+            <button className={`${styles.segBtn} ${view === 'tabla' ? styles.segOn : ''}`} onClick={() => setView('tabla')}>Tabla</button>
+            <button className={`${styles.segBtn} ${view === 'tarjetas' ? styles.segOn : ''}`} onClick={() => setView('tarjetas')}>Tarjetas</button>
           </div>
-        ))}
+        </div>
+        {view === 'tabla'
+          ? <VentasTable day={day} mode={mode} onModeChange={setMode} onSave={saveLine} />
+          : (<>
+            {day.sectors.length === 0 && <div className={styles.small}>Aún no hay sectores. Créalos en “Administrar”.</div>}
+            {day.sectors.map(sec => (
+              <div key={sec.id} className={styles.sector}>
+                <button className={styles.sectorHead} onClick={() => setOpenSectors(o => ({ ...o, [sec.id]: !o[sec.id] }))}>
+                  <span>{sec.name}<div className={styles.small}>{sec.clients.length} cliente{sec.clients.length !== 1 ? 's' : ''}</div></span>
+                  <span className={styles.meta}>Entrega {sec.deliveredBoxes} / Pedido {sec.orderedBoxes}<br />
+                    {money(sec.invoiceTotal)} <Icon name={openSectors[sec.id] ? 'up' : 'down'} size={14} /></span>
+                </button>
+                {openSectors[sec.id] && sec.clients.map(c => (
+                  <ClientCard key={c.id} client={c} stock={day.stock} save={saveLine} />
+                ))}
+              </div>
+            ))}
+          </>)}
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Cierre del día · cosechado vs vendido</h2>
+        <h2 className={styles.sectionTitle}>Cierre del día</h2>
         <div className={styles.closeBox}>
           <div className={`${styles.closeRow} ${styles.closeHead}`}>
             <span>Categoría</span><span className={styles.right}>Había</span>
@@ -201,7 +239,7 @@ export default function DespachoPage() {
             </div>
           ))}
           <div className={styles.small} style={{ marginTop: 8 }}>
-            Sobran {s.leftoverBoxes} cajas: pasan a mañana y saldrán primero. Registra como descarte lo que no se pueda guardar.
+            Sobran {s.leftoverBoxes} cajas: pasan a mañana y salen primero. Registra como descarte lo que no se pueda guardar.
           </div>
         </div>
       </section>
@@ -260,9 +298,19 @@ export default function DespachoPage() {
         )}
       </section>
 
-      </>)}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Aplicación para Android</h2>
+        <ApkDownload />
+      </section>
+    </>)
+  }
 
-      {error && <div className={styles.toast} role="alert" onClick={() => setError('')}>⚠️ {error}</div>}
-    </div>
+  return (
+    <AppShell items={NAV} moreKeys={MORE} active={tab} onNavigate={setTab} title={current.label} subtitle={subtitle}
+      user={user} onLogout={doLogout}>
+      {tab !== 'app' && (<>{dateBar}<ClientSearch date={date} /></>)}
+      <div className={styles.view}>{content}</div>
+      {error && <div className={styles.toast} role="alert" onClick={() => setError('')}><Icon name="alert" size={18} /><span>{error}</span></div>}
+    </AppShell>
   )
 }

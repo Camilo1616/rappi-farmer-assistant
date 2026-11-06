@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchClients } from '../services/despachoService'
+import Icon from './Icon'
 import styles from '../pages/DespachoPage.module.css'
 
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
@@ -28,11 +29,11 @@ export default function ClientSearch({ date }) {
 
   return (
     <div className={styles.searchBox}>
-      <button className={`${styles.btn} ${styles.btnGhost}`} style={{ width: '100%' }} onClick={() => setOpen(o => !o)}>
-        🔍 {open ? 'Cerrar buscador' : 'Buscar cliente'}
+      <button className={styles.searchBar} onClick={() => setOpen(o => !o)}>
+        <Icon name="search" size={18} />{open ? 'Cerrar buscador' : 'Buscar cliente…'}
       </button>
       {open && (
-        <div style={{ marginTop: 10 }}>
+        <div className={styles.searchBody}>
           <input className={styles.input} style={{ width: '100%', boxSizing: 'border-box' }} autoFocus
             placeholder="Nombre o sector…" value={q} onChange={e => setQ(e.target.value)} />
           <div className={styles.small} style={{ margin: '6px 0' }}>
@@ -47,7 +48,7 @@ export default function ClientSearch({ date }) {
                 <span style={{ textAlign: 'right' }}>
                   <span className={Number(c.balance) > 0 ? styles.debt : Number(c.balance) < 0 ? styles.credit : ''}>
                     {money(c.balance)}{Number(c.balance) < 0 ? ' a favor' : ''}</span>
-                  <div className={styles.small}>Ver ficha ›</div>
+                  <div className={styles.small}>Ver ficha</div>
                 </span>
               </button>
             </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import Icon from './Icon'
 import { useNavigate } from 'react-router-dom'
 import { getPortfolio, addPayment, deletePayment } from '../services/despachoService'
 import styles from '../pages/DespachoPage.module.css'
@@ -62,13 +63,13 @@ export default function CarteraPanel({ date, onError }) {
         <div key={sec.id} className={styles.sector}>
           <button className={styles.sectorHead} onClick={() => setOpen(o => ({ ...o, [`s${sec.id}`]: !o[`s${sec.id}`] }))}>
             <span>{sec.name}<div className={styles.small}>{sec.clients.length} cliente{sec.clients.length !== 1 ? 's' : ''}</div></span>
-            <span className={styles.meta}>Debe <Balance value={sec.balance} /> {open[`s${sec.id}`] ? '▲' : '▼'}</span>
+            <span className={styles.meta}>Debe <Balance value={sec.balance} /> <Icon name={open[`s${sec.id}`] ? 'up' : 'down'} size={14} /></span>
           </button>
           {open[`s${sec.id}`] && sec.clients.map(c => (
             <div key={c.id}>
               <button className={styles.clientHead} onClick={() => setOpen(o => ({ ...o, [c.id]: !o[c.id] }))}>
                 <strong>{c.name}</strong>
-                <span className={styles.meta}><Balance value={c.balance} /> {open[c.id] ? '▲' : '▼'}</span>
+                <span className={styles.meta}><Balance value={c.balance} /> <Icon name={open[c.id] ? 'up' : 'down'} size={14} /></span>
               </button>
               {open[c.id] && (
                 <>

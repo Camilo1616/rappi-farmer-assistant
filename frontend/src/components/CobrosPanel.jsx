@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import Icon from './Icon'
 import {
   getRuns, createRun, deleteRun, addRunClient, removeRunItem, collectItem, resolveItem, reviewItem,
   deleteRunPayment, deleteEmpties, handoverRun, reopenRun, getTripDay, searchClients,
@@ -8,7 +9,7 @@ import styles from '../pages/DespachoPage.module.css'
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
 const METHODS = [['EFECTIVO', 'Efectivo'], ['NEQUI', 'Nequi'], ['CONSIGNACION', 'Consignación']]
 const RECEIVERS = ['Conductor', 'Angela', 'Lorena']
-const RESOLUTIONS = [['DEBE', 'Quedó debiendo'], ['DESCUENTO', 'Descuento'], ['FALTANTE', 'Faltante de fresa']]
+const RESOLUTIONS = [['DEBE', 'Quedó debiendo'], ['DESCUENTO', 'Descuento'], ['FALTANTE', 'Faltante']]
 const STATUS = {
   SIN_COBRO: ['Sin cobrar', styles.badgeNone],
   PARCIAL: ['Parcial', styles.badgeWarn],
@@ -43,7 +44,7 @@ function ItemCard({ item, run_, busy }) {
     <div>
       <button className={styles.itemHead} onClick={() => setOpen(o => !o)}>
         <span>
-          <strong>{item.name}</strong>{item.needsReview && ' ⚠️'}{item.addedManually && <span className={styles.small}> · agregado</span>}
+          <strong>{item.name}</strong>{item.needsReview && <span className={styles.moraTag} style={{ background: 'rgba(217,119,6,.15)', color: '#D97706' }}>Duda</span>}{item.addedManually && <span className={styles.small}> · agregado</span>}
           <div className={styles.small}>Debía {money(item.owed)}{item.packaging > 0 ? ` · vacías ${item.packaging}` : ''}</div>
         </span>
         <span style={{ textAlign: 'right' }}>
@@ -85,14 +86,14 @@ function ItemCard({ item, run_, busy }) {
               <span>{p.label}{p.method ? ` · ${p.method.toLowerCase()}` : ''} · <strong>{money(p.amount)}</strong>
                 {p.receivedBy ? ` · ${p.receivedBy}` : ''}{p.note ? ` · ${p.note}` : ''}</span>
               <button className={`${styles.btn} ${styles.btnGhost}`} aria-label="Quitar pago"
-                onClick={() => run_(() => deleteRunPayment(p.id))}>✕</button>
+                onClick={() => run_(() => deleteRunPayment(p.id))}><Icon name="x" size={14} /></button>
             </div>
           ))}
           {item.empties.map(e => (
             <div key={e.id} className={styles.payRow} style={{ padding: '6px 0' }}>
-              <span>📦 Vacías recibidas · <strong>{e.boxes}</strong></span>
+              <span><Icon name="box" size={14} style={{ verticalAlign: -2 }} /> Vacías recibidas · <strong>{e.boxes}</strong></span>
               <button className={`${styles.btn} ${styles.btnGhost}`} aria-label="Quitar vacías"
-                onClick={() => run_(() => deleteEmpties(e.id))}>✕</button>
+                onClick={() => run_(() => deleteEmpties(e.id))}><Icon name="x" size={14} /></button>
             </div>
           ))}
 
@@ -130,7 +131,7 @@ function ItemCard({ item, run_, busy }) {
 
           <div className={styles.chips}>
             <button className={`${styles.chip} ${item.needsReview ? styles.chipOn : ''}`}
-              onClick={() => run_(() => reviewItem(item.id, !item.needsReview))}>⚠️ {item.needsReview ? 'Quitar duda' : 'Marcar duda'}</button>
+              onClick={() => run_(() => reviewItem(item.id, !item.needsReview))}>{item.needsReview ? 'Quitar duda' : 'Marcar duda'}</button>
             <button className={styles.chip} onClick={() => run_(() => removeRunItem(item.id))}>Quitar de la hoja</button>
           </div>
         </div>
@@ -146,7 +147,7 @@ function Handover({ run, run_ }) {
   const diff = h.difference != null ? Number(h.difference) : null
   return (
     <div className={styles.handover}>
-      <strong>💵 Cuadre del efectivo</strong>
+      <strong>Cuadre del efectivo</strong>
       <div className={styles.plRow}><span>Efectivo cobrado</span><strong>{money(h.cash)}</strong></div>
       {run.tripId && <div className={styles.plRow}><span>− Gastos del viaje</span><strong>{money(h.tripExpenses)}</strong></div>}
       <div className={styles.plRow}><span>Debe entregar</span><strong>{money(h.cashExpected)}</strong></div>
@@ -154,7 +155,7 @@ function Handover({ run, run_ }) {
         <>
           <div className={styles.plRow}><span>Entregó a {h.handedTo}</span><strong>{money(h.handedAmount)}</strong></div>
           <div className={diff === 0 ? styles.in : diff < 0 ? styles.out : styles.in}>
-            {diff === 0 ? '✅ Cuadra' : diff < 0 ? `Faltan ${money(-diff)}` : `Sobran ${money(diff)}`}
+            {diff === 0 ? 'Cuadra' : diff < 0 ? `Faltan ${money(-diff)}` : `Sobran ${money(diff)}`}
           </div>
           <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => run_(() => reopenRun(run.id))}>Reabrir</button>
         </>
@@ -187,7 +188,7 @@ function AddClient({ run, date, run_ }) {
   }
   return (
     <div style={{ padding: '0 14px 12px' }}>
-      <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setOpen(o => !o)}>＋ Agregar cliente que no está</button>
+      <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setOpen(o => !o)}>Agregar cliente que no está</button>
       {open && (
         <div style={{ marginTop: 8 }}>
           <form className={styles.form} onSubmit={search}>
@@ -214,7 +215,7 @@ function RunCard({ run, date, run_, busy }) {
   return (
     <div className={styles.crop}>
       <div className={styles.cropHead}>
-        <span>🧾 {run.destination || 'Hoja de cobro'}{run.driverName ? ` · ${run.driverName}` : ''}</span>
+        <span>{run.destination || 'Hoja de cobro'}{run.driverName ? ` · ${run.driverName}` : ''}</span>
         <span className={`${styles.badge} ${run.closed ? styles.badgeOk : styles.badgeWarn}`}>{run.closed ? 'Cuadrada' : 'Abierta'}</span>
       </div>
       <div className={styles.statGrid}>
@@ -235,7 +236,7 @@ function RunCard({ run, date, run_, busy }) {
         </div>
       )}
       <div className={styles.chips} style={{ padding: '10px 14px' }}>
-        <button className={styles.btn} onClick={share}>📲 Enviar hoja por WhatsApp</button>
+        <button className={styles.btn} onClick={share}><Icon name="send" size={16} style={{ verticalAlign: -3, marginRight: 6 }} />Enviar hoja por WhatsApp</button>
         <button className={`${styles.btn} ${styles.btnGhost}`} onClick={copy}>Copiar</button>
       </div>
 
@@ -284,7 +285,7 @@ export default function CobrosPanel({ date, sectors, onError }) {
       {runs.map(r => <RunCard key={r.id} run={r} date={date} run_={run_} busy={busy} />)}
 
       <button className={`${styles.btn} ${showNew ? styles.btnGhost : ''}`} onClick={() => setShowNew(s => !s)}>
-        {showNew ? 'Cancelar' : '＋ Nueva hoja de cobro'}
+        {showNew ? 'Cancelar' : 'Nueva hoja de cobro'}
       </button>
       {showNew && (
         <form className={styles.closeBox} style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }} onSubmit={e => {

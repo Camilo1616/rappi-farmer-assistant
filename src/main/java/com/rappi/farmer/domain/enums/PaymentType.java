@@ -2,7 +2,7 @@ package com.rappi.farmer.domain.enums;
 
 /** Movimientos que bajan el saldo de un cliente. */
 public enum PaymentType {
-    ABONO("Abono"), CONSIGNACION("Consignación"), DESCUENTO("Descuento"), FALTANTE("Faltante de fresa");
+    ABONO("Abono"), CONSIGNACION("Consignación"), DESCUENTO("Descuento"), FALTANTE("Faltante");
 
     private final String label;
 

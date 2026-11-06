@@ -4,6 +4,8 @@ import {
   getClientProfile, updateClient, addClientNote, deleteClientNote, addPayment, getDay,
 } from '../services/despachoService'
 import styles from './ClienteFichaPage.module.css'
+import Icon from '../components/Icon'
+import '../styles/app-theme.css'
 
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
 const todayStr = () => new Date().toLocaleDateString('en-CA')
@@ -15,10 +17,10 @@ const initials = (name = '') => name.split(' ').filter(Boolean).slice(0, 2).map(
 const waNumber = (phone = '') => { const d = phone.replace(/\D/g, ''); return d.length === 10 ? '57' + d : d }
 
 const KIND = {
-  COMPRA: { icon: '🍓', dot: styles.dotCompra, sign: '+', cls: styles.warn },
-  PAGO: { icon: '💵', dot: styles.dotPago, sign: '−', cls: styles.good },
-  AJUSTE: { icon: '🏷️', dot: styles.dotAjuste, sign: '−', cls: styles.warn },
-  VACIAS: { icon: '📦', dot: styles.dotVacias, sign: '', cls: styles.info },
+  COMPRA: { icon: <Icon name="cart" size={15} />, dot: styles.dotCompra, sign: '+', cls: styles.warn },
+  PAGO: { icon: <Icon name="dollar" size={15} />, dot: styles.dotPago, sign: '−', cls: styles.good },
+  AJUSTE: { icon: <Icon name="percent" size={15} />, dot: styles.dotAjuste, sign: '−', cls: styles.warn },
+  VACIAS: { icon: <Icon name="box" size={15} />, dot: styles.dotVacias, sign: '', cls: styles.info },
 }
 const PAY_TYPES = [['ABONO', 'Abono'], ['CONSIGNACION', 'Consignación'], ['DESCUENTO', 'Descuento']]
 const METHODS = [['EFECTIVO', 'Efectivo'], ['NEQUI', 'Nequi'], ['CONSIGNACION', 'Consignación']]
@@ -170,7 +172,7 @@ function Notes({ profile, reload, fail }) {
             <div className={styles.noteText}>{n.content}</div>
             <div className={styles.noteDate}>{new Date(n.createdAt).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
-          <button className={`${styles.chip}`} aria-label="Eliminar nota" onClick={() => run(() => deleteClientNote(profile.id, n.id))}>✕</button>
+          <button className={`${styles.chip}`} aria-label="Eliminar nota" onClick={() => run(() => deleteClientNote(profile.id, n.id))}><Icon name="x" size={14} /></button>
         </div>
       ))}
     </div>
@@ -186,6 +188,8 @@ export default function ClienteFichaPage() {
   const [tab, setTab] = useState('historial')
   const [limit, setLimit] = useState(40)
   const [error, setError] = useState('')
+  // Vuelve a la pantalla de la que venía (misma sección y fecha); si se abrió directo, va al inicio
+  const goBack = () => (window.history.state && window.history.state.idx > 0 ? navigate(-1) : navigate('/despacho'))
 
   const load = useCallback(() => getClientProfile(id, limit).then(p => { setProfile(p); setError('') })
     .catch(e => setError(e.response?.data?.message || 'No se pudo cargar el cliente')), [id, limit])
@@ -194,8 +198,8 @@ export default function ClienteFichaPage() {
 
   if (!profile) {
     return (
-      <div className={styles.page}>
-        <div className={styles.top}><button className={styles.back} onClick={() => navigate('/despacho')}>← Volver</button></div>
+      <div className={`app-theme ${styles.page}`}>
+        <div className={styles.top}><button className={styles.back} onClick={goBack}><Icon name="left" size={16} style={{ verticalAlign: -3, marginRight: 4 }} />Volver</button></div>
         <div className={styles.empty}>{error || 'Cargando cliente…'}</div>
       </div>
     )
@@ -205,9 +209,9 @@ export default function ClienteFichaPage() {
   const wa = profile.phone ? `https://wa.me/${waNumber(profile.phone)}?text=${encodeURIComponent(statementText(profile))}` : null
 
   return (
-    <div className={styles.page}>
+    <div className={`app-theme ${styles.page}`}>
       <div className={styles.top}>
-        <button className={styles.back} onClick={() => navigate('/despacho')}>← Volver</button>
+        <button className={styles.back} onClick={goBack}><Icon name="left" size={16} style={{ verticalAlign: -3, marginRight: 4 }} />Volver</button>
         <span className={styles.topTitle}>Ficha del cliente</span>
       </div>
 
@@ -221,13 +225,13 @@ export default function ClienteFichaPage() {
                 <div className={styles.tags}>
                   <span className={`${styles.tag} ${statusCls}`}>{statusLabel}</span>
                   <span className={styles.tag}>{profile.sector}</span>
-                  {profile.plaza && <span className={styles.tag}>📍 {profile.plaza}</span>}
+                  {profile.plaza && <span className={styles.tag}><Icon name="pin" size={12} style={{ verticalAlign: -2 }} /> {profile.plaza}</span>}
                 </div>
               </div>
             </div>
             <div className={styles.actions}>
-              <a className={`${styles.act} ${!profile.phone ? styles.actOff : ''}`} href={profile.phone ? `tel:${profile.phone.replace(/\s/g, '')}` : undefined}>📞 Llamar</a>
-              <a className={`${styles.act} ${styles.actPrimary} ${!wa ? styles.actOff : ''}`} href={wa || undefined} target="_blank" rel="noopener noreferrer">💬 Enviar estado de cuenta</a>
+              <a className={`${styles.act} ${!profile.phone ? styles.actOff : ''}`} href={profile.phone ? `tel:${profile.phone.replace(/\s/g, '')}` : undefined}><Icon name="phone" size={16} style={{ verticalAlign: -3, marginRight: 6 }} />Llamar</a>
+              <a className={`${styles.act} ${styles.actPrimary} ${!wa ? styles.actOff : ''}`} href={wa || undefined} target="_blank" rel="noopener noreferrer"><Icon name="chat" size={16} style={{ verticalAlign: -3, marginRight: 6 }} />Enviar estado de cuenta</a>
             </div>
             {!profile.phone && <div className={styles.kpiHint}>Agrega un teléfono en “Datos” para llamar o escribir por WhatsApp.</div>}
           </div>
@@ -238,7 +242,7 @@ export default function ClienteFichaPage() {
               <div className={`${styles.kpiValue} ${balance > 0 ? styles.debt : balance < 0 ? styles.info : styles.good}`}>{money(balance)}</div>
               <div className={styles.kpiHint}>{balance > 0 ? 'El cliente debe' : balance < 0 ? 'Saldo a favor del cliente' : 'Sin deuda'}</div>
             </div>
-            <div className={styles.kpi}><div className={styles.kpiLabel}>📦 Vacías que debe</div><div className={styles.kpiValue}>{profile.packaging}</div></div>
+            <div className={styles.kpi}><div className={styles.kpiLabel}>Vacías que debe</div><div className={styles.kpiValue}>{profile.packaging}</div></div>
             <div className={styles.kpi}><div className={styles.kpiLabel}>Facturado 30 días</div><div className={styles.kpiValue}>{money(profile.billed30)}</div></div>
             <div className={styles.kpi}><div className={styles.kpiLabel}>Pagado 30 días</div><div className={`${styles.kpiValue} ${styles.good}`}>{money(profile.paid30)}</div></div>
             <div className={styles.kpi}><div className={styles.kpiLabel}>Sin pagar</div>
@@ -293,7 +297,7 @@ export default function ClienteFichaPage() {
         </div>
       </div>
 
-      {error && <div className={styles.toast} role="alert" onClick={() => setError('')}>⚠️ {error}</div>}
+      {error && <div className={styles.toast} role="alert" onClick={() => setError('')}><Icon name="alert" size={18} /> {error}</div>}
     </div>
   )
 }

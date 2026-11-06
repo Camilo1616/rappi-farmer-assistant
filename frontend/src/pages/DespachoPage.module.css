@@ -44,7 +44,7 @@
 .toast { position: fixed; left: 12px; right: 12px; bottom: 12px; max-width: 876px; margin: 0 auto;
   background: var(--bg-card); border: 2px solid var(--red); color: var(--text-primary);
   padding: 12px 16px; border-radius: 12px; z-index: 10; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
-.btn { background: var(--rappi-orange); color: #fff; border: none; border-radius: 10px; padding: 10px 14px;
+.btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 10px 14px;
   font-weight: 600; cursor: pointer; font-family: inherit; }
 .btnGhost { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); }
 .form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
@@ -59,7 +59,7 @@
 .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
 .tab { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card);
   color: var(--text-secondary); font-weight: 700; cursor: pointer; font-family: inherit; font-size: 1rem; }
-.tabOn { background: var(--rappi-orange); color: #fff; border-color: var(--rappi-orange); }
+.tabOn { background: var(--accent); color: #fff; border-color: var(--accent); }
 .debt { color: #EF4444; font-weight: 700; } .credit { color: #22C55E; font-weight: 700; }
 .breakdown { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: .9rem; padding: 4px 14px; }
 .payRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 14px;
@@ -68,7 +68,7 @@
 .seg { display: flex; gap: 6px; margin-bottom: 10px; }
 .segBtn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card);
   color: var(--text-secondary); font-weight: 600; cursor: pointer; font-family: inherit; }
-.segOn { background: var(--bg-input); color: var(--text-primary); border-color: var(--rappi-orange); }
+.segOn { background: var(--bg-input); color: var(--text-primary); border-color: var(--accent); }
 .rangeNav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .rangeLabel { flex: 1; text-align: center; font-weight: 600; }
 .table { width: 100%; border-collapse: collapse; font-size: .85rem; }
@@ -78,7 +78,7 @@
 .barRow { display: grid; grid-template-columns: 64px 1fr 54px; gap: 8px; align-items: center; padding: 4px 0; font-size: .8rem; }
 .barTrack { height: 10px; border-radius: 99px; background: var(--bg-input); position: relative; overflow: hidden; }
 .barHarv { position: absolute; inset: 0 auto 0 0; background: rgba(34,197,94,.35); border-radius: 99px; }
-.barSold { position: absolute; inset: 0 auto 0 0; background: var(--rappi-orange); border-radius: 99px; }
+.barSold { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 99px; }
 .searchBox { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
 .result { border-top: 1px solid var(--border); padding: 10px 2px; }
 .resultHead { width: 100%; display: flex; justify-content: space-between; gap: 8px; background: none; border: none;
@@ -116,7 +116,7 @@
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { padding: 8px 12px; border-radius: 99px; border: 1px solid var(--border); background: var(--bg-input);
   color: var(--text-secondary); font-family: inherit; font-weight: 600; cursor: pointer; font-size: .85rem; }
-.chipOn { background: var(--rappi-orange); border-color: var(--rappi-orange); color: #fff; }
+.chipOn { background: var(--accent); border-color: var(--accent); color: #fff; }
 .sectorLabel { padding: 8px 14px; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
   color: var(--text-secondary); background: rgba(255,255,255,.03); border-top: 1px solid var(--border); }
 .itemHead { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px;
@@ -139,3 +139,36 @@
 .sugRow { display: flex; justify-content: space-between; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--border); font-size: .88rem; }
 .sugGive { font-weight: 800; color: #22C55E; white-space: nowrap; }
 .sugNone { font-weight: 800; color: #EF4444; white-space: nowrap; }
+
+/* ══════════ Refinamientos de diseño ══════════ */
+.view { display: flex; flex-direction: column; gap: 4px; }
+.dateRow { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.date { flex: 1; min-width: 0; text-align: center; font-weight: 700; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); padding: 11px; }
+.nav { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; color: var(--text-secondary); background: var(--bg-card); box-shadow: var(--shadow-sm); }
+.nav:hover { color: var(--accent); }
+.card, .stock, .closeBox, .searchBox, .profitBox, .crop, .sector { box-shadow: var(--shadow-sm); border-radius: 16px; }
+.card { padding: 16px; }
+.cardLabel { font-size: .74rem; font-weight: 600; color: var(--text-secondary); }
+.cardValue { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+.sectionTitle { font-size: .74rem; font-weight: 800; letter-spacing: .08em; }
+.sectionHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.segmented { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--bg-input); gap: 2px; }
+.segBtn { border: none; background: none; padding: 8px 14px; border-radius: 9px; font-family: inherit; font-weight: 700; font-size: .85rem; color: var(--text-secondary); cursor: pointer; }
+.segOn { background: var(--bg-card); color: var(--accent); box-shadow: var(--shadow-sm); }
+.btn { border-radius: 12px; font-weight: 700; padding: 11px 16px; transition: background .15s, transform .05s; }
+.btn:hover:not(:disabled) { background: var(--accent-strong); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btnGhost:hover:not(:disabled) { background: var(--bg-input); color: var(--text-primary); }
+.input, .num { border-radius: 10px; }
+.input:focus, .num:focus, .date:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.stockName { font-weight: 700; }
+.first { background: var(--accent-soft); color: var(--accent); }
+.toast { display: flex; align-items: center; gap: 10px; border: 1px solid var(--danger); color: var(--text-primary); border-radius: 14px; bottom: 84px; }
+.toast svg { color: var(--danger); }
+@media (min-width: 960px) { .toast { bottom: 20px; left: 272px; right: 20px; max-width: 760px; } }
+.chip.chipOn, .chipOn { background: var(--accent); border-color: var(--accent); color: #fff; }
+.searchBox { padding: 0; overflow: hidden; margin-bottom: 14px; }
+.searchBar { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 16px; border: none; background: none; color: var(--text-secondary);
+  font-family: inherit; font-size: .95rem; cursor: pointer; text-align: left; }
+.searchBar:hover { color: var(--text-primary); }
+.searchBody { padding: 0 14px 14px; }

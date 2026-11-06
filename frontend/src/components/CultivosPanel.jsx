@@ -6,7 +6,7 @@ import styles from '../pages/DespachoPage.module.css'
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
 const LABELS = { JUMBO: 'Jumbo', PRIMERA: 'Primera', SEGUNDA: 'Segunda', TERCERA: 'Tercera', CUARTA: 'Cuarta', QUINTA: 'Quinta', MADURA: 'Madura', BOLSAS: 'Bolsas' }
 
-/** Cultivos: fresa recibida de cada uno en el día y su precio de compra. Suma sola al stock. */
+/** Cultivos: producto recibido de cada uno en el día y su precio de compra. Suma sola al stock. */
 export default function CultivosPanel({ date, onError }) {
   const [data, setData] = useState(null)
   const [pricesOpen, setPricesOpen] = useState({})

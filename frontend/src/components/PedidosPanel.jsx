@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
+import Icon from './Icon'
 import { useNavigate } from 'react-router-dom'
 import { getOpenOrders, getSuggestion, applySuggestion } from '../services/despachoService'
 import styles from '../pages/DespachoPage.module.css'
 
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
 
-/** Pedidos abiertos del día contra la fresa disponible, con reparto sugerido cuando no alcanza. */
+/** Pedidos abiertos del día contra lo disponible, con reparto sugerido cuando no alcanza. */
 export default function PedidosPanel({ date, onError, onChanged }) {
   const navigate = useNavigate()
   const [data, setData] = useState(null)
@@ -46,7 +47,7 @@ export default function PedidosPanel({ date, onError, onChanged }) {
 
       {moraWithOrders.length > 0 && (
         <div className={styles.moraBox} style={{ margin: '0 0 14px' }}>
-          <strong>⚠️ {moraWithOrders.length} cliente{moraWithOrders.length !== 1 ? 's' : ''} en mora con pedido abierto</strong>
+          <strong><Icon name="alert" size={16} style={{ verticalAlign: -3, marginRight: 6 }} />{moraWithOrders.length} cliente{moraWithOrders.length !== 1 ? 's' : ''} en mora con pedido abierto</strong>
           {moraWithOrders.map(o => (
             <div key={o.clientId} className={styles.payRow} style={{ padding: '6px 0', border: 'none' }}>
               <button className={styles.resultHead} onClick={() => navigate(`/despacho/cliente/${o.clientId}`)}>
@@ -58,7 +59,7 @@ export default function PedidosPanel({ date, onError, onChanged }) {
         </div>
       )}
 
-      <h2 className={styles.sectionTitle}>Pedido contra fresa disponible</h2>
+      <h2 className={styles.sectionTitle}>Pedido contra disponible</h2>
       <div className={styles.closeBox} style={{ marginBottom: 16 }}>
         <table className={styles.otbl}>
           <thead><tr><th>Categoría</th><th>Pedido</th><th>Entreg.</th><th>Pend.</th><th>Hay</th><th>Falta / sobra</th></tr></thead>
@@ -67,18 +68,18 @@ export default function PedidosPanel({ date, onError, onChanged }) {
               <tr key={c.category}>
                 <td>{c.label}</td><td>{c.ordered}</td><td>{c.delivered}</td><td>{c.pending}</td><td>{c.free}</td>
                 <td>{c.shortage > 0 ? <span className={styles.short}>−{c.shortage}</span>
-                  : c.surplus > 0 ? <span className={styles.spare}>+{c.surplus}</span> : '✓'}</td>
+                  : c.surplus > 0 ? <span className={styles.spare}>+{c.surplus}</span> : <Icon name="check" size={14} />}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {data.categories.every(c => c.ordered === 0 && c.free === 0) && <div className={styles.small}>Sin pedidos ni fresa este día.</div>}
+        {data.categories.every(c => c.ordered === 0 && c.free === 0) && <div className={styles.small}>Sin pedidos ni existencias este día.</div>}
       </div>
 
       <h2 className={styles.sectionTitle}>Reparto sugerido</h2>
       <div className={styles.closeBox} style={{ marginBottom: 16 }}>
         <div className={styles.small} style={{ marginBottom: 8 }}>
-          Reparte la fresa disponible entre los pedidos pendientes: primero los clientes al día (menor saldo primero) y al final los morosos.
+          Reparte lo disponible entre los pedidos pendientes: primero los clientes al día (menor saldo primero) y al final los morosos.
         </div>
         <button className={styles.btn} onClick={calc} disabled={s.pending === 0}>
           {s.pending === 0 ? 'No hay pedidos pendientes' : 'Calcular reparto'}
@@ -91,7 +92,7 @@ export default function PedidosPanel({ date, onError, onChanged }) {
                 <span><strong>{r.name}</strong>{r.overdue && <span className={styles.moraTag}>En mora</span>}
                   <div className={styles.small}>{r.label} · pidió {r.ordered}, lleva {r.delivered}</div></span>
                 <span className={r.give > 0 ? styles.sugGive : styles.sugNone}>
-                  {r.give > 0 ? `+${r.give}` : 'sin fresa'}{r.uncovered > 0 && r.give > 0 ? ` (faltan ${r.uncovered})` : ''}
+                  {r.give > 0 ? `+${r.give}` : 'sin existencias'}{r.uncovered > 0 && r.give > 0 ? ` (faltan ${r.uncovered})` : ''}
                 </span>
               </div>
             ))}

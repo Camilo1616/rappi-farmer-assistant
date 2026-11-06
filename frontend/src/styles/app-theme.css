@@ -1,0 +1,15 @@
+/* Tema del panel de ventas (despacho, cartera, cobros...). Se aplica solo dentro de .app-theme,
+   así las pantallas del resto del proyecto conservan su estilo. Hereda claro/oscuro de global.css. */
+.app-theme {
+  --accent: #4F46E5;
+  --accent-strong: #4338CA;
+  --accent-soft: rgba(79, 70, 229, 0.10);
+  --accent-ring: rgba(79, 70, 229, 0.35);
+  --ok: #16A34A;
+  --warn: #D97706;
+  --danger: #DC2626;
+  --info: #2563EB;
+  --ring: 0 0 0 3px var(--accent-ring);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+}

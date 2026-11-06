@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import Icon from './Icon'
 import { getTripDay, createTrip, deleteTrip, addTripEntry, deleteTripEntry, savePreset, deletePreset } from '../services/despachoService'
 import styles from '../pages/DespachoPage.module.css'
 
@@ -35,7 +36,7 @@ function EntryForm({ trip, date, presets, run }) {
     }}>
       <select className={styles.input} defaultValue="" onChange={e => applyPreset(e.target.value)} aria-label="Tarifa frecuente">
         <option value="">Tarifa frecuente…</option>
-        {presets.map(p => <option key={p.id} value={p.id}>{p.kind === 'INCOME' ? '＋' : '−'} {p.concept}</option>)}
+        {presets.map(p => <option key={p.id} value={p.id}>{p.kind === 'INCOME' ? '+' : '−'} {p.concept}</option>)}
       </select>
       <select className={styles.input} value={type} onChange={e => setType(e.target.value)}>
         <option value="EXPENSE">Gasto</option><option value="INCOME">Ingreso (flete)</option>
@@ -64,7 +65,7 @@ function PresetsEditor({ presets, date, run }) {
     <div className={styles.closeBox}>
       {presets.map(p => (
         <div key={p.id} className={styles.cropPriceRow}>
-          <span>{p.kind === 'INCOME' ? '＋' : '−'} {p.concept}{p.unitAmount != null ? ` · ${money(p.unitAmount)}${p.perBox ? ' / caja' : ''}` : ''}</span>
+          <span>{p.kind === 'INCOME' ? '+' : '−'} {p.concept}{p.unitAmount != null ? ` · ${money(p.unitAmount)}${p.perBox ? ' / caja' : ''}` : ''}</span>
           <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => run(() => deletePreset(p.id, date))}>Quitar</button>
         </div>
       ))}
@@ -119,7 +120,7 @@ export default function ViajesPanel({ date, onError }) {
       {data.trips.map(t => (
         <div key={t.id} className={styles.crop}>
           <div className={styles.cropHead}>
-            <span>🚚 {t.destination || 'Viaje'}{t.driverName ? ` · ${t.driverName}` : ''}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Icon name="truck" size={16} />{t.destination || 'Viaje'}{t.driverName ? ` · ${t.driverName}` : ''}</span>
             <span className={`${styles.meta} ${Number(t.net) >= 0 ? styles.in : styles.out}`}>{money(t.net)}</span>
           </div>
           {t.entries.length === 0 && <div className={styles.small} style={{ padding: '8px 14px' }}>Sin líneas todavía.</div>}
@@ -131,7 +132,7 @@ export default function ViajesPanel({ date, onError }) {
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className={e.type === 'INCOME' ? styles.in : styles.out}>{e.type === 'INCOME' ? '+' : '−'}{money(e.amount)}</span>
-                <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => run(() => deleteTripEntry(e.id, date))} aria-label="Quitar línea">✕</button>
+                <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => run(() => deleteTripEntry(e.id, date))} aria-label="Quitar línea"><Icon name="x" size={14} /></button>
               </span>
             </div>
           ))}
