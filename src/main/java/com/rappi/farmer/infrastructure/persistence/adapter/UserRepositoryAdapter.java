@@ -44,6 +44,7 @@ public class UserRepositoryAdapter implements UserRepository {
         entity.setLastActivity(user.getLastActivity());
         entity.setActivityStatus(user.getActivityStatus());
         entity.setWhatsappPhoneRegisteredAt(user.getWhatsappPhoneRegisteredAt());
+        entity.setMustChangePassword(user.isMustChangePassword());
 
         return toDomain(jpaRepository.save(entity));
     }
@@ -75,6 +76,6 @@ public class UserRepositoryAdapter implements UserRepository {
                 e.getAccountStatus(), e.getLiderId(),
                 e.getNickname(), e.getAvatarUrl(), e.getCalendarRefreshToken(), e.getLastLoginAt(),
                 e.getLastImportDate(), e.getLastActivity(), e.getActivityStatus(),
-                e.getWhatsappPhoneRegisteredAt());
+                e.getWhatsappPhoneRegisteredAt(), Boolean.TRUE.equals(e.getMustChangePassword()));
     }
 }

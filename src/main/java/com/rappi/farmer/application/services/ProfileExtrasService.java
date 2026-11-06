@@ -99,7 +99,11 @@ public class ProfileExtrasService {
         if (newPassword.length() < 6) {
             throw new RuntimeException("La nueva contraseña debe tener al menos 6 caracteres");
         }
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new RuntimeException("La nueva contraseña debe ser distinta de la actual");
+        }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false); // ya no usa la contraseña temporal del correo
         userRepository.save(user);
     }
 

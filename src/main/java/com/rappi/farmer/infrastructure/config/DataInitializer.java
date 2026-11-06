@@ -37,15 +37,25 @@ public class DataInitializer implements ApplicationRunner {
         String duenaEmail = System.getenv("DUENA_EMAIL");
         String duenaPassword = System.getenv("DUENA_PASSWORD");
         if (duenaEmail != null && !duenaEmail.isBlank() && duenaPassword != null && !duenaPassword.isBlank()) {
-            createIfNotExists("Angela", duenaEmail.trim(), duenaPassword, UserRole.DUENA.name(), "CO");
+            createPanelUser("Angela", duenaEmail.trim(), duenaPassword, UserRole.DUENA);
         }
         // Cuenta de Lorena (cartera): misma regla, solo si se definen las variables de entorno
         String asistenteEmail = System.getenv("ASISTENTE_EMAIL");
         String asistentePassword = System.getenv("ASISTENTE_PASSWORD");
         if (asistenteEmail != null && !asistenteEmail.isBlank() && asistentePassword != null && !asistentePassword.isBlank()) {
-            createIfNotExists("Lorena", asistenteEmail.trim(), asistentePassword, UserRole.ASISTENTE.name(), "CO");
+            createPanelUser("Lorena", asistenteEmail.trim(), asistentePassword, UserRole.ASISTENTE);
         }
 
+    }
+
+    /** Cuenta inicial del panel: la contraseña la define quien despliega, así que debe cambiarla en su primer ingreso. */
+    private void createPanelUser(String fullName, String email, String password, UserRole role) {
+        if (userRepository.findByEmail(email).isPresent()) return;
+        createIfNotExists(fullName, email, password, role.name(), "CO");
+        userRepository.findByEmail(email.toLowerCase()).ifPresent(u -> {
+            u.setMustChangePassword(true);
+            userRepository.save(u);
+        });
     }
 
     private void createIfNotExists(String fullName, String email, String password, String role, String country) {

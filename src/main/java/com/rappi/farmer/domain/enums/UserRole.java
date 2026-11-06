@@ -19,6 +19,11 @@ public enum UserRole {
         };
     }
 
+    /** Roles del panel de ventas (despacho y cartera); no pertenecen a Rappi, así que pueden usar cualquier correo. */
+    public boolean isPanelRole() {
+        return this == DUENA || this == ASISTENTE;
+    }
+
     public boolean canImport() {
         return this == LIDER || this == FARMER_MASS || this == COORDINATOR;
     }

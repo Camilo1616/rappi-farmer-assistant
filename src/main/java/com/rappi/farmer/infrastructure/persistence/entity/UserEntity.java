@@ -72,4 +72,7 @@ public class UserEntity {
     /** Fecha en que el farmer activó la SIM de WhatsApp — controla el límite diario de envíos */
     @Column(name = "whatsapp_phone_registered_at")
     private LocalDate whatsappPhoneRegisteredAt;
+
+    @Column(name = "must_change_password")
+    private Boolean mustChangePassword = false;
 }

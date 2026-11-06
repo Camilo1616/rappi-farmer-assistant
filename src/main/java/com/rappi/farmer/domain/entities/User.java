@@ -34,6 +34,8 @@ public class User {
     private LocalDateTime lastActivity;
     private String activityStatus;
     private java.time.LocalDate whatsappPhoneRegisteredAt;
+    /** true cuando el usuario entro con una contrasena temporal enviada por correo y debe cambiarla. */
+    private boolean mustChangePassword;
 
     public UserRole getUserRole() {
         try { return UserRole.valueOf(role); } catch (Exception e) { return UserRole.FARMER_MASS; }

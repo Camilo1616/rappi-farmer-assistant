@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
 import CalendarCallbackPage from './pages/CalendarCallbackPage'
@@ -19,6 +19,7 @@ const ProfilePage           = lazy(() => import('./pages/ProfilePage'))
 const LiderDashboardPage    = lazy(() => import('./pages/LiderDashboardPage'))
 const DespachoPage          = lazy(() => import('./pages/DespachoPage'))
 const ClienteFichaPage      = lazy(() => import('./pages/ClienteFichaPage'))
+const CambiarClavePage      = lazy(() => import('./pages/CambiarClavePage'))
 
 function RouteFallback() {
   return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando…</div>
@@ -48,8 +49,12 @@ function IndexRedirect() {
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return null
-  return user ? children : <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace />
+  // Entró con la contraseña temporal del correo: no avanza hasta crear una propia
+  if (user.mustChangePassword && location.pathname !== '/cambiar-clave') return <Navigate to="/cambiar-clave" replace />
+  return children
 }
 
 function AppRoutes() {
@@ -57,6 +62,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/calendar-callback" element={<CalendarCallbackPage />} />
+      <Route path="/cambiar-clave" element={<PrivateRoute><Lazy><CambiarClavePage /></Lazy></PrivateRoute>} />
       <Route path="/" element={<PrivateRoute><IndexRedirect /></PrivateRoute>} />
       <Route
         path="/dashboard"

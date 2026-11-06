@@ -1,0 +1,11 @@
+.page { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: var(--bg-primary); color: var(--text-primary); }
+.card { width: 100%; max-width: 420px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 26px; box-shadow: var(--shadow-md); display: grid; gap: 10px; }
+.title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+.text { font-size: .88rem; color: var(--text-secondary); line-height: 1.45; margin-bottom: 6px; }
+.label { font-size: .75rem; font-weight: 700; color: var(--text-secondary); margin-top: 4px; }
+.input { width: 100%; box-sizing: border-box; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); border-radius: 12px; padding: 13px; font-size: 1rem; font-family: inherit; }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.error { color: var(--danger); font-size: .86rem; font-weight: 600; }
+.btn { margin-top: 8px; background: var(--accent); color: #fff; border: none; border-radius: 12px; padding: 14px; font-weight: 700; font-size: 1rem; font-family: inherit; cursor: pointer; }
+.btn:disabled { opacity: .6; }
+.link { background: none; border: none; color: var(--text-secondary); font-family: inherit; font-size: .85rem; cursor: pointer; padding: 6px; }

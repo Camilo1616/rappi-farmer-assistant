@@ -12,6 +12,7 @@ export const login = async (email, password) => {
     fullName: data.fullName,
     role: data.role,
     nickname: data.nickname ?? null,
+    mustChangePassword: !!data.mustChangePassword,
   }))
   return data
 }

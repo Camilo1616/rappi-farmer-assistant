@@ -20,8 +20,8 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const data = await login(email, password)
-      setUser({ id: data.id, email: data.email, fullName: data.fullName, role: data.role })
-      navigate('/')
+      setUser({ id: data.id, email: data.email, fullName: data.fullName, role: data.role, mustChangePassword: !!data.mustChangePassword })
+      navigate(data.mustChangePassword ? '/cambiar-clave' : '/')
     } catch (err) {
       setError(err.response?.data?.message || 'Credenciales incorrectas')
     } finally {
@@ -65,7 +65,7 @@ export default function LoginPage() {
           </div>
 
           <h2 className={styles.title}>Bienvenido de vuelta</h2>
-          <p className={styles.sub}>Ingresa con tu cuenta @rappi.com</p>
+          <p className={styles.sub}>Ingresa con tu correo y contraseña</p>
 
           <form className={styles.form} onSubmit={handleSubmit}>
             <div className={styles.fieldWrap}>
@@ -73,7 +73,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 className={styles.input}
-                placeholder="nombre@rappi.com"
+                placeholder="tu@correo.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
@@ -472,8 +472,8 @@ function ForgotPasswordModal({ onClose }) {
               Ingresa tu correo registrado y te enviaremos un código.
             </p>
             <div className={styles.modalField}>
-              <label className={styles.modalLabel}>Correo @rappi.com</label>
-              <input className={styles.modalInput} type="email" placeholder="nombre@rappi.com"
+              <label className={styles.modalLabel}>Correo</label>
+              <input className={styles.modalInput} type="email" placeholder="tu@correo.com"
                 value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
             </div>
             {error && <div className={styles.modalError}>⚠ {error}</div>}

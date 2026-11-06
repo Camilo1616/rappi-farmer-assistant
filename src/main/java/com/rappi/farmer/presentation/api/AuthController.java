@@ -42,7 +42,7 @@ public class AuthController {
             // Sync calendar en background sin bloquear la respuesta
             CompletableFuture.runAsync(() -> calendarService.syncOnLogin(user, result.calendarSyncDays()));
             return ResponseEntity.ok(new AuthResponse(token, user.getEmail(),
-                    user.getFullName(), user.getUserRole().name(), user.getId(), user.getNickname()));
+                    user.getFullName(), user.getUserRole().name(), user.getId(), user.getNickname(), user.isMustChangePassword()));
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", e.getMessage()));
@@ -100,7 +100,7 @@ public class AuthController {
             String token = jwtService.generateToken(user.getEmail(), user.getUserRole().name());
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new AuthResponse(token, user.getEmail(),
-                            user.getFullName(), user.getUserRole().name(), user.getId(), user.getNickname()));
+                            user.getFullName(), user.getUserRole().name(), user.getId(), user.getNickname(), user.isMustChangePassword()));
         } catch (BusinessException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -109,8 +109,8 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
         String email = body.get("email");
-        if (!isRappiEmail(email))
-            return ResponseEntity.badRequest().body(Map.of("message", "Solo se permiten correos corporativos @rappi.com"));
+        if (email == null || email.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("message", "Ingresa tu correo"));
         if (!userService.existsByEmail(email))
             return ResponseEntity.badRequest().body(Map.of("message", "No existe una cuenta con ese correo"));
         try {
@@ -200,5 +200,6 @@ public class AuthController {
             String fullName,
             String role,
             Long userId,
-            String nickname) {}
+            String nickname,
+            boolean mustChangePassword) {}
 }

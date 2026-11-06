@@ -28,12 +28,12 @@ public class UserService {
 
     /** Autentica al usuario. Lanza BusinessException si las credenciales son incorrectas. */
     public LoginResult login(String email, String rawPassword) {
-        if (!User.isRappiEmail(email)) {
-            throw new BusinessException("El correo debe ser @rappi.com");
-        }
         // Leer usuario sin transacción abierta — bcrypt no debe retener una conexión de DB
         User user = userRepository.findByEmail(email.toLowerCase())
                 .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
+        if (!user.isActive()) {
+            throw new BusinessException("Tu cuenta está desactivada. Habla con quien administra los usuarios.");
+        }
         if (!encoder.matches(rawPassword, user.getPasswordHash())) {
             throw new BusinessException("Contraseña incorrecta");
         }
@@ -51,7 +51,8 @@ public class UserService {
 
     @Transactional
     public User createUser(CreateUserRequest request) {
-        if (!User.isRappiEmail(request.getEmail())) {
+        // El correo corporativo solo se exige a los roles de Rappi; los del panel de ventas usan su correo propio
+        if (!isPanelRole(request.getRole()) && !User.isRappiEmail(request.getEmail())) {
             throw new BusinessException("El correo debe ser @rappi.com");
         }
         if (userRepository.existsByEmail(request.getEmail().toLowerCase())) {
@@ -66,10 +67,14 @@ public class UserService {
         User user = new User(null, request.getFullName(),
                 request.getEmail().toLowerCase(),
                 request.getRole() != null ? request.getRole() : UserRole.FARMER_MASS.name(),
-                hash, code, country, "ACTIVE", request.getLiderId(), nickname, null, null, null, null, null, null, null);
+                hash, code, country, "ACTIVE", request.getLiderId(), nickname, null, null, null, null, null, null, null, false);
         User saved = userRepository.save(user);
         log.info("Usuario creado: {} ({})", saved.getEmail(), saved.getRole());
         return saved;
+    }
+
+    private static boolean isPanelRole(String role) {
+        try { return role != null && UserRole.valueOf(role).isPanelRole(); } catch (IllegalArgumentException e) { return false; }
     }
 
     public List<User> findAll() {

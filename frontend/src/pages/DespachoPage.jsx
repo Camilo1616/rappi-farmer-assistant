@@ -17,6 +17,7 @@ import ClientSearch from '../components/ClientSearch'
 import AppShell from '../components/AppShell'
 import VentasTable from '../components/VentasTable'
 import ApkDownload from '../components/ApkDownload'
+import UsuariosPanel from '../components/UsuariosPanel'
 import Icon from '../components/Icon'
 import '../styles/app-theme.css'
 import styles from './DespachoPage.module.css'
@@ -29,10 +30,11 @@ const NAV = [
   { key: 'cultivos', label: 'Cultivos', icon: 'layers' },
   { key: 'viajes', label: 'Viajes', icon: 'truck' },
   { key: 'reportes', label: 'Reportes', icon: 'chart' },
+  { key: 'usuarios', label: 'Usuarios y roles', icon: 'user' },
   { key: 'app', label: 'Descargar app', icon: 'smartphone' },
 ]
 // En celular estas van dentro del botón "Más" de la barra inferior
-const MORE = ['cultivos', 'viajes', 'reportes', 'app']
+const MORE = ['cultivos', 'viajes', 'reportes', 'usuarios', 'app']
 
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
 const todayStr = () => new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en hora local
@@ -152,6 +154,8 @@ export default function DespachoPage() {
   let content
   if (tab === 'app') {
     content = <ApkDownload />
+  } else if (tab === 'usuarios') {
+    content = <UsuariosPanel actorId={user?.id} actorRole={user?.role} onError={setError} />
   } else if (!day) {
     content = <div className={styles.small}>{error || 'Cargando…'}</div>
   } else if (tab === 'pedidos') {
@@ -308,7 +312,7 @@ export default function DespachoPage() {
   return (
     <AppShell items={NAV} moreKeys={MORE} active={tab} onNavigate={setTab} title={current.label} subtitle={subtitle}
       user={user} onLogout={doLogout}>
-      {tab !== 'app' && (<>{dateBar}<ClientSearch date={date} /></>)}
+      {tab !== 'app' && tab !== 'usuarios' && (<>{dateBar}<ClientSearch date={date} /></>)}
       <div className={styles.view}>{content}</div>
       {error && <div className={styles.toast} role="alert" onClick={() => setError('')}><Icon name="alert" size={18} /><span>{error}</span></div>}
     </AppShell>
