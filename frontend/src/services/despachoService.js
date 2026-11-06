@@ -10,3 +10,7 @@ export const setLine = (date, clientId, category, orderedBoxes, deliveredBoxes) 
 export const setPrice = (category, price) => api.put('/despacho/prices', { category, price }).then(r => r.data)
 export const createSector = (name) => api.post('/despacho/sectors', { name }).then(r => r.data)
 export const createClient = (data) => api.post('/despacho/clients', data).then(r => r.data)
+
+export const getPortfolio = (date) => api.get('/despacho/portfolio', { params: { date } }).then(r => r.data)
+export const addPayment = (data) => api.post('/despacho/payments', data).then(r => r.data)
+export const deletePayment = (id, date) => api.delete(`/despacho/payments/${id}`, { params: { date } }).then(r => r.data)

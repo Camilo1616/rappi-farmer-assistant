@@ -17,4 +17,9 @@ public interface DispatchLineJpaRepository extends JpaRepository<DispatchLineEnt
     /** Total de cajas entregadas por categoria hasta el dia indicado (inclusive). */
     @Query("select e.category, coalesce(sum(e.deliveredBoxes), 0) from DispatchLineEntity e where e.day <= :day group by e.category")
     List<Object[]> sumDeliveredUpTo(@Param("day") LocalDate day);
+
+    /** Total facturado (cajas entregadas x precio) por cliente hasta el dia indicado (inclusive). */
+    @Query("select e.clientId, coalesce(sum(e.deliveredBoxes * e.unitPrice), 0) from DispatchLineEntity e "
+            + "where e.day <= :day group by e.clientId")
+    List<Object[]> billedUpTo(@Param("day") LocalDate day);
 }

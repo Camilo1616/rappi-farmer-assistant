@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import {
   getDay, setHarvest, setDiscard, setLine, setPrice, createSector, createClient,
 } from '../services/despachoService'
+import CarteraPanel from '../components/CarteraPanel'
 import styles from './DespachoPage.module.css'
 
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
@@ -87,6 +88,7 @@ export default function DespachoPage() {
   const [day, setDay] = useState(null)
   const [error, setError] = useState('')
   const [openSectors, setOpenSectors] = useState({})
+  const [tab, setTab] = useState('despacho')
   const [showAdmin, setShowAdmin] = useState(false)
   const [sectorName, setSectorName] = useState('')
   const [client, setClient] = useState({ sectorId: '', name: '', openingBalance: '' })
@@ -120,6 +122,12 @@ export default function DespachoPage() {
         <button className={styles.nav} onClick={() => setDate(shiftDay(date, 1))} aria-label="Día siguiente">›</button>
       </div>
 
+      <div className={styles.tabs}>
+        <button className={`${styles.tab} ${tab === 'despacho' ? styles.tabOn : ''}`} onClick={() => setTab('despacho')}>Despacho</button>
+        <button className={`${styles.tab} ${tab === 'cartera' ? styles.tabOn : ''}`} onClick={() => setTab('cartera')}>Cartera</button>
+      </div>
+
+      {tab === 'cartera' ? <CarteraPanel date={date} onError={setError} /> : (<>
       <div className={styles.cards}>
         <div className={styles.card}><div className={styles.cardLabel}>Cosechado hoy</div><div className={styles.cardValue}>{s.harvestedBoxes}</div></div>
         <div className={styles.card}><div className={styles.cardLabel}>Arrastre de ayer</div><div className={styles.cardValue}>{s.carryoverBoxes}</div></div>
@@ -231,6 +239,8 @@ export default function DespachoPage() {
           </div>
         )}
       </section>
+
+      </>)}
 
       {error && <div className={styles.toast} role="alert" onClick={() => setError('')}>⚠️ {error}</div>}
     </div>

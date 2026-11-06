@@ -56,3 +56,12 @@
 .closeRow:last-child { border-bottom: none; }
 .closeHead { color: var(--text-secondary); font-size: .7rem; }
 .right { text-align: right; }
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.tab { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card);
+  color: var(--text-secondary); font-weight: 700; cursor: pointer; font-family: inherit; font-size: 1rem; }
+.tabOn { background: var(--rappi-orange); color: #fff; border-color: var(--rappi-orange); }
+.debt { color: #EF4444; font-weight: 700; } .credit { color: #22C55E; font-weight: 700; }
+.breakdown { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: .9rem; padding: 4px 14px; }
+.payRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 14px;
+  border-top: 1px solid var(--border); font-size: .9rem; }
+.payForm { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px 14px; }

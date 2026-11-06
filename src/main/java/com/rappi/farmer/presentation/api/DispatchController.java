@@ -1,6 +1,8 @@
 package com.rappi.farmer.presentation.api;
 
 import com.rappi.farmer.application.services.DispatchService;
+import com.rappi.farmer.application.services.PortfolioService;
+import com.rappi.farmer.domain.enums.PaymentType;
 import com.rappi.farmer.domain.enums.FruitCategory;
 import com.rappi.farmer.domain.exceptions.BusinessException;
 import com.rappi.farmer.domain.exceptions.InsufficientStockException;
@@ -27,12 +29,15 @@ import java.util.Map;
 public class DispatchController {
 
     private final DispatchService service;
+    private final PortfolioService portfolio;
 
     public record HarvestRequest(@NotNull LocalDate date, @NotNull FruitCategory category, @NotNull @Min(0) Integer boxes) {}
     public record LineRequest(@NotNull LocalDate date, @NotNull Long clientId, @NotNull FruitCategory category,
                               @NotNull @Min(0) Integer orderedBoxes, @NotNull @Min(0) Integer deliveredBoxes) {}
     public record PriceRequest(@NotNull FruitCategory category, @NotNull BigDecimal price) {}
     public record SectorRequest(@NotBlank String name) {}
+    public record PaymentRequest(@NotNull LocalDate date, @NotNull Long clientId, @NotNull PaymentType type,
+                                 @NotNull BigDecimal amount, String note) {}
     public record ClientRequest(@NotNull Long sectorId, @NotBlank String name, BigDecimal openingBalance) {}
 
     @GetMapping("/day")
@@ -72,6 +77,24 @@ public class DispatchController {
     @PostMapping("/clients")
     public ResponseEntity<?> client(@Valid @RequestBody ClientRequest r) {
         return ResponseEntity.ok(service.createClient(r.sectorId(), r.name(), r.openingBalance()));
+    }
+
+    @GetMapping("/portfolio")
+    public ResponseEntity<?> portfolio(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(portfolio.getPortfolio(date != null ? date : LocalDate.now()));
+    }
+
+    @PostMapping("/payments")
+    public ResponseEntity<?> addPayment(@Valid @RequestBody PaymentRequest r) {
+        portfolio.addPayment(r.date(), r.clientId(), r.type(), r.amount(), r.note());
+        return ResponseEntity.ok(portfolio.getPortfolio(r.date()));
+    }
+
+    @DeleteMapping("/payments/{id}")
+    public ResponseEntity<?> deletePayment(@PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        portfolio.deletePayment(id);
+        return ResponseEntity.ok(portfolio.getPortfolio(date));
     }
 
     @ExceptionHandler(InsufficientStockException.class)
