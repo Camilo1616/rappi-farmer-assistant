@@ -7,9 +7,10 @@ import java.util.List;
 /** Vista completa de un dia de despacho: stock, clientes por sector y resumen de cierre. */
 public record DispatchDayDto(LocalDate date, List<StockDto> stock, List<SectorDto> sectors, SummaryDto summary) {
 
-    /** Stock de una categoria: arrastre de dias anteriores + cosecha - entregado - descarte. */
+    /** Stock de una categoria: arrastre + cosecha (manual + cultivos) - entregado - descarte. */
     public record StockDto(String category, String label, int carryover, int harvested,
-                           int delivered, int discarded, int available, BigDecimal price) {}
+                           int delivered, int discarded, int available, BigDecimal price,
+                           int cultivoHarvested) {}
 
     public record LineDto(String category, int ordered, int delivered, BigDecimal unitPrice) {}
 

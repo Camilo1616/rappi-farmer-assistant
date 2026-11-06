@@ -84,3 +84,21 @@
 .resultHead { width: 100%; display: flex; justify-content: space-between; gap: 8px; background: none; border: none;
   color: inherit; font-family: inherit; text-align: left; cursor: pointer; padding: 0; }
 .detail { margin-top: 8px; font-size: .85rem; display: grid; gap: 4px; color: var(--text-secondary); }
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tab { flex: 1 0 auto; padding: 12px 16px; font-size: .95rem; white-space: nowrap; }
+.crop { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+.cropHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px;
+  background: rgba(255,255,255,.03); font-weight: 700; }
+.cropGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; padding: 12px 14px; }
+.cropCell { display: flex; flex-direction: column; gap: 4px; }
+.cropPriceRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; font-size: .9rem; }
+.in { color: #22C55E; font-weight: 700; } .out { color: #EF4444; font-weight: 700; }
+.entry { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 14px;
+  border-top: 1px solid var(--border); font-size: .9rem; }
+.entryMain { display: flex; flex-direction: column; }
+.profitBox { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.profitBig { font-size: 1.8rem; font-weight: 800; margin: 4px 0 10px; }
+.plRow { display: flex; justify-content: space-between; padding: 4px 0; font-size: .9rem; color: var(--text-secondary); }
+.plRow strong { color: var(--text-primary); }
+.preview { font-size: .85rem; color: var(--text-secondary); width: 100%; }
+.check { display: flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--text-secondary); }

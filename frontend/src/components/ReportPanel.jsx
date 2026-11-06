@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getReport } from '../services/despachoService'
+import ProfitCard from './ProfitCard'
 import styles from '../pages/DespachoPage.module.css'
 
 const money = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0)
@@ -69,6 +70,8 @@ export default function ReportPanel({ date, onError }) {
           <div className={styles.card} style={{ marginBottom: 16 }}>
             <div className={styles.cardLabel}>Ventas del periodo</div><div className={styles.cardValue}>{money(t.sales)}</div>
           </div>
+
+          <div style={{ marginBottom: 16 }}><ProfitCard from={from} to={to} /></div>
 
           <h2 className={styles.sectionTitle}>Por categoría</h2>
           <div className={styles.closeBox} style={{ marginBottom: 16 }}>

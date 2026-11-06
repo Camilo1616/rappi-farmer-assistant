@@ -21,7 +21,7 @@ public class HarvestReportService {
 
     private static final long MAX_DAYS = 366;
 
-    private final HarvestJpaRepository harvestRepo;
+    private final HarvestSource harvestSource;
     private final DiscardJpaRepository discardRepo;
     private final DispatchLineJpaRepository lineRepo;
 
@@ -36,7 +36,7 @@ public class HarvestReportService {
 
         // Stock con el que arranca el periodo = lo acumulado hasta el dia anterior
         LocalDate prev = from.minusDays(1);
-        Map<String, Integer> hPrev = totalByCategory(harvestRepo.sumUpTo(prev));
+        Map<String, Integer> hPrev = totalByCategory(harvestSource.sumUpTo(prev));
         Map<String, Integer> dPrev = totalByCategory(lineRepo.sumDeliveredUpTo(prev));
         Map<String, Integer> xPrev = totalByCategory(discardRepo.sumUpTo(prev));
 
@@ -46,7 +46,7 @@ public class HarvestReportService {
         Map<LocalDate, BigDecimal> daySales = new HashMap<>();
         int ordered = 0;
 
-        for (Object[] r : harvestRepo.sumByDay(from, to)) {
+        for (Object[] r : harvestSource.sumByDay(from, to)) {
             int n = ((Number) r[2]).intValue();
             cat.computeIfAbsent((String) r[1], k -> new int[3])[0] += n;
             day.computeIfAbsent((LocalDate) r[0], k -> new int[3])[0] += n;

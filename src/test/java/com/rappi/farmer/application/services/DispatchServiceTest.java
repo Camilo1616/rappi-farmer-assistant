@@ -26,6 +26,8 @@ class DispatchServiceTest {
     private DispatchClientJpaRepository clientRepo;
     private CategoryPriceJpaRepository priceRepo;
     private HarvestJpaRepository harvestRepo;
+    private HarvestSource harvestSource;
+    private CropIntakeJpaRepository intakeRepo;
     private DiscardJpaRepository discardRepo;
     private DispatchLineJpaRepository lineRepo;
     private DispatchService service;
@@ -36,12 +38,15 @@ class DispatchServiceTest {
         clientRepo = mock(DispatchClientJpaRepository.class);
         priceRepo = mock(CategoryPriceJpaRepository.class);
         harvestRepo = mock(HarvestJpaRepository.class);
+        harvestSource = mock(HarvestSource.class);
+        intakeRepo = mock(CropIntakeJpaRepository.class);
         discardRepo = mock(DiscardJpaRepository.class);
         lineRepo = mock(DispatchLineJpaRepository.class);
-        service = new DispatchService(sectorRepo, clientRepo, priceRepo, harvestRepo, discardRepo, lineRepo);
+        service = new DispatchService(sectorRepo, clientRepo, priceRepo, harvestRepo, discardRepo, lineRepo,
+                harvestSource, intakeRepo);
 
         when(clientRepo.findById(1L)).thenReturn(Optional.of(new DispatchClientEntity()));
-        when(harvestRepo.sumUpTo(any())).thenReturn(List.of());
+        when(harvestSource.sumUpTo(any())).thenReturn(List.of());
         when(discardRepo.sumUpTo(any())).thenReturn(List.of());
         when(lineRepo.sumDeliveredUpTo(any())).thenReturn(List.of());
         when(lineRepo.findByDayAndClientIdAndCategory(any(), any(), any())).thenReturn(Optional.empty());
@@ -57,7 +62,7 @@ class DispatchServiceTest {
 
     @Test
     void deliveringMoreThanStockIsRejectedWithMaxAllowed() {
-        when(harvestRepo.sumUpTo(any())).thenReturn(rows("SEGUNDA", 5));
+        when(harvestSource.sumUpTo(any())).thenReturn(rows("SEGUNDA", 5));
         when(lineRepo.sumDeliveredUpTo(any())).thenReturn(rows("SEGUNDA", 8)); // ya incluye esta entrega
         InsufficientStockException e = assertThrows(InsufficientStockException.class,
                 () -> service.setLine(DAY, 1L, FruitCategory.SEGUNDA, 8, 8));
@@ -66,14 +71,14 @@ class DispatchServiceTest {
 
     @Test
     void deliveringLessThanOrderedIsAllowed() {
-        when(harvestRepo.sumUpTo(any())).thenReturn(rows("SEGUNDA", 5));
+        when(harvestSource.sumUpTo(any())).thenReturn(rows("SEGUNDA", 5));
         when(lineRepo.sumDeliveredUpTo(any())).thenReturn(rows("SEGUNDA", 3));
         assertDoesNotThrow(() -> service.setLine(DAY, 1L, FruitCategory.SEGUNDA, 7, 3));
     }
 
     @Test
     void newLineFreezesCurrentPrice() {
-        when(harvestRepo.sumUpTo(any())).thenReturn(rows("SEGUNDA", 5));
+        when(harvestSource.sumUpTo(any())).thenReturn(rows("SEGUNDA", 5));
         when(lineRepo.sumDeliveredUpTo(any())).thenReturn(rows("SEGUNDA", 2));
         service.setLine(DAY, 1L, FruitCategory.SEGUNDA, 2, 2);
         ArgumentCaptor<DispatchLineEntity> cap = ArgumentCaptor.forClass(DispatchLineEntity.class);
@@ -92,7 +97,7 @@ class DispatchServiceTest {
 
     @Test
     void harvestCannotDropBelowWhatWasAlreadyDelivered() {
-        when(harvestRepo.sumUpTo(any())).thenReturn(rows("SEGUNDA", 2));
+        when(harvestSource.sumUpTo(any())).thenReturn(rows("SEGUNDA", 2));
         when(lineRepo.sumDeliveredUpTo(any())).thenReturn(rows("SEGUNDA", 4));
         assertThrows(RuntimeException.class, () -> service.setHarvest(DAY, FruitCategory.SEGUNDA, 2));
     }
@@ -100,9 +105,9 @@ class DispatchServiceTest {
     @Test
     void leftoverFromYesterdayCarriesOverToToday() {
         // Ayer: cosecha 10, entrega 4 -> arrastre 6. Hoy: +5 cosechadas, 3 entregadas.
-        when(harvestRepo.sumUpTo(DAY.minusDays(1))).thenReturn(rows("SEGUNDA", 10));
+        when(harvestSource.sumUpTo(DAY.minusDays(1))).thenReturn(rows("SEGUNDA", 10));
         when(lineRepo.sumDeliveredUpTo(DAY.minusDays(1))).thenReturn(rows("SEGUNDA", 4));
-        when(harvestRepo.sumUpTo(DAY)).thenReturn(rows("SEGUNDA", 15));
+        when(harvestSource.sumUpTo(DAY)).thenReturn(rows("SEGUNDA", 15));
         when(lineRepo.sumDeliveredUpTo(DAY)).thenReturn(rows("SEGUNDA", 7));
 
         DispatchDayDto day = service.getDay(DAY);

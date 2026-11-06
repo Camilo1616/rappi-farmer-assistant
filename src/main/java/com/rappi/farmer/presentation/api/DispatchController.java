@@ -4,17 +4,15 @@ import com.rappi.farmer.application.services.ClientSearchService;
 import com.rappi.farmer.application.services.DispatchService;
 import com.rappi.farmer.application.services.HarvestReportService;
 import com.rappi.farmer.application.services.PortfolioService;
+import com.rappi.farmer.application.services.ProfitService;
 import com.rappi.farmer.domain.enums.PaymentType;
 import com.rappi.farmer.domain.enums.FruitCategory;
-import com.rappi.farmer.domain.exceptions.BusinessException;
-import com.rappi.farmer.domain.exceptions.InsufficientStockException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +24,7 @@ import java.util.Map;
 /** API del despacho diario de fresas. Solo la dueña y el administrador. */
 @RestController
 @RequestMapping("/api/despacho")
-@PreAuthorize("hasAnyRole('ADMIN','DUENA')")
+@PreAuthorize("hasAnyRole('ADMIN','DUENA','ASISTENTE')")
 @RequiredArgsConstructor
 public class DispatchController {
 
@@ -34,6 +32,7 @@ public class DispatchController {
     private final PortfolioService portfolio;
     private final HarvestReportService reports;
     private final ClientSearchService clientSearch;
+    private final ProfitService profit;
 
     public record HarvestRequest(@NotNull LocalDate date, @NotNull FruitCategory category, @NotNull @Min(0) Integer boxes) {}
     public record LineRequest(@NotNull LocalDate date, @NotNull Long clientId, @NotNull FruitCategory category,
@@ -107,20 +106,15 @@ public class DispatchController {
         return ResponseEntity.ok(reports.getReport(from, to));
     }
 
+    @GetMapping("/profit")
+    public ResponseEntity<?> profit(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(profit.getProfit(from, to));
+    }
+
     @GetMapping("/clients/search")
     public ResponseEntity<?> searchClients(@RequestParam(defaultValue = "") String q,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(clientSearch.search(q, date != null ? date : LocalDate.now()));
-    }
-
-    @ExceptionHandler(InsufficientStockException.class)
-    public ResponseEntity<?> noStock(InsufficientStockException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                "code", "NO_STOCK", "message", e.getMessage(), "maxAllowed", e.getMaxAllowed()));
-    }
-
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<?> business(BusinessException e) {
-        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
     }
 }

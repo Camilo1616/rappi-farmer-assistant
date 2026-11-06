@@ -37,18 +37,22 @@ public class DispatchService {
     private final HarvestJpaRepository harvestRepo;
     private final DiscardJpaRepository discardRepo;
     private final DispatchLineJpaRepository lineRepo;
+    private final HarvestSource harvestSource;
+    private final CropIntakeJpaRepository intakeRepo;
 
     // ── Consulta del dia ─────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public DispatchDayDto getDay(LocalDate date) {
         Map<String, BigDecimal> prices = prices();
-        Map<String, Integer> hUpTo = toMap(harvestRepo.sumUpTo(date));
+        Map<String, Integer> hUpTo = toMap(harvestSource.sumUpTo(date));
         Map<String, Integer> dUpTo = toMap(lineRepo.sumDeliveredUpTo(date));
         Map<String, Integer> xUpTo = toMap(discardRepo.sumUpTo(date));
-        Map<String, Integer> hPrev = toMap(harvestRepo.sumUpTo(date.minusDays(1)));
+        Map<String, Integer> hPrev = toMap(harvestSource.sumUpTo(date.minusDays(1)));
         Map<String, Integer> dPrev = toMap(lineRepo.sumDeliveredUpTo(date.minusDays(1)));
         Map<String, Integer> xPrev = toMap(discardRepo.sumUpTo(date.minusDays(1)));
+        Map<String, Integer> cUpTo = toMap(intakeRepo.sumUpTo(date));
+        Map<String, Integer> cPrev = toMap(intakeRepo.sumUpTo(date.minusDays(1)));
 
         List<StockDto> stock = new ArrayList<>();
         int carry = 0, harv = 0, deliv = 0, disc = 0, left = 0;
@@ -60,7 +64,7 @@ public class DispatchService {
             int discarded = get(xUpTo, k) - get(xPrev, k);
             int available = carryover + harvested - delivered - discarded;
             stock.add(new StockDto(k, c.label(), carryover, harvested, delivered, discarded, available,
-                    prices.getOrDefault(k, BigDecimal.ZERO)));
+                    prices.getOrDefault(k, BigDecimal.ZERO), get(cUpTo, k) - get(cPrev, k)));
             carry += carryover; harv += harvested; deliv += delivered; disc += discarded; left += available;
         }
 
@@ -203,9 +207,14 @@ public class DispatchService {
 
     private int stockUpTo(LocalDate date, FruitCategory category) {
         String k = category.name();
-        return get(toMap(harvestRepo.sumUpTo(date)), k)
+        return get(toMap(harvestSource.sumUpTo(date)), k)
                 - get(toMap(lineRepo.sumDeliveredUpTo(date)), k)
                 - get(toMap(discardRepo.sumUpTo(date)), k);
+    }
+
+    /** Lo usa el modulo de cultivos: si una entrada baja, el stock no puede quedar negativo. */
+    public void assertSupplyChangeKeepsStockValid(LocalDate date, FruitCategory category) {
+        requireStockNotNegative(date, category, "Ya se despachó o descartó más fresa de la que quedaría");
     }
 
     private void requireStockNotNegative(LocalDate date, FruitCategory category, String msg) {

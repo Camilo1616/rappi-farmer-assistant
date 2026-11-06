@@ -7,6 +7,10 @@ import {
 } from '../services/despachoService'
 import CarteraPanel from '../components/CarteraPanel'
 import ReportPanel from '../components/ReportPanel'
+import CultivosPanel from '../components/CultivosPanel'
+import ViajesPanel from '../components/ViajesPanel'
+import ProfitCard from '../components/ProfitCard'
+import NumberField from '../components/NumberField'
 import ClientSearch from '../components/ClientSearch'
 import styles from './DespachoPage.module.css'
 
@@ -27,21 +31,6 @@ function Stepper({ label, value, onChange }) {
         <button className={styles.stepBtn} onClick={() => onChange(value + 1)} aria-label={`más ${label}`}>+</button>
       </div>
     </div>
-  )
-}
-
-/** Input numérico que guarda al salir del campo (evita una petición por tecla). */
-function NumberField({ value, onCommit, label }) {
-  const commit = (el) => {
-    const n = Math.max(0, parseInt(el.value, 10) || 0)
-    el.value = String(n)
-    if (n !== value) onCommit(n)
-  }
-  // key={value}: si el valor del servidor cambia, el input se reinicia con el dato real
-  return (
-    <input key={value} className={styles.num} type="number" inputMode="numeric" min="0" aria-label={label}
-      defaultValue={value} onBlur={e => commit(e.target)}
-      onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()} />
   )
 }
 
@@ -129,10 +118,14 @@ export default function DespachoPage() {
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${tab === 'despacho' ? styles.tabOn : ''}`} onClick={() => setTab('despacho')}>Despacho</button>
         <button className={`${styles.tab} ${tab === 'cartera' ? styles.tabOn : ''}`} onClick={() => setTab('cartera')}>Cartera</button>
+        <button className={`${styles.tab} ${tab === 'cultivos' ? styles.tabOn : ''}`} onClick={() => setTab('cultivos')}>Cultivos</button>
+        <button className={`${styles.tab} ${tab === 'viajes' ? styles.tabOn : ''}`} onClick={() => setTab('viajes')}>Viajes</button>
         <button className={`${styles.tab} ${tab === 'reportes' ? styles.tabOn : ''}`} onClick={() => setTab('reportes')}>Reportes</button>
       </div>
 
       {tab === 'cartera' ? <CarteraPanel date={date} onError={setError} />
+        : tab === 'cultivos' ? <CultivosPanel date={date} onError={setError} />
+        : tab === 'viajes' ? <ViajesPanel date={date} onError={setError} />
         : tab === 'reportes' ? <ReportPanel date={date} onError={setError} /> : (<>
       <div className={styles.cards}>
         <div className={styles.card}><div className={styles.cardLabel}>Cosechado hoy</div><div className={styles.cardValue}>{s.harvestedBoxes}</div></div>
@@ -150,8 +143,9 @@ export default function DespachoPage() {
                 {c.carryover > 0 && <span className={styles.first}>🔥 {c.carryover} sale primero</span>}</div>
               <div className={styles.avail}>{c.available}</div>
               <div className={styles.small}>{money(c.price)} / caja</div>
-              <div className={styles.mini}><span className={styles.small}>Cosecha</span>
-                <NumberField label={`Cosecha ${c.label}`} value={c.harvested}
+              {c.cultivoHarvested > 0 && <div className={styles.small}>De cultivos: {c.cultivoHarvested}</div>}
+              <div className={styles.mini}><span className={styles.small}>{c.cultivoHarvested > 0 ? 'Ajuste' : 'Cosecha'}</span>
+                <NumberField label={`Cosecha ${c.label}`} value={c.harvested - c.cultivoHarvested}
                   onCommit={n => run(() => setHarvest(date, c.category, n))} /></div>
             </div>
           ))}
@@ -197,6 +191,10 @@ export default function DespachoPage() {
             Sobran {s.leftoverBoxes} cajas: pasan a mañana y saldrán primero. Registra como descarte lo que no se pueda guardar.
           </div>
         </div>
+      </section>
+
+      <section className={styles.section}>
+        <ProfitCard from={date} to={date} refreshKey={s.salesTotal} />
       </section>
 
       <section className={styles.section}>

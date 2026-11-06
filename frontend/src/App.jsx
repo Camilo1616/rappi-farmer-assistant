@@ -29,7 +29,7 @@ function Lazy({ children }) {
 
 function homeFor(role) {
   if (role === 'LIDER') return '/lider'
-  if (role === 'DUENA') return '/despacho'
+  if (role === 'DUENA' || role === 'ASISTENTE') return '/despacho'
   return '/dashboard'
 }
 
@@ -91,7 +91,7 @@ function AppRoutes() {
         path="/despacho"
         element={
           <PrivateRoute>
-            <RoleRoute allowed={['DUENA', 'ADMIN']}>
+            <RoleRoute allowed={['DUENA', 'ASISTENTE', 'ADMIN']}>
               <Lazy><DespachoPage /></Lazy>
             </RoleRoute>
           </PrivateRoute>
