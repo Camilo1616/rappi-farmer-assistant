@@ -40,7 +40,7 @@ public class DispatchController {
     public record PriceRequest(@NotNull FruitCategory category, @NotNull BigDecimal price) {}
     public record SectorRequest(@NotBlank String name) {}
     public record PaymentRequest(@NotNull LocalDate date, @NotNull Long clientId, @NotNull PaymentType type,
-                                 @NotNull BigDecimal amount, String note) {}
+                                 @NotNull BigDecimal amount, String note, String method, String receivedBy) {}
     public record ClientRequest(@NotNull Long sectorId, @NotBlank String name, BigDecimal openingBalance,
                                 Integer openingPackaging) {}
 
@@ -90,7 +90,7 @@ public class DispatchController {
 
     @PostMapping("/payments")
     public ResponseEntity<?> addPayment(@Valid @RequestBody PaymentRequest r) {
-        portfolio.addPayment(r.date(), r.clientId(), r.type(), r.amount(), r.note());
+        portfolio.addPayment(r.date(), r.clientId(), r.type(), r.amount(), r.note(), r.method(), r.receivedBy());
         return ResponseEntity.ok(portfolio.getPortfolio(r.date()));
     }
 

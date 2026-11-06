@@ -85,6 +85,16 @@ public class PortfolioService {
 
     @Transactional
     public void addPayment(LocalDate date, Long clientId, PaymentType type, BigDecimal amount, String note) {
+        addPayment(date, clientId, type, amount, note, null, null);
+    }
+
+    /** Igual, indicando el metodo (EFECTIVO, NEQUI, CONSIGNACION) y quien recibio el pago. */
+    @Transactional
+    public void addPayment(LocalDate date, Long clientId, PaymentType type, BigDecimal amount, String note,
+                           String method, String receivedBy) {
+        if (method != null && !method.isBlank() && !CollectionService.METHODS.contains(method)) {
+            throw new BusinessException("Método de pago inválido");
+        }
         if (amount == null || amount.signum() <= 0) {
             throw new BusinessException("El valor debe ser mayor a cero");
         }
@@ -95,6 +105,8 @@ public class PortfolioService {
         p.setType(type.name());
         p.setAmount(amount);
         p.setNote(note == null || note.isBlank() ? null : note.trim());
+        p.setMethod(method == null || method.isBlank() ? null : method);
+        p.setReceivedBy(receivedBy == null || receivedBy.isBlank() ? null : receivedBy.trim());
         p.setCreatedAt(LocalDateTime.now());
         paymentRepo.save(p);
     }

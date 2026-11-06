@@ -18,6 +18,7 @@ const GestionAgmPage        = lazy(() => import('./pages/GestionAgmPage'))
 const ProfilePage           = lazy(() => import('./pages/ProfilePage'))
 const LiderDashboardPage    = lazy(() => import('./pages/LiderDashboardPage'))
 const DespachoPage          = lazy(() => import('./pages/DespachoPage'))
+const ClienteFichaPage      = lazy(() => import('./pages/ClienteFichaPage'))
 
 function RouteFallback() {
   return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando…</div>
@@ -93,6 +94,16 @@ function AppRoutes() {
           <PrivateRoute>
             <RoleRoute allowed={['DUENA', 'ASISTENTE', 'ADMIN']}>
               <Lazy><DespachoPage /></Lazy>
+            </RoleRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/despacho/cliente/:id"
+        element={
+          <PrivateRoute>
+            <RoleRoute allowed={['DUENA', 'ASISTENTE', 'ADMIN']}>
+              <Lazy><ClienteFichaPage /></Lazy>
             </RoleRoute>
           </PrivateRoute>
         }

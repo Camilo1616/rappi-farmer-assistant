@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getPortfolio, addPayment, deletePayment } from '../services/despachoService'
 import styles from '../pages/DespachoPage.module.css'
 
@@ -34,6 +35,7 @@ function PaymentForm({ clientId, date, run }) {
 
 /** Cartera: lo vendido, lo cobrado y el saldo de cada cliente a la fecha elegida. */
 export default function CarteraPanel({ date, onError }) {
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [open, setOpen] = useState({})
   const load = useCallback(() => getPortfolio(date).then(setData).catch(() => onError('No se pudo cargar la cartera')), [date, onError])
@@ -86,6 +88,9 @@ export default function CarteraPanel({ date, onError }) {
                     </div>
                   ))}
                   <PaymentForm clientId={c.id} date={date} run={run} />
+                  <div style={{ padding: '0 14px 12px' }}>
+                    <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => navigate(`/despacho/cliente/${c.id}`)}>Abrir ficha del cliente ›</button>
+                  </div>
                 </>
               )}
             </div>

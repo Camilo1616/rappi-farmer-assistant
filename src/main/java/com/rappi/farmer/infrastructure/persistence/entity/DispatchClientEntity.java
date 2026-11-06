@@ -27,4 +27,10 @@ public class DispatchClientEntity {
 
     @Column(name = "opening_packaging")
     private Integer openingPackaging = 0;
+
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "plaza")
+    private String plaza;
 }

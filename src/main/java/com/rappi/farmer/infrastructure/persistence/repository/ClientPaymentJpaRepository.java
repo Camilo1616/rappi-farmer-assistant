@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -20,4 +22,7 @@ public interface ClientPaymentJpaRepository extends JpaRepository<ClientPaymentE
     List<ClientPaymentEntity> findTop3ByClientIdAndDayLessThanEqualOrderByDayDescIdDesc(Long clientId, LocalDate day);
 
     List<ClientPaymentEntity> findByRunId(Long runId);
+
+    /** Movimientos de un cliente hasta el dia indicado, el mas reciente primero. */
+    List<ClientPaymentEntity> findByClientIdAndDayLessThanEqualOrderByDayDescIdDesc(Long clientId, LocalDate day, Pageable page);
 }

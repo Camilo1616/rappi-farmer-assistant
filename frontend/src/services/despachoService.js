@@ -47,3 +47,9 @@ export const deleteRunPayment = (paymentId) => api.delete(`/cobros/payments/${pa
 export const deleteEmpties = (id) => api.delete(`/cobros/empties/${id}`).then(r => r.data)
 export const handoverRun = (id, data) => api.put(`/cobros/${id}/handover`, data).then(r => r.data)
 export const reopenRun = (id) => api.put(`/cobros/${id}/reopen`).then(r => r.data)
+
+// ── Ficha del cliente (CRM) ──
+export const getClientProfile = (id, limit = 40) => api.get(`/despacho/clients/${id}`, { params: { limit } }).then(r => r.data)
+export const updateClient = (id, data) => api.put(`/despacho/clients/${id}`, data).then(r => r.data)
+export const addClientNote = (id, content) => api.post(`/despacho/clients/${id}/notes`, { content }).then(r => r.data)
+export const deleteClientNote = (id, noteId) => api.delete(`/despacho/clients/${id}/notes/${noteId}`).then(r => r.data)
