@@ -14,8 +14,10 @@ public record DispatchDayDto(LocalDate date, List<StockDto> stock, List<SectorDt
 
     public record LineDto(String category, int ordered, int delivered, BigDecimal unitPrice) {}
 
+    /** balance/overdue/daysSincePayment: cartera del cliente, para avisar al despachar a un moroso. */
     public record ClientDto(Long id, String name, BigDecimal openingBalance, List<LineDto> lines,
-                            int orderedBoxes, int deliveredBoxes, BigDecimal invoiceTotal) {}
+                            int orderedBoxes, int deliveredBoxes, BigDecimal invoiceTotal,
+                            BigDecimal balance, boolean overdue, Integer daysSincePayment) {}
 
     public record SectorDto(Long id, String name, List<ClientDto> clients,
                             int orderedBoxes, int deliveredBoxes, BigDecimal invoiceTotal) {}

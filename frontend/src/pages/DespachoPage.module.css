@@ -125,3 +125,17 @@
 .alertBar { margin: 10px 14px 0; padding: 8px 12px; border-radius: 10px; background: rgba(245,158,11,.12);
   color: #F59E0B; font-size: .85rem; font-weight: 600; }
 .handover { margin: 12px 14px 14px; padding: 12px; border-radius: 12px; background: var(--bg-input); display: flex; flex-direction: column; gap: 6px; }
+.moraTag { font-size: .68rem; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: rgba(239,68,68,.15);
+  color: #EF4444; margin-left: 6px; white-space: nowrap; }
+.moraBox { margin: 0 14px 6px; padding: 10px 12px; border-radius: 10px; background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.4); font-size: .85rem; }
+.otbl { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.otbl th, .otbl td { padding: 8px 4px; text-align: right; border-bottom: 1px solid var(--border); }
+.otbl th:first-child, .otbl td:first-child { text-align: left; }
+.otbl th { color: var(--text-secondary); font-size: .68rem; font-weight: 700; }
+.short { color: #EF4444; font-weight: 800; } .spare { color: #22C55E; font-weight: 800; }
+.pill { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 9px; border-radius: 99px;
+  background: var(--bg-input); color: var(--text-secondary); margin: 2px 4px 2px 0; }
+.sugRow { display: flex; justify-content: space-between; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--border); font-size: .88rem; }
+.sugGive { font-weight: 800; color: #22C55E; white-space: nowrap; }
+.sugNone { font-weight: 800; color: #EF4444; white-space: nowrap; }

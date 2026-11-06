@@ -1,5 +1,6 @@
 package com.rappi.farmer.application.services;
 
+import com.rappi.farmer.application.dtos.ClientDelinquency;
 import com.rappi.farmer.application.dtos.DispatchDayDto;
 import com.rappi.farmer.application.dtos.DispatchDayDto.*;
 import com.rappi.farmer.domain.enums.FruitCategory;
@@ -39,6 +40,7 @@ public class DispatchService {
     private final DispatchLineJpaRepository lineRepo;
     private final HarvestSource harvestSource;
     private final CropIntakeJpaRepository intakeRepo;
+    private final DelinquencyService delinquencyService;
 
     // ── Consulta del dia ─────────────────────────────────────────────────────
 
@@ -72,6 +74,7 @@ public class DispatchService {
         for (DispatchLineEntity l : lineRepo.findByDay(date)) {
             linesByClient.computeIfAbsent(l.getClientId(), x -> new ArrayList<>()).add(l);
         }
+        Map<Long, ClientDelinquency> delinquency = delinquencyService.infoByClient(date);
         Map<Long, List<DispatchClientEntity>> clientsBySector = new HashMap<>();
         for (DispatchClientEntity c : clientRepo.findAllByOrderByNameAsc()) {
             clientsBySector.computeIfAbsent(c.getSectorId(), x -> new ArrayList<>()).add(c);
@@ -94,7 +97,9 @@ public class DispatchService {
                     total = total.add(l.getUnitPrice().multiply(BigDecimal.valueOf(l.getDeliveredBoxes())));
                     lineDtos.add(new LineDto(l.getCategory(), l.getOrderedBoxes(), l.getDeliveredBoxes(), l.getUnitPrice()));
                 }
-                clients.add(new ClientDto(c.getId(), c.getName(), c.getOpeningBalance(), lineDtos, ordered, delivered, total));
+                ClientDelinquency d = delinquency.getOrDefault(c.getId(), ClientDelinquency.NONE);
+                clients.add(new ClientDto(c.getId(), c.getName(), c.getOpeningBalance(), lineDtos, ordered, delivered, total,
+                        d.balance(), d.overdue(), d.daysSincePayment()));
                 sOrdered += ordered; sDelivered += delivered; sTotal = sTotal.add(total);
             }
             sectors.add(new SectorDto(s.getId(), s.getName(), clients, sOrdered, sDelivered, sTotal));

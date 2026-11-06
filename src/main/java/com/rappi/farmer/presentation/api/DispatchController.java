@@ -3,6 +3,7 @@ package com.rappi.farmer.presentation.api;
 import com.rappi.farmer.application.services.ClientSearchService;
 import com.rappi.farmer.application.services.DispatchService;
 import com.rappi.farmer.application.services.HarvestReportService;
+import com.rappi.farmer.application.services.OpenOrdersService;
 import com.rappi.farmer.application.services.PortfolioService;
 import com.rappi.farmer.application.services.ProfitService;
 import com.rappi.farmer.domain.enums.PaymentType;
@@ -33,6 +34,7 @@ public class DispatchController {
     private final HarvestReportService reports;
     private final ClientSearchService clientSearch;
     private final ProfitService profit;
+    private final OpenOrdersService openOrders;
 
     public record HarvestRequest(@NotNull LocalDate date, @NotNull FruitCategory category, @NotNull @Min(0) Integer boxes) {}
     public record LineRequest(@NotNull LocalDate date, @NotNull Long clientId, @NotNull FruitCategory category,
@@ -111,6 +113,22 @@ public class DispatchController {
     public ResponseEntity<?> profit(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ResponseEntity.ok(profit.getProfit(from, to));
+    }
+
+    @GetMapping("/open-orders")
+    public ResponseEntity<?> openOrders(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(openOrders.getOpenOrders(date != null ? date : LocalDate.now()));
+    }
+
+    @GetMapping("/open-orders/suggestion")
+    public ResponseEntity<?> suggestion(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(openOrders.suggest(date != null ? date : LocalDate.now()));
+    }
+
+    @PostMapping("/open-orders/apply")
+    public ResponseEntity<?> applySuggestion(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        int boxes = openOrders.apply(date);
+        return ResponseEntity.ok(Map.of("applied", boxes, "orders", openOrders.getOpenOrders(date)));
     }
 
     @GetMapping("/clients/search")

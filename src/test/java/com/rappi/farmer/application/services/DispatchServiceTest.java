@@ -28,6 +28,7 @@ class DispatchServiceTest {
     private HarvestJpaRepository harvestRepo;
     private HarvestSource harvestSource;
     private CropIntakeJpaRepository intakeRepo;
+    private DelinquencyService delinquency;
     private DiscardJpaRepository discardRepo;
     private DispatchLineJpaRepository lineRepo;
     private DispatchService service;
@@ -40,10 +41,11 @@ class DispatchServiceTest {
         harvestRepo = mock(HarvestJpaRepository.class);
         harvestSource = mock(HarvestSource.class);
         intakeRepo = mock(CropIntakeJpaRepository.class);
+        delinquency = mock(DelinquencyService.class);
         discardRepo = mock(DiscardJpaRepository.class);
         lineRepo = mock(DispatchLineJpaRepository.class);
         service = new DispatchService(sectorRepo, clientRepo, priceRepo, harvestRepo, discardRepo, lineRepo,
-                harvestSource, intakeRepo);
+                harvestSource, intakeRepo, delinquency);
 
         when(clientRepo.findById(1L)).thenReturn(Optional.of(new DispatchClientEntity()));
         when(harvestSource.sumUpTo(any())).thenReturn(List.of());

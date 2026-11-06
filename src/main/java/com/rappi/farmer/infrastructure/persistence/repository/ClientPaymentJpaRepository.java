@@ -25,4 +25,9 @@ public interface ClientPaymentJpaRepository extends JpaRepository<ClientPaymentE
 
     /** Movimientos de un cliente hasta el dia indicado, el mas reciente primero. */
     List<ClientPaymentEntity> findByClientIdAndDayLessThanEqualOrderByDayDescIdDesc(Long clientId, LocalDate day, Pageable page);
+
+    /** [cliente, ultimo dia con dinero recibido] (abono o consignacion) hasta el dia indicado. */
+    @Query("select p.clientId, max(p.day) from ClientPaymentEntity p "
+            + "where p.type in ('ABONO', 'CONSIGNACION') and p.day <= :day group by p.clientId")
+    List<Object[]> lastCashInByClient(@Param("day") LocalDate day);
 }

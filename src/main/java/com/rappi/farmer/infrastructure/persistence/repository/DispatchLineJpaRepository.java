@@ -40,4 +40,8 @@ public interface DispatchLineJpaRepository extends JpaRepository<DispatchLineEnt
     @Query("select e.clientId, coalesce(sum(e.deliveredBoxes), 0) from DispatchLineEntity e "
             + "where e.day <= :day and e.category <> 'BOLSAS' group by e.clientId")
     List<Object[]> returnableBoxesUpTo(@Param("day") LocalDate day);
+
+    /** [cliente, primer dia con entrega] hasta el dia indicado. */
+    @Query("select e.clientId, min(e.day) from DispatchLineEntity e where e.deliveredBoxes > 0 and e.day <= :day group by e.clientId")
+    List<Object[]> firstPurchaseByClient(@Param("day") LocalDate day);
 }

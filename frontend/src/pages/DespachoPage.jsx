@@ -10,6 +10,7 @@ import ReportPanel from '../components/ReportPanel'
 import CultivosPanel from '../components/CultivosPanel'
 import ViajesPanel from '../components/ViajesPanel'
 import CobrosPanel from '../components/CobrosPanel'
+import PedidosPanel from '../components/PedidosPanel'
 import ProfitCard from '../components/ProfitCard'
 import NumberField from '../components/NumberField'
 import ClientSearch from '../components/ClientSearch'
@@ -45,6 +46,13 @@ function ClientCard({ client, stock, save }) {
           <div className={styles.small}>Pedido {client.orderedBoxes} · Entrega {client.deliveredBoxes}</div></span>
         <span className={styles.meta}>{money(client.invoiceTotal)} {open ? '▲' : '▼'}</span>
       </button>
+      {open && client.overdue && (
+        <div className={styles.moraBox} style={{ marginTop: 8 }}>
+          <strong>Cliente en mora:</strong> debe {money(client.balance)}
+          {client.daysSincePayment != null ? ` · ${client.daysSincePayment} días sin pagar` : ' · nunca ha registrado un pago'}.
+          Revisa antes de despacharle más fresa.
+        </div>
+      )}
       {open && (
         <div className={styles.lines}>
           {stock.map(s => {
@@ -118,6 +126,7 @@ export default function DespachoPage() {
 
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${tab === 'despacho' ? styles.tabOn : ''}`} onClick={() => setTab('despacho')}>Despacho</button>
+        <button className={`${styles.tab} ${tab === 'pedidos' ? styles.tabOn : ''}`} onClick={() => setTab('pedidos')}>Pedidos</button>
         <button className={`${styles.tab} ${tab === 'cartera' ? styles.tabOn : ''}`} onClick={() => setTab('cartera')}>Cartera</button>
         <button className={`${styles.tab} ${tab === 'cobros' ? styles.tabOn : ''}`} onClick={() => setTab('cobros')}>Cobros</button>
         <button className={`${styles.tab} ${tab === 'cultivos' ? styles.tabOn : ''}`} onClick={() => setTab('cultivos')}>Cultivos</button>
@@ -125,7 +134,8 @@ export default function DespachoPage() {
         <button className={`${styles.tab} ${tab === 'reportes' ? styles.tabOn : ''}`} onClick={() => setTab('reportes')}>Reportes</button>
       </div>
 
-      {tab === 'cartera' ? <CarteraPanel date={date} onError={setError} />
+      {tab === 'pedidos' ? <PedidosPanel date={date} onError={setError} onChanged={load} />
+        : tab === 'cartera' ? <CarteraPanel date={date} onError={setError} />
         : tab === 'cobros' ? <CobrosPanel date={date} sectors={day.sectors} onError={setError} />
         : tab === 'cultivos' ? <CultivosPanel date={date} onError={setError} />
         : tab === 'viajes' ? <ViajesPanel date={date} onError={setError} />

@@ -53,3 +53,8 @@ export const getClientProfile = (id, limit = 40) => api.get(`/despacho/clients/$
 export const updateClient = (id, data) => api.put(`/despacho/clients/${id}`, data).then(r => r.data)
 export const addClientNote = (id, content) => api.post(`/despacho/clients/${id}/notes`, { content }).then(r => r.data)
 export const deleteClientNote = (id, noteId) => api.delete(`/despacho/clients/${id}/notes/${noteId}`).then(r => r.data)
+
+// ── Pedidos abiertos y reparto ──
+export const getOpenOrders = (date) => api.get('/despacho/open-orders', { params: { date } }).then(r => r.data)
+export const getSuggestion = (date) => api.get('/despacho/open-orders/suggestion', { params: { date } }).then(r => r.data)
+export const applySuggestion = (date) => api.post('/despacho/open-orders/apply', null, { params: { date } }).then(r => r.data)

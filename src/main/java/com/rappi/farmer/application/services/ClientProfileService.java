@@ -26,8 +26,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ClientProfileService {
 
-    /** Dias sin pagar a partir de los cuales un cliente con saldo se considera "en mora". */
-    static final int OVERDUE_DAYS = 15;
     private static final int FETCH_ROWS = 200;
 
     private final DispatchClientJpaRepository clientRepo;
@@ -89,7 +87,7 @@ public class ClientProfileService {
         // Sin pagos registrados se mide desde su compra mas antigua conocida
         Integer reference = daysSincePayment != null ? daysSincePayment
                 : firstPurchase == null ? null : (int) ChronoUnit.DAYS.between(firstPurchase, date);
-        boolean overdue = bal.balance().signum() > 0 && reference != null && reference > OVERDUE_DAYS;
+        boolean overdue = DelinquencyService.isOverdue(bal.balance(), reference);
 
         List<NoteDto> notes = noteRepo.findByClientIdOrderByIdDesc(clientId).stream()
                 .map(n -> new NoteDto(n.getId(), n.getContent(), n.getCreatedAt())).toList();
