@@ -4,7 +4,8 @@ public enum UserRole {
     ADMIN,
     LIDER,
     COORDINATOR,
-    FARMER_MASS;
+    FARMER_MASS,
+    DUENA;
 
     public String displayName() {
         return switch (this) {
@@ -12,6 +13,7 @@ public enum UserRole {
             case LIDER       -> "Líder";
             case COORDINATOR -> "Coordinador";
             case FARMER_MASS -> "Farmer Mass";
+            case DUENA       -> "Dueña";
         };
     }
 

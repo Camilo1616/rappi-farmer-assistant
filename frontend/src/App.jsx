@@ -17,6 +17,7 @@ const ReportsPage           = lazy(() => import('./pages/ReportsPage'))
 const GestionAgmPage        = lazy(() => import('./pages/GestionAgmPage'))
 const ProfilePage           = lazy(() => import('./pages/ProfilePage'))
 const LiderDashboardPage    = lazy(() => import('./pages/LiderDashboardPage'))
+const DespachoPage          = lazy(() => import('./pages/DespachoPage'))
 
 function RouteFallback() {
   return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando…</div>
@@ -26,16 +27,22 @@ function Lazy({ children }) {
   return <Suspense fallback={<RouteFallback />}>{children}</Suspense>
 }
 
+function homeFor(role) {
+  if (role === 'LIDER') return '/lider'
+  if (role === 'DUENA') return '/despacho'
+  return '/dashboard'
+}
+
 function RoleRoute({ allowed, children }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
-  if (!allowed.includes(user.role)) return <Navigate to={user.role === 'LIDER' ? '/lider' : '/dashboard'} replace />
+  if (!allowed.includes(user.role)) return <Navigate to={homeFor(user.role)} replace />
   return children
 }
 
 function IndexRedirect() {
   const { user } = useAuth()
-  return <Navigate to={user?.role === 'LIDER' ? '/lider' : '/dashboard'} replace />
+  return <Navigate to={homeFor(user?.role)} replace />
 }
 
 function PrivateRoute({ children }) {
@@ -76,6 +83,16 @@ function AppRoutes() {
           <PrivateRoute>
             <RoleRoute allowed={['LIDER', 'ADMIN']}>
               <Lazy><LiderDashboardPage /></Lazy>
+            </RoleRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/despacho"
+        element={
+          <PrivateRoute>
+            <RoleRoute allowed={['DUENA', 'ADMIN']}>
+              <Lazy><DespachoPage /></Lazy>
             </RoleRoute>
           </PrivateRoute>
         }

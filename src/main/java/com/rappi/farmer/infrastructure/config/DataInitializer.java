@@ -33,6 +33,13 @@ public class DataInitializer implements ApplicationRunner {
         createIfNotExists("Andres Moreno",   "andres.moreno@rappi.com",   "rappi2025", UserRole.FARMER_MASS.name(), "CO");
         createIfNotExists("Camila Herrera",  "camila.herrera@rappi.com",  "rappi2025", UserRole.FARMER_MASS.name(), "CO");
 
+        // Cuenta de la dueña (despacho de fresas): solo se crea si se definen ambas variables de entorno
+        String duenaEmail = System.getenv("DUENA_EMAIL");
+        String duenaPassword = System.getenv("DUENA_PASSWORD");
+        if (duenaEmail != null && !duenaEmail.isBlank() && duenaPassword != null && !duenaPassword.isBlank()) {
+            createIfNotExists("Angela", duenaEmail.trim(), duenaPassword, UserRole.DUENA.name(), "CO");
+        }
+
     }
 
     private void createIfNotExists(String fullName, String email, String password, String role, String country) {

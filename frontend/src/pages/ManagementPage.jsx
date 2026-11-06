@@ -1,7 +1,4 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import SalesPanel from '../components/SalesPanel'
-import CropsPanel from '../components/CropsPanel'
 import { getTodayManagements, updateManagement, deleteManagement, registerManagement } from '../services/dashboardService'
 import { getWaSentToday } from '../services/whatsappService'
 import ConfirmModal from '../components/ConfirmModal'
@@ -126,7 +123,7 @@ function StatCard({ icon, label, value, color, sub }) {
 }
 
 /* ── Página principal ── */
-function ManagementTab() {
+export default function ManagementPage() {
   const [rows,         setRows]         = useState([])
   const [loading,      setLoading]      = useState(true)
   const [search,       setSearch]       = useState('')
@@ -448,40 +445,6 @@ function ManagementTab() {
           onConfirm={doDelete}
           onCancel={() => setConfirmDelete(null)}
         />
-      )}
-    </div>
-  )
-}
-
-const TABS = [
-  { key: 'gestiones', label: 'Gestiones' },
-  { key: 'ventas',    label: 'Ventas' },
-  { key: 'cultivos',  label: 'Cultivos' },
-]
-
-/** Sistema de gestión: gestiones diarias + ventas/pedidos + cultivos (?tab=...). */
-export default function ManagementPage() {
-  const [params, setParams] = useSearchParams()
-  const tab = TABS.some(t => t.key === params.get('tab')) ? params.get('tab') : 'gestiones'
-  const go = (key) => setParams(key === 'gestiones' ? {} : { tab: key })
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, padding: '24px 32px 0' }}>
-        {TABS.map(t => (
-          <button key={t.key} onClick={() => go(t.key)} style={{
-            padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
-            border: '1px solid var(--border)',
-            background: tab === t.key ? 'var(--rappi-orange)' : 'var(--bg-card)',
-            color: tab === t.key ? '#fff' : 'var(--text-secondary)',
-          }}>{t.label}</button>
-        ))}
-      </div>
-      {tab === 'gestiones' && <ManagementTab />}
-      {tab !== 'gestiones' && (
-        <div style={{ padding: 32 }}>
-          {tab === 'ventas' ? <SalesPanel onGoToCrops={() => go('cultivos')} /> : <CropsPanel />}
-        </div>
       )}
     </div>
   )

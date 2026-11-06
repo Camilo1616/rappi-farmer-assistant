@@ -47,7 +47,7 @@ export const getLidersByCountry = (country) => api.get(`/auth/liders?country=${c
 
 export const heartbeat = () => api.post('/auth/heartbeat').catch(() => {})
 
-const VALID_ROLES = ['ADMIN', 'LIDER', 'COORDINATOR', 'FARMER_MASS']
+const VALID_ROLES = ['ADMIN', 'LIDER', 'COORDINATOR', 'FARMER_MASS', 'DUENA']
 
 export const getCurrentUser = () => {
   const raw = localStorage.getItem('user')
